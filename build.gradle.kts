@@ -40,6 +40,9 @@ dependencies {
     api("eu.darkbot", "DarkBot", "97430f3417")
 }
 
+tasks.withType<Jar> {
+    archiveFileName.set("SharedPlugin.jar")
+}
 
 tasks.register<Copy>("copyFile") {
     from(layout.buildDirectory.file("SharedPlugin.jar"))
