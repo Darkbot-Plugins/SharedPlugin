@@ -11,9 +11,11 @@ on:
 jobs:
   virustotal:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: VirusTotal Scan
-        uses: crazy-max/ghaction-virustotal@v4
+        uses: crazy-max/ghaction-virustotal@d34968c958ae283fe976efed637081b9f9dcf74f
         with:
           vt_api_key: ${{ secrets.VT_API_KEY }}
           update_release_body: true
