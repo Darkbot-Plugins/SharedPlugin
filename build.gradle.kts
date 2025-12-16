@@ -1,11 +1,19 @@
 
 plugins {
     id("org.gradle.java-library")
+    id("org.sonarqube") version "7.2.1.6560"
 }
 
 buildscript {
     repositories {
         mavenCentral()
+    }
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "Darkbot-Plugins_SharedPlugin")
+        property("sonar.organization", "darkbot-plugins")
     }
 }
 
