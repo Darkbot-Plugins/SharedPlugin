@@ -2,6 +2,8 @@ package dev.shared.do_gamer.behaviour.simpleHealing;
 
 import java.util.HashSet;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import dev.shared.do_gamer.config.SimpleHealingConfig;
 import eu.darkbot.api.PluginAPI;
@@ -18,6 +20,7 @@ import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.PetAPI;
+import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Healing", description = "Activate the ship's healing ability and use the PET healing gear.")
@@ -37,6 +40,7 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     private static final String CHECK_HP_POD = "hpPod";
     private static final String CHECK_PET_COMBO = "petCombo";
     private final Timer petComboCooldown = Timer.get(PET_COMBO_COOLDOWN_MS);
+    private static final Logger logger = Logger.getLogger(SimpleHealing.class.getName());
 
     public SimpleHealing(PluginAPI api) {
         this.hero = api.requireAPI(HeroAPI.class);
@@ -132,8 +136,10 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
             if (this.pet.getGear() == PetGear.COMBO_REPAIR) {
                 this.petComboCooldown.activate();
             }
-        } catch (Exception ignored) {
-            // Ignore any exceptions when setting PET gear
+        } catch (ItemNotEquippedException ignored) {
+            // Item not equipped, not critical exception and should be ignored
+        } catch (Exception e) {
+            logger.log(Level.WARNING, "Failed to set PET gear to COMBO_REPAIR", e);
         }
     }
 
