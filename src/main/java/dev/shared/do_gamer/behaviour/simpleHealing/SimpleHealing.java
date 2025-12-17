@@ -29,11 +29,14 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     private SimpleHealingConfig config;
     private final Set<ShipAbility> supportedShips = new HashSet<>();
     private ShipAbility currentShip = null; // Current ship being used
+    private static final long PET_COMBO_COOLDOWN_MS = 15_000L;
+    private static final int ABILITY_USE_RETRY_DELAY_MS = 250;
+    private static final double MAX_REPAIR_TARGET_DISTANCE = 750.0;
     private static final String CHECK_HP = "hp";
     private static final String CHECK_SHIELD = "shield";
     private static final String CHECK_HP_POD = "hpPod";
     private static final String CHECK_PET_COMBO = "petCombo";
-    private final Timer petComboCooldown = Timer.get(15_000L);
+    private final Timer petComboCooldown = Timer.get(PET_COMBO_COOLDOWN_MS);
 
     public SimpleHealing(PluginAPI api) {
         this.hero = api.requireAPI(HeroAPI.class);
@@ -112,7 +115,8 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
 
     // Use the specified ability if available
     private void useAbility(Ability ability) {
-        this.items.useItem(ability, 250, ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED);
+        this.items.useItem(ability, ABILITY_USE_RETRY_DELAY_MS,
+                ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED);
     }
 
     // Use the PET Combo Repair gear if available
@@ -158,7 +162,7 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     // Check if hero has target
     private boolean hasTarget() {
         return (this.attack.hasTarget() && this.attack.isAttacking()
-                && this.hero.distanceTo(this.attack.getTarget()) <= 750.0);
+                && this.hero.distanceTo(this.attack.getTarget()) <= MAX_REPAIR_TARGET_DISTANCE);
     }
 
     // Helper class to associate ship names with their abilities
