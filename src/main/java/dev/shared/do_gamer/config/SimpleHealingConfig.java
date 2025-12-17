@@ -10,7 +10,7 @@ public class SimpleHealingConfig {
 
     public @Option("do_gamer.simple_healing.config.shield_repair") ShieldRepairConfig shield = new ShieldRepairConfig();
 
-    public @Option("do_gamer.simple_healing.config.repaid_pod") HpRepairConfig hpPod = new HpRepairConfig();
+    public @Option("do_gamer.simple_healing.config.repair_pod") HpRepairConfig hpPod = new HpRepairConfig();
 
     public @Option("do_gamer.simple_healing.config.pet_combo_repair") HpRepairConfig petCombo = new HpRepairConfig();
 
