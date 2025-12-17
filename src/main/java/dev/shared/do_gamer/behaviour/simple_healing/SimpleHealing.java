@@ -38,10 +38,6 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     private final Timer petComboCooldown = Timer.get(PET_COMBO_COOLDOWN_MS);
     private static final Logger logger = Logger.getLogger(SimpleHealing.class.getName());
 
-    private enum HealthCheckType {
-        HP, SHIELD, HP_POD, PET_COMBO
-    }
-
     public SimpleHealing(PluginAPI api) {
         this.hero = api.requireAPI(HeroAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
@@ -59,34 +55,35 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
 
     @Override
     public void onTickBehavior() {
-        handleShipAbilities();
-        handlePetGear();
+        Health health = this.hero.getHealth();
+        handleShipAbilities(health);
+        handlePetGear(health);
     }
 
-    private void handleShipAbilities() {
+    private void handleShipAbilities(Health health) {
         if (!this.isEnabledShipAbility())
             return;
         // Try to use HP ability
-        if (this.config.hp.enabled && this.checkHealth(HealthCheckType.HP)) {
+        if (this.config.hp.enabled && this.checkHp(health)) {
             this.useAbility(this.currentShip.hp);
         }
         // Try to use shield ability if available
         if (this.config.shield.enabled && this.currentShip.shield != null
-                && this.checkHealth(HealthCheckType.SHIELD)) {
+                && this.checkShield(health)) {
             this.useAbility(this.currentShip.shield);
         }
         // Try to use HP pod if available
         if (this.config.hpPod.enabled && this.currentShip.hpPod != null
-                && this.checkHealth(HealthCheckType.HP_POD)) {
+                && this.checkHpPod(health)) {
             this.useAbility(this.currentShip.hpPod);
         }
     }
 
-    private void handlePetGear() {
+    private void handlePetGear(Health health) {
         if (!this.isEnabledPetGear())
             return;
         // Try to use Combo Repair
-        if (this.pet.hasGear(PetGear.COMBO_REPAIR) && this.checkHealth(HealthCheckType.PET_COMBO)) {
+        if (this.pet.hasGear(PetGear.COMBO_REPAIR) && this.checkPetCombo(health)) {
             if (this.attack.hasTarget() && this.attack.isAttacking()) {
                 this.attack.stopAttack(); // Stop attacking to avoid skip a gear
             }
@@ -147,21 +144,24 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
         }
     }
 
-    // Check health by type
-    private boolean checkHealth(HealthCheckType type) {
-        Health health = this.hero.getHealth();
-        switch (type) {
-            case HP:
-                return (health.hpPercent() <= this.config.hp.min && !this.isRepair());
-            case SHIELD:
-                return (health.shieldPercent() <= this.config.shield.min && !this.isRepair());
-            case HP_POD:
-                return (health.hpPercent() <= this.config.hpPod.min && !this.isRepair());
-            case PET_COMBO:
-                return (health.hpPercent() <= this.config.petCombo.min && this.isRepair() && !this.hasTarget());
-            default:
-                return false;
-        }
+    // Check HP health
+    private boolean checkHp(Health health) {
+        return (health.hpPercent() <= this.config.hp.min && !this.isRepair());
+    }
+
+    // Check shield health
+    private boolean checkShield(Health health) {
+        return (health.shieldPercent() <= this.config.shield.min && !this.isRepair());
+    }
+
+    // Check HP pod health
+    private boolean checkHpPod(Health health) {
+        return (health.hpPercent() <= this.config.hpPod.min && !this.isRepair());
+    }
+
+    // Check PET combo health
+    private boolean checkPetCombo(Health health) {
+        return (health.hpPercent() <= this.config.petCombo.min && this.isRepair() && !this.hasTarget());
     }
 
     // Check if repair bot is active
