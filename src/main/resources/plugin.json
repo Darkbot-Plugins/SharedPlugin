@@ -6,7 +6,7 @@
 	"supportedVersion": "1.131.7",
 	"basePackage": "dev.shared",
 	"features": [
-		"dev.shared.do_gamer.behaviour.simple_healing"
+		"dev.shared.do_gamer.behaviour.simple_healing.SimpleHealing"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json"
 }
