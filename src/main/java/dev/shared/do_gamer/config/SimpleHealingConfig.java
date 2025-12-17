@@ -17,20 +17,20 @@ public class SimpleHealingConfig {
     public static class HpRepairConfig {
 
         @Option("general.enabled")
-        public boolean ENABLED = false;
+        public boolean enabled = false;
 
         @Option("do_gamer.simple_healing.config.min_hp")
         @Percentage
-        public double MIN_HP = 0.5;
+        public double min = 0.5;
     }
 
     public static class ShieldRepairConfig {
 
         @Option("general.enabled")
-        public boolean ENABLED = false;
+        public boolean enabled = false;
 
         @Option("do_gamer.simple_healing.config.min_shield")
         @Percentage
-        public double MIN_SHIELD = 0.5;
+        public double min = 0.5;
     }
 }

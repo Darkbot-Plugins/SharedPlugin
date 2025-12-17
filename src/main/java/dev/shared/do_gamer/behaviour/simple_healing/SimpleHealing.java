@@ -1,4 +1,4 @@
-package dev.shared.do_gamer.behaviour.simpleHealing;
+package dev.shared.do_gamer.behaviour.simple_healing;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -52,54 +52,56 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
         this.supportedShips.add(new ShipAbility("solace", Ability.SOLACE));
         this.supportedShips.add(new ShipAbility("solace-plus", Ability.SOLACE_PLUS_NANO_CLUSTER_REPAIRER_PLUS));
         this.supportedShips.add(new ShipAbility("orcus", Ability.ORCUS_ASSIMILATE));
-        Set.of("aegis", "a-elite", "a-veteran", "hammerclaw", "hammerclaw-plus").forEach(name -> {
-            this.supportedShips.add(new ShipAbility(name, Ability.AEGIS_HP_REPAIR, Ability.AEGIS_SHIELD_REPAIR,
-                    Ability.AEGIS_REPAIR_POD));
-        });
+        Set.of("aegis", "a-elite", "a-veteran", "hammerclaw", "hammerclaw-plus")
+                .forEach(name -> this.supportedShips.add(new ShipAbility(name,
+                        Ability.AEGIS_HP_REPAIR, Ability.AEGIS_SHIELD_REPAIR, Ability.AEGIS_REPAIR_POD)));
     }
 
     @Override
     public void onTickBehavior() {
-        // Use ship abilities if enabled
-        if (this.isEnabledShipAbility()) {
-            // Try to use HP ability
-            if (this.config.hp.ENABLED && this.checkHealth(HealthCheckType.HP)) {
-                this.useAbility(this.currentShip.hp);
-            }
+        handleShipAbilities();
+        handlePetGear();
+    }
 
-            // Try to use shield ability if available
-            if (this.config.shield.ENABLED && this.currentShip.shield != null
-                    && this.checkHealth(HealthCheckType.SHIELD)) {
-                this.useAbility(this.currentShip.shield);
-            }
-
-            // Try to use HP pod if available
-            if (this.config.hpPod.ENABLED && this.currentShip.hpPod != null
-                    && this.checkHealth(HealthCheckType.HP_POD)) {
-                this.useAbility(this.currentShip.hpPod);
-            }
+    private void handleShipAbilities() {
+        if (!this.isEnabledShipAbility())
+            return;
+        // Try to use HP ability
+        if (this.config.hp.enabled && this.checkHealth(HealthCheckType.HP)) {
+            this.useAbility(this.currentShip.hp);
         }
+        // Try to use shield ability if available
+        if (this.config.shield.enabled && this.currentShip.shield != null
+                && this.checkHealth(HealthCheckType.SHIELD)) {
+            this.useAbility(this.currentShip.shield);
+        }
+        // Try to use HP pod if available
+        if (this.config.hpPod.enabled && this.currentShip.hpPod != null
+                && this.checkHealth(HealthCheckType.HP_POD)) {
+            this.useAbility(this.currentShip.hpPod);
+        }
+    }
 
-        // Use PET gear if enabled
-        if (this.isEnabledPetGear()) {
-            // Try to use Combo Repair
-            if (this.pet.hasGear(PetGear.COMBO_REPAIR) && this.checkHealth(HealthCheckType.PET_COMBO)) {
-                if (this.attack.hasTarget() && this.attack.isAttacking()) {
-                    this.attack.stopAttack(); // Stop attacking to avoid skip a gear
-                }
-                this.usePetCombo();
+    private void handlePetGear() {
+        if (!this.isEnabledPetGear())
+            return;
+        // Try to use Combo Repair
+        if (this.pet.hasGear(PetGear.COMBO_REPAIR) && this.checkHealth(HealthCheckType.PET_COMBO)) {
+            if (this.attack.hasTarget() && this.attack.isAttacking()) {
+                this.attack.stopAttack(); // Stop attacking to avoid skip a gear
             }
+            this.usePetCombo();
         }
     }
 
     // Check if any ship ability is enabled and valid for the current ship
     private boolean isEnabledShipAbility() {
-        if (this.config.hp.ENABLED || this.config.shield.ENABLED || this.config.hpPod.ENABLED) {
+        if (this.config.hp.enabled || this.config.shield.enabled || this.config.hpPod.enabled) {
             if (this.valid(this.currentShip)) {
                 return true;
             }
 
-            this.currentShip = this.supportedShips.stream().filter(s -> this.valid(s)).findFirst().orElse(null);
+            this.currentShip = this.supportedShips.stream().filter(this::valid).findFirst().orElse(null);
             return this.valid(this.currentShip);
         }
         return false;
@@ -107,7 +109,7 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
 
     // Check if PET gear is enabled
     private boolean isEnabledPetGear() {
-        return this.config.petCombo.ENABLED && this.pet.isActive();
+        return this.config.petCombo.enabled && this.pet.isActive();
     }
 
     // Validate if the ship matches the current ship type
@@ -150,13 +152,13 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
         Health health = this.hero.getHealth();
         switch (type) {
             case HP:
-                return (health.hpPercent() <= this.config.hp.MIN_HP && !this.isRepair());
+                return (health.hpPercent() <= this.config.hp.min && !this.isRepair());
             case SHIELD:
-                return (health.shieldPercent() <= this.config.shield.MIN_SHIELD && !this.isRepair());
+                return (health.shieldPercent() <= this.config.shield.min && !this.isRepair());
             case HP_POD:
-                return (health.hpPercent() <= this.config.hpPod.MIN_HP && !this.isRepair());
+                return (health.hpPercent() <= this.config.hpPod.min && !this.isRepair());
             case PET_COMBO:
-                return (health.hpPercent() <= this.config.petCombo.MIN_HP && this.isRepair() && !this.hasTarget());
+                return (health.hpPercent() <= this.config.petCombo.min && this.isRepair() && !this.hasTarget());
             default:
                 return false;
         }
