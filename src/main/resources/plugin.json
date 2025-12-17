@@ -1,12 +1,13 @@
 {
 	"name": "SharedPlugin",
 	"author": "Several Devs",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"minVersion": "1.131.6 beta 3",
-	"supportedVersion": "1.131.7",
+	"supportedVersion": "1.132.0 alpha 2",
 	"basePackage": "dev.shared",
 	"features": [
 		"dev.shared.do_gamer.behaviour.SimpleHealing"
 	],
-	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json"
+	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
+	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/download/v0.1.0/SharedPlugin.jar"
 }

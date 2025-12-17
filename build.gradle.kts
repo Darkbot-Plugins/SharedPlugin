@@ -33,12 +33,11 @@ dependencies {
 }
 
 
-tasks.register<Copy>("copyFile") {
-    from(layout.buildDirectory.file("SharedPlugin.jar"))
-    into("SharedPlugin.jar")
+tasks.named<Jar>("jar") {
+    archiveFileName.set("SharedPlugin.jar")
 }
 
 tasks.register<Exec>("signFile") {
-    dependsOn("copyFile")
+    dependsOn("build")
     commandLine("cmd", "/c", "sign.bat")
 }
