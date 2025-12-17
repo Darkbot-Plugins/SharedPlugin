@@ -1,4 +1,4 @@
-package dev.shared.do_gamer.behaviour.simple_healing;
+package dev.shared.do_gamer.behaviour;
 
 import java.util.HashSet;
 import java.util.Set;
