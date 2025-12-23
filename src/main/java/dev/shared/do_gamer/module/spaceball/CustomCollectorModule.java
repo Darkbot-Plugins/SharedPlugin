@@ -9,6 +9,8 @@ import eu.darkbot.shared.modules.CollectorModule;
 public class CustomCollectorModule extends CollectorModule {
 
     private static final double GATE_RADIUS = 800;
+    private static final int MAX_MOVES_AROUND_GATE = 30;
+    private static final int DIRECTION_SWITCH_MOVES = 16;
     private static final double[] OFFSETS_X = new double[8];
     private static final double[] OFFSETS_Y = new double[8];
 
@@ -53,7 +55,7 @@ public class CustomCollectorModule extends CollectorModule {
     }
 
     private boolean skipMoving() {
-        return this.moveCounter > 30;
+        return this.moveCounter > MAX_MOVES_AROUND_GATE;
     }
 
     public void resetMoveCounter() {
@@ -107,7 +109,7 @@ public class CustomCollectorModule extends CollectorModule {
 
         // Update movement direction if two full loops are completed
         this.directionMoves++;
-        if (this.directionMoves >= 16) {
+        if (this.directionMoves >= DIRECTION_SWITCH_MOVES) {
             this.moveClockwise = !this.moveClockwise; // Switch direction
             this.directionMoves = 0; // Reset counter
         }

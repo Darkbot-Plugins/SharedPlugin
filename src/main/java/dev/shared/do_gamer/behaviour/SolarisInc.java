@@ -38,6 +38,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
     private long lastStickyTime = 0; // Last time sticky was active
     private final Set<ShipAbility> supportedShips = new HashSet<>();
     private ShipAbility currentShip = null; // Current ship being used
+    private static final int MIN_ABILITY_COOLDOWN_SECONDS = 30;
 
     public SolarisInc(PluginAPI api) {
         this.attack = api.requireAPI(AttackAPI.class);
@@ -118,7 +119,8 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
     // Use ability if available
     private boolean useAbility() {
         ShipAbility ship = this.getCurrentShip();
-        if (ship == null) return false;
+        if (ship == null)
+            return false;
         double wait = (double) this.config.other.minWait;
         CustomAbility ability = ship.ability;
         return this.items
@@ -161,7 +163,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
 
     private boolean isCooldown() {
         // At least 30 second cooldown with boosters
-        return this.cooldown(30);
+        return this.cooldown(MIN_ABILITY_COOLDOWN_SECONDS);
     }
 
     private boolean cooldown(int seconds) {

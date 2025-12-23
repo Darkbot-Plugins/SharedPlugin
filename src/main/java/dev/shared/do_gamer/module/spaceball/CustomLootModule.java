@@ -7,6 +7,8 @@ import eu.darkbot.shared.modules.LootModule;
 
 public class CustomLootModule extends LootModule {
 
+    private static final int ANGLE_MOVES_BEFORE_FLIP = 20;
+
     private int angleMoves = 0; // Track moves
     private boolean flipAngle = false;
     private boolean isCustom = true; // Flag to indicate custom mode
@@ -100,7 +102,7 @@ public class CustomLootModule extends LootModule {
 
             // Update angle movements
             this.angleMoves++;
-            if (this.angleMoves > 20) {
+            if (this.angleMoves > ANGLE_MOVES_BEFORE_FLIP) {
                 this.flipAngle = !this.flipAngle; // Switch angle
                 this.angleMoves = 0; // Reset counter
             }

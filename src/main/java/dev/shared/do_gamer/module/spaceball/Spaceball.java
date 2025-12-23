@@ -52,6 +52,8 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     private static final String NPC_NAME = "SpaceBall";
     private static final String BOX_NAME = "FROM_SHIP";
     private static final int MAX_TARGET_DISTANCE = 1000; // max distance to keep target considered in range
+    private static final int MAX_NULL_TARGETS_BEFORE_REFRESH = 3;
+    private static final int MAX_RELOAD_ATTEMPTS = 3;
     private boolean autoStart; // Flag to auto start
     private boolean start; // Flag to start the bot
     private boolean stop; // Flag to stop the bot
@@ -561,8 +563,8 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
         if (this.isOnTargetMap()) {
             this.nullTargetCounter++; // Increment the null target counter
         }
-        if (this.nullTargetCounter > 3) {
-            this.doRefresh(); // Refresh the game if counter exceeds 3
+        if (this.nullTargetCounter > MAX_NULL_TARGETS_BEFORE_REFRESH) {
+            this.doRefresh(); // Refresh the game if counter exceeds threshold
         }
     }
 
@@ -599,9 +601,9 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
             // Cannot reload, hero is under attack or low HP
             this.lastTargetLostTime = System.currentTimeMillis();
         } else {
-            if (this.reloadCounter > 3 || !this.isRunningTime()) {
+            if (this.reloadCounter > MAX_RELOAD_ATTEMPTS || !this.isRunningTime()) {
                 this.resetCounters(); // Reset the counters
-                this.stop = true; // Stop the bot if reloads exceed 3 or after end hour
+                this.stop = true; // Stop the bot if reloads exceed threshold or after end hour
             } else {
                 // Refreshing game due to consecutive null targets
                 this.nullTargetCounter = 0; // Reset the null target counter

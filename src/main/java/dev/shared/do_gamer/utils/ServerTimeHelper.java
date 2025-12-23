@@ -15,6 +15,7 @@ public class ServerTimeHelper {
 
     private static long serverOffsetMinutes = -1; // Offset in minutes between local time and server time
     private static long lastOffsetCheckTime = 0; // Timestamp for the last offset check
+    private static final long OFFSET_CHECK_INTERVAL_MS = 5 * 60_000L; // 5 minutes
 
     private ServerTimeHelper() {
         // Private constructor to hide the implicit public one
@@ -36,8 +37,8 @@ public class ServerTimeHelper {
         }
 
         long currentTime = System.currentTimeMillis();
-        // Check server time offset every 5 minutes if not updated
-        if ((currentTime - lastOffsetCheckTime) >= (5 * 60_000L)) {
+        // Check server time offset if not updated
+        if ((currentTime - lastOffsetCheckTime) >= OFFSET_CHECK_INTERVAL_MS) {
             lastOffsetCheckTime = currentTime;
 
             try {
