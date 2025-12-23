@@ -623,8 +623,8 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
         this.pet.setEnabled(false);
         if (!this.traveler.isDone()) {
             this.traveler.setTarget(this.starSystem.getOrCreateMap(this.getExitMap()));
+            this.traveler.tick();
         }
-        this.traveler.tick();
     }
 
     private void stopBot() {
