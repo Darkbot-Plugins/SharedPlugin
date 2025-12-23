@@ -117,8 +117,10 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
 
     // Use ability if available
     private boolean useAbility() {
+        ShipAbility ship = this.getCurrentShip();
+        if (ship == null) return false;
         double wait = (double) this.config.other.minWait;
-        CustomAbility ability = this.getCurrentShip().ability;
+        CustomAbility ability = ship.ability;
         return this.items
                 .useItem(ability, wait, ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED)
                 .isSuccessful();
