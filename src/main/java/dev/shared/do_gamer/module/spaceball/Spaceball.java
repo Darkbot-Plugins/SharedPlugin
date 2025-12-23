@@ -51,6 +51,7 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     private static final String TERGET_MAP = "4-4";
     private static final String NPC_NAME = "SpaceBall";
     private static final String BOX_NAME = "FROM_SHIP";
+    private static final int MAX_TARGET_DISTANCE = 1000; // max distance to keep target considered in range
     private boolean autoStart; // Flag to auto start
     private boolean start; // Flag to start the bot
     private boolean stop; // Flag to stop the bot
@@ -478,7 +479,7 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
         if (!this.loot.getAttacker().hasTarget()) {
             return true;
         }
-        return this.hero.distanceTo(this.loot.getAttacker().getTarget()) > 1000;
+        return this.hero.distanceTo(this.loot.getAttacker().getTarget()) > MAX_TARGET_DISTANCE;
     }
 
     private double calculateDistanceToExitGate() {
