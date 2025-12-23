@@ -56,15 +56,18 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
 
     @Override
     public void onTickBehavior() {
-        if (this.config.enabled) {
-            if (this.bot.getModule() instanceof MapModule) {
-                return; // Keep inactive while traveling
-            }
+        // Early exit if feature is disabled
+        if (this.config == null || !this.config.enabled) {
+            return;
+        }
+        // Keep inactive while traveling
+        if (this.bot.getModule() instanceof MapModule) {
+            return;
+        }
 
-            if (this.valid(this.getCurrentShip())) {
-                this.activateInc();
-            }
-
+        ShipAbility ship = this.getCurrentShip();
+        if (ship != null) {
+            this.activateInc();
         }
     }
 
@@ -73,7 +76,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
         long npcNumb = this.getNpcs().count();
 
         // Activate the Solaris ability if enough NPCs are nearby
-        if (npcNumb >= this.config.npc.minNumb && this.useAbility() && !this.isCooldown()) {
+        if (npcNumb >= this.config.npc.minNumb && !this.isCooldown() && this.useAbility()) {
             // Update last use time
             this.lastUseTime = currentTime;
         }
@@ -119,8 +122,9 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
     // Use ability if available
     private boolean useAbility() {
         ShipAbility ship = this.getCurrentShip();
-        if (ship == null)
+        if (ship == null) {
             return false;
+        }
         double wait = (double) this.config.other.minWait;
         CustomAbility ability = ship.ability;
         return this.items
