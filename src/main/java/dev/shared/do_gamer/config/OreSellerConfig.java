@@ -30,8 +30,8 @@ public class OreSellerConfig {
     @Option("do_gamer.ore_seller.pet")
     public PetConfig pet = new PetConfig();
 
-    @Option("do_gamer.ore_seller.cpu")
-    public CpuConfig cpu = new CpuConfig();
+    @Option("do_gamer.ore_seller.drone")
+    public DroneConfig drone = new DroneConfig();
 
     @Option("do_gamer.ore_seller.ores")
     public OresConfig ores = new OresConfig();
@@ -39,11 +39,11 @@ public class OreSellerConfig {
     public static class SellModeOptions implements Dropdown.Options<String> {
         public static final String BASE = "Base selling";
         public static final String PET = "PET trading";
-        public static final String CPU = "Trade CPU";
+        public static final String DRONE = "HM7 trade drone";
 
         @Override
         public List<String> options() {
-            return Arrays.asList(BASE, PET, CPU);
+            return Arrays.asList(BASE, PET, DRONE);
         }
     }
 
@@ -81,12 +81,12 @@ public class OreSellerConfig {
         public int maxWaitSeconds = 60;
     }
 
-    public static class CpuConfig {
-        @Option("do_gamer.ore_seller.cpu.activation_delay")
+    public static class DroneConfig {
+        @Option("do_gamer.ore_seller.drone.activation_delay")
         @Number(min = 250, max = 2_000, step = 50)
         public int activationDelayMs = 750;
 
-        @Option("do_gamer.ore_seller.cpu.max_wait")
+        @Option("do_gamer.ore_seller.drone.max_wait")
         @Number(min = 5, max = 180, step = 5)
         public int maxWaitSeconds = 60;
     }

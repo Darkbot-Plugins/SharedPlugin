@@ -43,7 +43,7 @@ import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.shared.utils.SafetyFinder;
 import eu.darkbot.util.Timer;
 
-@Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the Trade CPU when cargo is full")
+@Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full")
 public class OreSeller extends TemporalModule implements Behavior, Configurable<OreSellerConfig> {
 
     private static final Logger logger = Logger.getLogger(OreSeller.class.getName());
@@ -88,7 +88,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         NONE,
         BASE,
         PET,
-        CPU
+        DRONE
     }
 
     private enum State {
@@ -100,7 +100,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         CLOSE_TRADE,
         SAFE_POSITIONING,
         PET_PREPARING,
-        CPU_PREPARING
+        DRONE_PREPARING
     }
 
     private enum TimerSlot {
@@ -219,8 +219,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             case PET_PREPARING:
                 this.handlePetPreparing();
                 break;
-            case CPU_PREPARING:
-                this.handleCpuPreparing();
+            case DRONE_PREPARING:
+                this.handleDronePreparing();
                 break;
             default:
                 this.finish(true);
@@ -254,8 +254,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 return "Base trade";
             case PET:
                 return "PET trader";
-            case CPU:
-                return "Trade CPU";
+            case DRONE:
+                return "HM7 trade drone";
             default:
                 return this.humanizeEnum(this.activeMode);
         }
@@ -280,8 +280,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 return "Moving to safe position";
             case PET_PREPARING:
                 return "Preparing PET trade";
-            case CPU_PREPARING:
-                return "Preparing CPU trade";
+            case DRONE_PREPARING:
+                return "Preparing drone trade";
             default:
                 return this.humanizeEnum(this.state);
         }
@@ -306,8 +306,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                     return "switching to trader gear";
                 }
                 return "PET ready";
-            case CPU:
-                return this.timer(TimerSlot.LOAD).isActive() ? "waiting on CPU" : "CPU ready";
+            case DRONE:
+                return this.timer(TimerSlot.LOAD).isActive() ? "waiting on drone" : "drone ready";
             default:
                 break;
         }
@@ -370,8 +370,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         switch (mode) {
             case SellModeOptions.PET:
                 return this.canUsePetTrader() ? ActiveMode.PET : ActiveMode.NONE;
-            case SellModeOptions.CPU:
-                return this.canUseTradeCpu() ? ActiveMode.CPU : ActiveMode.NONE;
+            case SellModeOptions.DRONE:
+                return this.canUseTradeDrone() ? ActiveMode.DRONE : ActiveMode.NONE;
             case SellModeOptions.BASE:
                 return ActiveMode.BASE;
             default:
@@ -387,9 +387,9 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
-     * Confirms the trade CPU item is ready for use.
+     * Confirms the HM7 trade drone item is ready for use.
      */
-    private boolean canUseTradeCpu() {
+    private boolean canUseTradeDrone() {
         return this.items.getItem(SelectableItem.Cpu.HMD_07,
                 ItemFlag.AVAILABLE, ItemFlag.READY, ItemFlag.USABLE)
                 .filter(item -> item.getQuantity() > 0).isPresent();
@@ -421,8 +421,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             case PET:
                 prepared = this.prepareNonBaseSellingState(State.PET_PREPARING);
                 break;
-            case CPU:
-                prepared = this.prepareNonBaseSellingState(State.CPU_PREPARING);
+            case DRONE:
+                prepared = this.prepareNonBaseSellingState(State.DRONE_PREPARING);
                 break;
             default:
                 prepared = false;
@@ -447,8 +447,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             case PET:
                 seconds = this.config.pet.maxWaitSeconds;
                 break;
-            case CPU:
-                seconds = this.config.cpu.maxWaitSeconds;
+            case DRONE:
+                seconds = this.config.drone.maxWaitSeconds;
                 break;
             case BASE:
             default:
@@ -737,8 +737,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.state = State.OPEN_TRADE;
         } else if (this.activeMode == ActiveMode.PET) {
             this.state = State.PET_PREPARING;
-        } else if (this.activeMode == ActiveMode.CPU) {
-            this.state = State.CPU_PREPARING;
+        } else if (this.activeMode == ActiveMode.DRONE) {
+            this.state = State.DRONE_PREPARING;
         } else {
             this.finish(false);
         }
@@ -815,10 +815,10 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
-     * Prepares the Trade CPU for selling by activating it.
+     * Prepares the HM7 trade drone for selling by activating it.
      */
-    private void handleCpuPreparing() {
-        if (!this.canUseTradeCpu()) {
+    private void handleDronePreparing() {
+        if (!this.canUseTradeDrone()) {
             this.finish(false);
             return;
         }
@@ -828,7 +828,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return;
         }
 
-        long delay = Math.max(MIN_ACTIVATION_DELAY_MS, this.config.cpu.activationDelayMs);
+        long delay = Math.max(MIN_ACTIVATION_DELAY_MS, this.config.drone.activationDelayMs);
         this.items.useItem(SelectableItem.Cpu.HMD_07, delay,
                 ItemFlag.AVAILABLE, ItemFlag.READY, ItemFlag.USABLE, ItemFlag.NOT_SELECTED);
     }
