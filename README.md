@@ -8,7 +8,10 @@ We will seek to implement CI/CD in the repository so that developers have a good
 
 ## Current features
 
-- SimpleHealing: This feature allows the bot to heal itself when its health is below a certain threshold. By @do-gamer
+- SimpleHealing: Activate the ship's healing ability and use the PET healing gear. By @do-gamer
+- OreSeller: Sells ores at base, via PET trader gear, or using the Trade CPU when cargo is full. By @do-gamer
+- SolarisInc: Activate Solaris (also Paladin) ability when there are x NPCs nearby. By @do-gamer
+- Spaceball: Attack SpaceBall without fleeing away and collect cargo boxes around the gate. By @do-gamer
 
 ## Contributing
 
