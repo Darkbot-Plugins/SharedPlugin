@@ -394,22 +394,28 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.previousPetEnabled = null;
         this.previousPetGear = null;
         this.timer(TimerSlot.LOAD).disarm();
-        if (mode == ActiveMode.BASE) {
-            if (!this.prepareBaseModeState()) {
-                this.abortStart();
-                return;
-            }
-        } else if (mode == ActiveMode.CPU) {
-            if (!this.prepareNonBaseSellingState(State.CPU_PREPARING)) {
-                this.abortStart();
-                return;
-            }
-        } else {
-            if (!this.prepareNonBaseSellingState(State.PET_PREPARING)) {
-                this.abortStart();
-                return;
-            }
+
+        boolean prepared;
+        switch (mode) {
+            case BASE:
+                prepared = this.prepareBaseModeState();
+                break;
+            case PET:
+                prepared = this.prepareNonBaseSellingState(State.PET_PREPARING);
+                break;
+            case CPU:
+                prepared = this.prepareNonBaseSellingState(State.CPU_PREPARING);
+                break;
+            default:
+                prepared = false;
+                break;
         }
+
+        if (!prepared) {
+            this.abortStart();
+            return;
+        }
+
         this.bot.setModule(this);
     }
 
@@ -657,9 +663,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return;
         }
 
-        // Give the trade window a moment to populate before selling.
-        this.timer(TimerSlot.SELL_DELAY).activate(TRADE_WINDOW_POPULATE_DELAY_MS);
-        this.state = State.SELLING;
+        this.beginSellingAfterTradeWindow();
     }
 
     /**
@@ -671,18 +675,9 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return;
         }
 
-        if (!this.ensurePetTraderGearDuringSelling()) {
-            return;
-        }
+        this.ensurePetTraderGearDuringSelling();
 
-        if (this.activeMode != ActiveMode.BASE) {
-            if (this.hero.isMoving()) {
-                this.movement.stop(false);
-            }
-            if (this.attacker.isAttacking()) {
-                this.attacker.stopAttack();
-            }
-        }
+        this.stopMovementAndAttack();
 
         if (this.sellIndex >= this.sellPlan.size()) {
             if (this.wait(this.timer(TimerSlot.CLOSE_TRADE), CLOSE_TRADE_DELAY_MS)) {
@@ -712,18 +707,28 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     /**
      * Ensures the PET trader gear remains equipped during selling.
      */
-    private boolean ensurePetTraderGearDuringSelling() {
+    private void ensurePetTraderGearDuringSelling() {
         if (this.activeMode != ActiveMode.PET || !this.pet.isActive()) {
-            return true;
+            return; // Only relevant in PET mode
         }
 
         try {
             this.pet.setGear(PetGear.TRADER);
-            return true;
-        } catch (ItemNotEquippedException e) {
-            logger.log(Level.WARNING, "Failed to keep PET trader gear active during ore selling", e);
-            this.finish(false);
-            return false;
+        } catch (ItemNotEquippedException ignored) {
+            // Ignored exception, we just wanted to ensure trader gear is equipped
+        }
+    }
+
+    /**
+     * Halts movement and combat to avoid interference while selling.
+     */
+    private void stopMovementAndAttack() {
+        if (this.hero.isMoving()) {
+            this.movement.stop(false);
+        }
+
+        if (this.attacker.isAttacking()) {
+            this.attacker.stopAttack();
         }
     }
 
@@ -770,9 +775,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         loadTimer.disarm();
 
         if (this.oreApi.canSellOres()) {
-            // Give the trade window a moment to populate before selling.
-            this.timer(TimerSlot.SELL_DELAY).activate(TRADE_WINDOW_POPULATE_DELAY_MS);
-            this.state = State.SELLING;
+            this.beginSellingAfterTradeWindow();
             return;
         }
 
@@ -824,15 +827,22 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         if (this.oreApi.canSellOres()) {
-            // Give the trade window a moment to populate before selling.
-            this.timer(TimerSlot.SELL_DELAY).activate(TRADE_WINDOW_POPULATE_DELAY_MS);
-            this.state = State.SELLING;
+            this.beginSellingAfterTradeWindow();
             return;
         }
 
         long delay = Math.max(MIN_ACTIVATION_DELAY_MS, this.config.cpu.activationDelayMs);
         this.items.useItem(SelectableItem.Cpu.HMD_07, delay,
                 ItemFlag.AVAILABLE, ItemFlag.READY, ItemFlag.USABLE, ItemFlag.NOT_SELECTED);
+    }
+
+    /**
+     * Arms the sell delay and advances to the selling state after the trade UI is
+     * ready.
+     */
+    private void beginSellingAfterTradeWindow() {
+        this.timer(TimerSlot.SELL_DELAY).activate(TRADE_WINDOW_POPULATE_DELAY_MS);
+        this.state = State.SELLING;
     }
 
     /**
@@ -867,7 +877,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private List<OreAPI.Ore> buildSellPlan(ActiveMode mode) {
         List<OreAPI.Ore> plan = new ArrayList<>();
         if (this.config.ores == null) {
-
             return plan;
         }
 
@@ -930,7 +939,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         int amount = this.oreApi.getAmount(OreAPI.Ore.PALLADIUM);
-        return amount < 0 || amount >= MIN_PALLADIUM_STACK;
+        return amount >= MIN_PALLADIUM_STACK;
     }
 
     /**
@@ -964,9 +973,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (!success) {
             logger.fine("Ore seller aborted before finishing run");
         }
-        if (this.activeMode == ActiveMode.BASE || this.activeMode == ActiveMode.CPU) {
-            this.oreApi.showTrade(false, null);
-        }
+        this.oreApi.showTrade(false, null);
         if (this.previousPetEnabled != null || this.previousPetGear != null) {
             this.restorePetSettings();
         }
@@ -1014,7 +1021,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
         this.previousPetEnabled = null;
         this.previousPetGear = null;
-
     }
 
     /**
