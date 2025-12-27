@@ -333,7 +333,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         // Keep inactive in GG maps when in base mode
         GameMap currentMap = this.starSystem.getCurrentMap();
-        if (currentMap != null && currentMap.isGG() && this.config.mode.equals(SellModeOptions.BASE)) {
+        if (currentMap != null && currentMap.isGG() && SellModeOptions.BASE.equals(this.config.mode)) {
             return false;
         }
 
