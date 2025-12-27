@@ -48,8 +48,8 @@ public class OreSellerConfig {
     }
 
     public static class TradeMapOptions implements Dropdown.Options<String> {
-        public static final String X1 = "x-1";
-        public static final String X8 = "x-8";
+        public static final String X1 = "X-1";
+        public static final String X8 = "X-8";
         public static final String FIVE_TWO = "5-2";
 
         @Override
