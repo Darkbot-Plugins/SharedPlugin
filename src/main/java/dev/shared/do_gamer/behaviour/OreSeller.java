@@ -184,10 +184,16 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         Timer failSafe = this.timer(TimerSlot.FAIL_SAFE);
-        if (failSafe.isArmed() && failSafe.isInactive()) {
-            logger.warning("Ore seller timed out");
-            this.finish(false);
-            return;
+        if (failSafe.isArmed()) {
+            if (this.isFailSafeExemptState()) {
+                // Reset the fail-safe timer in exempt states
+                long timeout = this.resolveFailSafeMillis(this.activeMode);
+                failSafe.activate(timeout);
+            } else if (failSafe.isInactive()) {
+                logger.warning("Ore seller timed out");
+                this.finish(false);
+                return;
+            }
         }
 
         switch (this.state) {
@@ -573,6 +579,20 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.movement.stop(false);
         this.state = this.postSafetyState;
         this.postSafetyState = null;
+    }
+
+    /**
+     * Determines if the current state is exempt from fail-safe timeout.
+     */
+    private boolean isFailSafeExemptState() {
+        switch (this.state) {
+            case TRAVEL_TO_BASE:
+            case MOVE_TO_REFINERY:
+            case SAFE_POSITIONING:
+                return true;
+            default:
+                return false;
+        }
     }
 
     /**
