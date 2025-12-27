@@ -521,12 +521,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.LOAD).disarm();
 
         this.traveler.tick();
-
-        if (this.traveler.isDone() && !Objects.equals(this.starSystem.getCurrentMap(), this.desiredBaseMap)) {
-            String msg = String.format("Traveler failed to reach %s for ore selling", this.desiredBaseMapName);
-            logger.warning(msg);
-            this.finish(false);
-        }
     }
 
     /**
