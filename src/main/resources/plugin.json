@@ -7,6 +7,7 @@
 	"basePackage": "dev.shared",
 	"features": [
 		"dev.shared.do_gamer.behaviour.SimpleHealing",
+		"dev.shared.do_gamer.behaviour.OreSeller",
 		"dev.shared.do_gamer.behaviour.SolarisInc",
 		"dev.shared.do_gamer.module.spaceball.Spaceball"
 	],
