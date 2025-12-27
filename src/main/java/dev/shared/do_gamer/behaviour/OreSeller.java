@@ -12,6 +12,7 @@ import java.util.logging.Logger;
 import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
+import dev.shared.do_gamer.utils.CaptchaBoxDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -325,7 +326,24 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     private boolean isReadyForBehavior() {
-        return this.config != null && this.config.enabled;
+        // Ensure module is enabled in config
+        if (this.config == null || !this.config.enabled) {
+            return false;
+        }
+
+        // Keep inactive in GG maps when in base mode
+        GameMap currentMap = this.starSystem.getCurrentMap();
+        if (currentMap != null && currentMap.isGG() && this.config.mode.equals(SellModeOptions.BASE)) {
+            return false;
+        }
+
+        // Keep inactive while attacking
+        if (this.attacker.hasTarget() && this.attacker.isAttacking()) {
+            return false;
+        }
+
+        // Keep inactive if captcha boxes detected
+        return !CaptchaBoxDetector.hasCaptchaBoxes(this.entities);
     }
 
     /**
@@ -556,10 +574,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return;
         }
 
-        if (this.attacker.isAttacking()) {
-            this.attacker.stopAttack();
-        }
-
         SafetyFinder.Escaping escapeState = this.safetyFinder.state();
         if (escapeState != SafetyFinder.Escaping.WAITING && escapeState != SafetyFinder.Escaping.NONE) {
             this.safetyFinder.setRefreshing(true);
@@ -671,7 +685,9 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         this.ensurePetTraderGearDuringSelling();
 
-        this.stopMovementAndAttack();
+        if (this.hero.isMoving()) {
+            this.movement.stop(false);
+        }
 
         if (this.sellIndex >= this.sellPlan.size()) {
             if (this.wait(this.timer(TimerSlot.CLOSE_TRADE), CLOSE_TRADE_DELAY_MS)) {
@@ -710,19 +726,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.pet.setGear(PetGear.TRADER);
         } catch (ItemNotEquippedException ignored) {
             // Ignored exception, we just wanted to ensure trader gear is equipped
-        }
-    }
-
-    /**
-     * Halts movement and combat to avoid interference while selling.
-     */
-    private void stopMovementAndAttack() {
-        if (this.hero.isMoving()) {
-            this.movement.stop(false);
-        }
-
-        if (this.attacker.isAttacking()) {
-            this.attacker.stopAttack();
         }
     }
 
