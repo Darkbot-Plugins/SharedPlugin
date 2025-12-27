@@ -75,6 +75,13 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private static final int BASE_DOCKING_DISTANCE = 300;
     private static final int MIN_PALLADIUM_STACK = 15;
     private static final int SELL_INTERVAL_MS = 750;
+    private static final double MIN_TRIGGER_PERCENT = 0.05;
+    private static final double MAX_TRIGGER_PERCENT = 0.99;
+    private static final long MIN_ACTIVATION_DELAY_MS = 250L;
+    private static final long TRAVEL_LOAD_DELAY_MS = 3_000L;
+    private static final long DOCKING_LOAD_DELAY_MS = 2_000L;
+    private static final long TRADE_WINDOW_POPULATE_DELAY_MS = 1_000L;
+    private static final long CLOSE_TRADE_DELAY_MS = 1_000L;
 
     private enum ActiveMode {
         NONE,
@@ -158,8 +165,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         List<OreAPI.Ore> plan = this.buildSellPlan(desiredMode);
-        if ((desiredMode == ActiveMode.BASE || desiredMode == ActiveMode.CPU)
-                && (plan.isEmpty() || !this.hasOreStock(plan))) {
+        if (plan.isEmpty() || !this.hasOreStock(plan)) {
             return;
         }
 
@@ -493,7 +499,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         if (Objects.equals(this.starSystem.getCurrentMap(), this.desiredBaseMap)) {
-            if (this.wait(this.timer(TimerSlot.LOAD), 3_000L)) {
+            if (this.wait(this.timer(TimerSlot.LOAD), TRAVEL_LOAD_DELAY_MS)) {
                 return;
             }
             this.state = State.MOVE_TO_REFINERY;
@@ -529,7 +535,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         this.movement.stop(false);
-        if (this.wait(this.timer(TimerSlot.LOAD), 2_000L)) {
+        if (this.wait(this.timer(TimerSlot.LOAD), DOCKING_LOAD_DELAY_MS)) {
             return;
         }
         this.state = State.OPEN_TRADE;
@@ -632,7 +638,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         // Give the trade window a moment to populate before selling.
-        this.timer(TimerSlot.SELL_DELAY).activate(1_000L);
+        this.timer(TimerSlot.SELL_DELAY).activate(TRADE_WINDOW_POPULATE_DELAY_MS);
         this.state = State.SELLING;
     }
 
@@ -659,7 +665,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         if (this.sellIndex >= this.sellPlan.size()) {
-            if (this.wait(this.timer(TimerSlot.CLOSE_TRADE), 1_000L)) {
+            if (this.wait(this.timer(TimerSlot.CLOSE_TRADE), CLOSE_TRADE_DELAY_MS)) {
                 return;
             }
             this.state = State.CLOSE_TRADE;
@@ -736,14 +742,16 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return;
         }
 
-        long delay = Math.max(250L, this.config.pet.activationDelayMs);
-        if (this.timer(TimerSlot.LOAD).isActive()) {
+        long delay = Math.max(MIN_ACTIVATION_DELAY_MS, this.config.pet.activationDelayMs);
+        Timer loadTimer = this.timer(TimerSlot.LOAD);
+        if (loadTimer.isActive()) {
             return;
         }
+        loadTimer.disarm();
 
         if (this.oreApi.canSellOres()) {
             // Give the trade window a moment to populate before selling.
-            this.timer(TimerSlot.SELL_DELAY).activate(1_000L);
+            this.timer(TimerSlot.SELL_DELAY).activate(TRADE_WINDOW_POPULATE_DELAY_MS);
             this.state = State.SELLING;
             return;
         }
@@ -752,8 +760,10 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.previousPetEnabled = this.pet.isEnabled();
         }
 
-        if (this.config.pet.keepEnabled) {
+        if (this.config.pet.keepEnabled && !this.pet.isEnabled()) {
             this.pet.setEnabled(true);
+            loadTimer.activate(delay);
+            return;
         }
 
         if (!this.pet.isActive()) {
@@ -764,7 +774,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (gear == PetGear.TRADER) {
             try {
                 this.pet.setGear(PetGear.PASSIVE); // Unequip trader gear
-                this.timer(TimerSlot.LOAD).activate(delay);
+                loadTimer.activate(delay);
             } catch (ItemNotEquippedException ignored) {
                 // Ignored exception, we just wanted to unequip trader gear
             }
@@ -777,6 +787,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         try {
             this.pet.setGear(PetGear.TRADER);
+            loadTimer.activate(delay);
         } catch (ItemNotEquippedException e) {
             logger.log(Level.WARNING, "Failed to equip PET trader gear for ore selling", e);
             this.finish(false);
@@ -794,12 +805,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         if (this.oreApi.canSellOres()) {
             // Give the trade window a moment to populate before selling.
-            this.timer(TimerSlot.SELL_DELAY).activate(1_000L);
+            this.timer(TimerSlot.SELL_DELAY).activate(TRADE_WINDOW_POPULATE_DELAY_MS);
             this.state = State.SELLING;
             return;
         }
 
-        long delay = Math.max(250L, this.config.cpu.activationDelayMs);
+        long delay = Math.max(MIN_ACTIVATION_DELAY_MS, this.config.cpu.activationDelayMs);
         this.items.useItem(SelectableItem.Cpu.HMD_07, delay,
                 ItemFlag.AVAILABLE, ItemFlag.READY, ItemFlag.USABLE, ItemFlag.NOT_SELECTED);
     }
@@ -827,7 +838,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      */
     private double normalizeTriggerThreshold() {
         double value = this.config.triggerPercent;
-        return Math.max(0.05, Math.min(0.99, value));
+        return Math.max(MIN_TRIGGER_PERCENT, Math.min(MAX_TRIGGER_PERCENT, value));
     }
 
     /**
