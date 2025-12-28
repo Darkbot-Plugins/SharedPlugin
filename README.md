@@ -8,9 +8,9 @@ We will seek to implement CI/CD in the repository so that developers have a good
 
 ## Current features
 
-- SimpleHealing: Activate the ship's healing ability and use the PET healing gear. By @do-gamer
-- OreSeller: Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full. By @do-gamer
-- SolarisInc: Activate Solaris (also Paladin) ability when there are x NPCs nearby. By @do-gamer
+- Simple Healing: Activate the ship's healing ability and use the PET healing gear. By @do-gamer
+- Ore Seller: Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full. By @do-gamer
+- Solaris Ability: Activate Solaris (also Paladin) ability when there are x NPCs nearby. By @do-gamer
 - Spaceball: Attack SpaceBall without fleeing away and collect cargo boxes around the gate. By @do-gamer
 
 ## Contributing
