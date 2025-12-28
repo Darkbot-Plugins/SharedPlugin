@@ -29,7 +29,7 @@ import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.shared.utils.MapTraveler;
 
-@Feature(name = "Spaceball", description = "Attack SpaceBall without fleeing away and collect cargo boxes around the gate")
+@Feature(name = "SpaceBall", description = "Attack SpaceBall without fleeing away and collect cargo boxes around the gate")
 public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, InstructionProvider {
 
     private final CustomLootModule loot;

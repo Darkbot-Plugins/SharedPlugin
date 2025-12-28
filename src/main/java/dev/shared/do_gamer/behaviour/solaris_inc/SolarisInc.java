@@ -23,7 +23,7 @@ import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.shared.modules.MapModule;
 
-@Feature(name = "Solaris Ability", description = "Activate Solaris (also Paladin) ability when there are x NPCs nearby")
+@Feature(name = "Solaris Ability", description = "Activate Solaris (also Paladin) ability when there are a certain number of NPCs nearby")
 public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, NpcExtraProvider {
     private final AttackAPI attack;
     private final BotAPI bot;
