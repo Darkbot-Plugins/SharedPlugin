@@ -1,5 +1,5 @@
 
-package dev.shared.do_gamer.utils;
+package dev.shared.do_gamer.behaviour.solaris_inc;
 
 import java.util.Locale;
 

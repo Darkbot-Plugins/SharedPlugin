@@ -1,4 +1,4 @@
-package dev.shared.do_gamer.behaviour;
+package dev.shared.do_gamer.behaviour.solaris_inc;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -8,8 +8,6 @@ import com.github.manolo8.darkbot.config.NpcExtraFlag;
 import com.github.manolo8.darkbot.core.itf.NpcExtraProvider;
 
 import dev.shared.do_gamer.config.SolarisIncConfig;
-import dev.shared.do_gamer.utils.CustomAbility;
-import dev.shared.do_gamer.utils.SolarisIncExtraNpcFlagsEnum;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -141,7 +139,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
                 .filter(npc -> {
                     if (npc.distanceTo(heroX, heroY) <= this.config.npc.maxDistance) {
                         if (this.config.npc.extraFlagOnly) {
-                            return npc.getInfo().hasExtraFlag(SolarisIncExtraNpcFlagsEnum.SOLARIS_ABILITY);
+                            return npc.getInfo().hasExtraFlag(ExtraNpcFlagsEnum.SOLARIS_ABILITY);
                         }
                         return true;
                     }
@@ -195,7 +193,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
 
     @Override
     public NpcExtraFlag[] values() {
-        return SolarisIncExtraNpcFlagsEnum.values();
+        return ExtraNpcFlagsEnum.values();
     }
 
     @Override

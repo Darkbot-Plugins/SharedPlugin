@@ -1,15 +1,15 @@
-package dev.shared.do_gamer.utils;
+package dev.shared.do_gamer.behaviour.solaris_inc;
 
 import com.github.manolo8.darkbot.config.NpcExtraFlag;
 
-public enum SolarisIncExtraNpcFlagsEnum implements NpcExtraFlag {
+public enum ExtraNpcFlagsEnum implements NpcExtraFlag {
     SOLARIS_ABILITY("SA", "Solaris Ability", "NPC that can trigger Solaris ability");
 
     private final String shortName;
     private final String name;
     private final String description;
 
-    SolarisIncExtraNpcFlagsEnum(String shortName, String name, String description) {
+    ExtraNpcFlagsEnum(String shortName, String name, String description) {
         this.shortName = shortName;
         this.name = name;
         this.description = description;
