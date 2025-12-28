@@ -9,7 +9,8 @@
 		"dev.shared.do_gamer.behaviour.SimpleHealing",
 		"dev.shared.do_gamer.behaviour.OreSeller",
 		"dev.shared.do_gamer.behaviour.solaris_inc.SolarisInc",
-		"dev.shared.do_gamer.module.spaceball.Spaceball"
+		"dev.shared.do_gamer.module.spaceball.Spaceball",
+		"dev.shared.do_gamer.behaviour.FixPetStuck"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
 	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/download/v0.2.1/SharedPlugin.jar"
