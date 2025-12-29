@@ -59,8 +59,12 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
      * Monitors the PET status and triggers a reload if it gets stuck.
      */
     private void monitorPet() {
-        if (!this.pet.isEnabled() || !this.attacker.hasTarget() || !this.attacker.isAttacking()) {
-            return;
+        if (!this.pet.isEnabled()) {
+            return; // PET is disabled, nothing to monitor
+        }
+
+        if (!this.attacker.hasTarget() || !this.attacker.isAttacking()) {
+            return; // Not in combat, no need to monitor PET
         }
 
         if (this.pet.isActive()) {
