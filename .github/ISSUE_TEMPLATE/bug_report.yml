@@ -1,0 +1,68 @@
+name: Bug Report
+description: Create a report to help us improve
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Prerequisites
+      options:
+        - label: I have searched the issues and there is no duplicate
+          required: true
+        - label: I confirm that I am on the latest version of the bot
+          required: true
+        - label: I confirm that someone else has reproduced the bug
+          required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: Describe what is happening.
+      placeholder: The bot does X when it should do Y...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: Describe how it should work.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: List the steps to reproduce the bug.
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. See error '...'
+    validations:
+      required: true
+  - type: textarea
+    id: additional-info
+    attributes:
+      label: Additional Information
+      description: Screenshots, videos, logs, etc.
+  - type: input
+    id: bot-version
+    attributes:
+      label: Bot Version
+      placeholder: e.g. 1.13.17 beta 109
+    validations:
+      required: true
+  - type: input
+    id: plugin-version
+    attributes:
+      label: Plugin Version
+      placeholder: e.g. 1.0.0
+    validations:
+      required: true
+  - type: input
+    id: feature
+    attributes:
+      label: Affected Feature
+      description: In which feature does the bug occur?
+    validations:
+      required: true
