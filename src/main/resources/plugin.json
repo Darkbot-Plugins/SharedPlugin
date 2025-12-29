@@ -1,7 +1,7 @@
 {
 	"name": "SharedPlugin",
 	"author": "Several Devs",
-	"version": "0.2.1",
+	"version": "0.3.0",
 	"minVersion": "1.131.6 beta 3",
 	"supportedVersion": "1.132.0 alpha 2",
 	"basePackage": "dev.shared",
@@ -13,5 +13,5 @@
 		"dev.shared.do_gamer.behaviour.FixPetStuck"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
-	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/download/v0.2.1/SharedPlugin.jar"
+	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/download/v0.3.0/SharedPlugin.jar"
 }
