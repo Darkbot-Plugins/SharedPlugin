@@ -107,6 +107,7 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
             return;
         }
 
+        System.out.println("PET was stuck, reloading the game.");
         this.bot.handleRefresh();
         this.lastReloadAt = System.currentTimeMillis();
         this.reset();
