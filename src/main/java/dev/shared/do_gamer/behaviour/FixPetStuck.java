@@ -26,7 +26,7 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
     private long stuckSince = -1L;
     private long lastReloadAt = 0L;
     private boolean reload = false;
-    private static final long POST_RELOAD_GRACE_MS = 20_000L;
+    private static final long POST_RELOAD_GRACE_MS = 60_000L;
 
     public FixPetStuck(PluginAPI api) {
         this.bot = api.requireAPI(BotAPI.class);
