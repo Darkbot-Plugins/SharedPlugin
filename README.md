@@ -13,6 +13,7 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - Solaris Ability: Activate Solaris (also Paladin) ability when there are a certain number of NPCs nearby. By @do-gamer
 - SpaceBall: Attack SpaceBall without fleeing away and collect cargo boxes around the gate. By @do-gamer
 - Fix PET stuck: Reloads the game when the PET window gets stuck. By @do-gamer
+- Repair PET: Repairs your PET when its health drops below a certain threshold. By @do-gamer
 
 ## Contributing
 
