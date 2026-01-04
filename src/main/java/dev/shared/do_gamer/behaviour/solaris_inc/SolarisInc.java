@@ -15,12 +15,14 @@ import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.items.ItemFlag;
+import eu.darkbot.api.game.items.SelectableItem;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
+import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.shared.modules.MapModule;
 
 @Feature(name = "Solaris Ability", description = "Activate Solaris (also Paladin) ability when there are a certain number of NPCs nearby")
@@ -31,6 +33,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
     private final EntitiesAPI entities;
     private final HeroItemsAPI items;
     private final MovementAPI movement;
+    private final PetAPI pet;
     private SolarisIncConfig config;
     private long lastUseTime = 0; // Last use time of the ability
     private long lastStickyTime = 0; // Last time sticky was active
@@ -45,6 +48,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
+        this.pet = api.requireAPI(PetAPI.class);
 
         // Define supported ships and their ability
         this.supportedShips.add(new ShipAbility("solaris", 10, CustomAbility.SOLARIS_INC));
@@ -77,6 +81,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
         if (npcNumb >= this.config.npc.minNumb && !this.isCooldown() && this.useAbility()) {
             // Update last use time
             this.lastUseTime = currentTime;
+            this.tryToUsePetKamikaze();
         }
 
         // Stick to NPCs if ability was recently used
@@ -128,6 +133,16 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
         return this.items
                 .useItem(ability, wait, ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED)
                 .isSuccessful();
+    }
+
+    // Try to use Pet Kamikaze if available
+    private void tryToUsePetKamikaze() {
+        if (!this.config.other.usePetKamikaze || !this.pet.isEnabled() || !this.pet.isActive()) {
+            return; // Feature disabled or PET inactive
+        }
+        double wait = (double) this.config.other.minWait;
+        this.items.useItem(SelectableItem.Pet.G_KK1, wait, ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE,
+                ItemFlag.NOT_SELECTED);
     }
 
     private Stream<Npc> getNpcs() {
