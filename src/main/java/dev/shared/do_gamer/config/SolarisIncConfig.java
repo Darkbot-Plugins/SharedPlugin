@@ -48,6 +48,9 @@ public class SolarisIncConfig {
         @Option("do_gamer.solaris_inc.config.other.min_wait")
         @Number(min = 200, max = 1000, step = 50)
         public int minWait = 500;
+
+        @Option("do_gamer.solaris_inc.config.other.use_pet_kamikaze")
+        public boolean usePetKamikaze = false;
     }
 
 }

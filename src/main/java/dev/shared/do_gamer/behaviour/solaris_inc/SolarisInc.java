@@ -15,6 +15,7 @@ import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.items.ItemFlag;
+import eu.darkbot.api.game.items.SelectableItem;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
@@ -77,6 +78,7 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
         if (npcNumb >= this.config.npc.minNumb && !this.isCooldown() && this.useAbility()) {
             // Update last use time
             this.lastUseTime = currentTime;
+            this.tryToUsePetKamikaze();
         }
 
         // Stick to NPCs if ability was recently used
@@ -128,6 +130,16 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
         return this.items
                 .useItem(ability, wait, ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED)
                 .isSuccessful();
+    }
+
+    // Try to use Pet Kamikaze if available
+    private void tryToUsePetKamikaze() {
+        if (!this.config.other.usePetKamikaze) {
+            return; // Feature disabled
+        }
+        double wait = (double) this.config.other.minWait;
+        this.items.useItem(SelectableItem.Pet.G_KK1, wait, ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE,
+                ItemFlag.NOT_SELECTED);
     }
 
     private Stream<Npc> getNpcs() {
