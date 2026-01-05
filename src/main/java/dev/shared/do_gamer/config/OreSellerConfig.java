@@ -63,7 +63,7 @@ public class OreSellerConfig {
         @Dropdown(options = TradeMapOptions.class)
         public String map = TradeMapOptions.X1;
 
-        @Option("do_gamer.ore_seller.base.max_wait")
+        @Option("do_gamer.ore_seller.max_wait")
         @Number(min = 10, max = 300, step = 5)
         public int maxWaitSeconds = 90;
     }
@@ -72,21 +72,21 @@ public class OreSellerConfig {
         @Option("do_gamer.ore_seller.pet.keep_enabled")
         public boolean keepEnabled = true;
 
-        @Option("do_gamer.ore_seller.pet.activation_delay")
+        @Option("do_gamer.ore_seller.activation_delay")
         @Number(min = 250, max = 2_000, step = 50)
         public int activationDelayMs = 750;
 
-        @Option("do_gamer.ore_seller.pet.max_wait")
+        @Option("do_gamer.ore_seller.max_wait")
         @Number(min = 5, max = 180, step = 5)
         public int maxWaitSeconds = 60;
     }
 
     public static class DroneConfig {
-        @Option("do_gamer.ore_seller.drone.activation_delay")
+        @Option("do_gamer.ore_seller.activation_delay")
         @Number(min = 250, max = 2_000, step = 50)
         public int activationDelayMs = 750;
 
-        @Option("do_gamer.ore_seller.drone.max_wait")
+        @Option("do_gamer.ore_seller.max_wait")
         @Number(min = 5, max = 180, step = 5)
         public int maxWaitSeconds = 60;
     }
