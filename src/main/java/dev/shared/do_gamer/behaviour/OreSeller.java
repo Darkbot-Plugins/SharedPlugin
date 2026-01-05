@@ -174,6 +174,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     @Override
+    public boolean canRefresh() {
+        // Prevent refresh while active
+        return !this.isActive();
+    }
+
+    @Override
     public void onTickModule() {
         if (!this.isActive()) {
             return;
