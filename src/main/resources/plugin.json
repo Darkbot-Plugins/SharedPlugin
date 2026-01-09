@@ -11,7 +11,8 @@
 		"dev.shared.do_gamer.behaviour.solaris_inc.SolarisInc",
 		"dev.shared.do_gamer.module.spaceball.Spaceball",
 		"dev.shared.do_gamer.behaviour.FixPetStuck",
-		"dev.shared.do_gamer.behaviour.RepairPet"
+		"dev.shared.do_gamer.behaviour.RepairPet",
+		"dev.shared.do_gamer.task.CloseAdOffer"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
 	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/download/v0.4.2/SharedPlugin.jar"
