@@ -14,6 +14,7 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - SpaceBall: Attack SpaceBall without fleeing away and collect cargo boxes around the gate. By @do-gamer
 - Fix PET stuck: Reloads the game when the PET window gets stuck. By @do-gamer
 - Repair PET: Repairs your PET when its health drops below a certain threshold. By @do-gamer
+- Close AD Offer: Automatically closes AD Offer on the left side (temporary solution until the bot is fixed). By @do-gamer
 
 ## Contributing
 
