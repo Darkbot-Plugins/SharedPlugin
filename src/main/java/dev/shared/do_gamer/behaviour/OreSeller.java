@@ -338,9 +338,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         // Keep inactive in GG maps when in base mode or any NPCs are present
-        GameMap currentMap = this.starSystem.getCurrentMap();
-        if (currentMap != null && currentMap.isGG()
-                && (SellModeOptions.BASE.equals(this.config.mode) || this.hasActiveNpc())) {
+        if (this.isGGMap() && (SellModeOptions.BASE.equals(this.config.mode) || this.hasActiveNpc())) {
             return false;
         }
 
@@ -366,6 +364,14 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private boolean isCooldownActive() {
         Timer cooldown = this.timer(TimerSlot.COOL_DOWN);
         return cooldown.isArmed() && cooldown.isActive();
+    }
+
+    /**
+     * Checks if the current map is a GG map.
+     */
+    private boolean isGGMap() {
+        GameMap currentMap = this.starSystem.getCurrentMap();
+        return currentMap != null && currentMap.isGG();
     }
 
     /**
@@ -516,6 +522,10 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Sets up the non-base selling state with safety positioning.
      */
     private boolean prepareNonBaseSellingState(State nextState) {
+        if (this.isGGMap()) {
+            this.state = nextState;
+            return true; // No need for safety finder in GG maps
+        }
         if (this.safetyFinder == null) {
             logger.warning("Safety finder unavailable for ore selling");
             return false;
