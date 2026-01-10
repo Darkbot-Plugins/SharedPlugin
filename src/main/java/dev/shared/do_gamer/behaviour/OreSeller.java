@@ -337,9 +337,10 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return false;
         }
 
-        // Keep inactive in GG maps when in base mode
+        // Keep inactive in GG maps when in base mode or any NPCs are present
         GameMap currentMap = this.starSystem.getCurrentMap();
-        if (currentMap != null && currentMap.isGG() && SellModeOptions.BASE.equals(this.config.mode)) {
+        if (currentMap != null && currentMap.isGG()
+                && (SellModeOptions.BASE.equals(this.config.mode) || this.hasActiveNpc())) {
             return false;
         }
 
@@ -365,6 +366,13 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private boolean isCooldownActive() {
         Timer cooldown = this.timer(TimerSlot.COOL_DOWN);
         return cooldown.isArmed() && cooldown.isActive();
+    }
+
+    /**
+     * Checks if have any NPCs present on the current map (useful for GG maps).
+     */
+    private boolean hasActiveNpc() {
+        return this.entities != null && !this.entities.getNpcs().isEmpty();
     }
 
     /**
