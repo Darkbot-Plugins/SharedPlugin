@@ -524,6 +524,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private boolean prepareNonBaseSellingState(State nextState) {
         if (this.isGGMap()) {
             this.state = nextState;
+            this.movement.stop(false);
             return true; // No need for safety finder in GG maps
         }
         if (this.safetyFinder == null) {
