@@ -13,29 +13,62 @@ This plugin is designed to make it easier for multiple developers to implement t
 
 ## Contribute Code
 
-To contribute code you can make Pull requests to this repository for review. To do this you have to clone the repository, create a branch, add your code and test it.
+To contribute code, please use the fork-and-pull workflow. This makes it easy for anyone to propose changes without needing write access to the main repository. All contributions will be reviewed and must follow DarkBot's rules.
 
-Everyone can implement their functionalities, but the code will be reviewed and features that do not comply with DarkBot's rules will not be accepted.
+Step-by-step guide
 
-### Clone the repository
+1) Create a fork
 
-The repository can be easily cloned using
+- On GitHub, click the "Fork" button in the top-right corner of the repository page to create a copy under your account.
+
+Note: You only need to create a fork the first time you contribute. If you already have a fork, skip this step and clone or update your existing fork.
+
+2) Clone your fork
+
+- If you already have a fork and cloned it previously, first sync your fork on GitHub with the upstream repository (recommended), then update your local clone. 
+
+On GitHub: open your fork page → click "Sync fork" → "Update branch".
 
 ```bash
-$ git clone https://github.com/Darkbot-Plugins/SharedPlugin.git
+# after syncing your fork on GitHub (Sync fork → Update branch):
+git checkout main
+git fetch origin
+git pull --rebase origin main
 ```
 
-### Create a branch
+- Otherwise, clone your fork with:
 
-[Oficial Github Documentation](https://docs.github.com/articles/creating-and-deleting-branches-within-your-repository)
+```bash
+git clone git@github.com:<your-username>/SharedPlugin.git
+cd SharedPlugin
+```
 
-### Add your code
+3) Create a branch in your fork
 
-As a plugin, it has two main dependencies for the code to be executed, those dependencies are [DarkBotAPI](https://github.com/darkbot-reloaded/DarkBotAPI) and [DarkBot](https://github.com/darkbot-reloaded/DarkBot).
+```bash
+git checkout -b my-feature-branch
+```
 
-That said, I recommend that you have knowledge of how both dependencies work as you need them to make new features and test the plugin's functionality.
+4) Add your code and test it
 
-One of the main rules when making changes is that the direct use of the DarkBot dependency should be avoided and the correct approach is to use the DarkBotAPI.
+- Implement your changes and run any local tests or manual checks.
+- This plugin depends on [DarkBotAPI](https://github.com/darkbot-reloaded/DarkBotAPI) and [DarkBot](https://github.com/darkbot-reloaded/DarkBot). Prefer using `DarkBotAPI` instead of referencing `DarkBot` directly.
+
+5) Push your branch to your fork
+
+```bash
+git add .
+git commit -m "Short, descriptive message"
+git push -u origin my-feature-branch
+```
+
+6) Make a Pull Request to the main repository
+
+- On GitHub, open a Pull Request from your fork/branch to the main repository's `main` branch (or the branch indicated in the repo). Describe what your change does and link any related issues.
+
+Notes
+- Follow repository coding conventions and keep changes focused and small when possible.
+- If your PR requires special testing steps, include them in the PR description so reviewers can reproduce.
 
 ### Build the plugin
 
