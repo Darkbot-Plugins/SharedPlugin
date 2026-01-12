@@ -1,0 +1,31 @@
+{
+	"name": "SharedPlugin",
+	"author": "Several Devs",
+	"version": "0.5.1",
+	"minVersion": "1.131.6 beta 3",
+	"supportedVersion": "1.132.0 alpha 2",
+	"basePackage": "dev.shared",
+	"features": [
+		"dev.shared.do_gamer.behaviour.SimpleHealing",
+		"dev.shared.do_gamer.behaviour.OreSeller",
+		"dev.shared.do_gamer.behaviour.solaris_inc.SolarisInc",
+		"dev.shared.do_gamer.module.spaceball.Spaceball",
+		"dev.shared.do_gamer.behaviour.FixPetStuck",
+		"dev.shared.do_gamer.behaviour.RepairPet",
+		"dev.shared.do_gamer.task.CloseAdOffer",
+        "dev.shared.berti.modules.BehemothModule",
+        "dev.shared.berti.modules.StrokelightModule",
+        "dev.shared.berti.modules.InvokeModule",
+        "dev.shared.berti.modules.BaseDestroyer",
+        "dev.shared.berti.modules.BaseDefendModule",
+        "dev.shared.berti.modules.PvPModule",
+        "dev.shared.berti.behaviors.EnemyTracker",
+        "dev.shared.berti.behaviors.CustomAbilities",
+        "dev.shared.berti.behaviors.CustomTechs",
+        "dev.shared.berti.behaviors.SimpleItems",
+        "dev.shared.berti.behaviors.SimplePet",
+        "dev.shared.berti.behaviors.ConfigChanger"
+	],
+	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
+	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/latest/download/SharedPlugin.jar"
+}
