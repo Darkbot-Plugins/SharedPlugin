@@ -36,7 +36,7 @@ git fetch origin
 git pull --rebase origin main
 ```
 
-- else clone your fork with:
+- Otherwise, clone your fork with:
 
 ```bash
 git clone git@github.com:<your-username>/SharedPlugin.git
