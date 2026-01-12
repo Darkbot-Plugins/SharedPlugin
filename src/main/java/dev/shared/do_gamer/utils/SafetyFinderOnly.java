@@ -31,7 +31,12 @@ public class SafetyFinderOnly extends SafetyFinder {
         this.jumpState = JumpState.CURRENT_MAP;
         this.activeTick();
 
-        if (this.escape == Escaping.NONE || this.safety == null) {
+        if (this.safety == null) {
+            this.escape = Escaping.NONE; // No valid safety to reach, mark as done to avoid loops
+            return true;
+        }
+
+        if (this.escape == Escaping.NONE) {
             return true;
         }
 
