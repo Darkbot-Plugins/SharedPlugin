@@ -73,6 +73,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private PetGear previousPetGear;
     private GameMap desiredBaseMap;
     private String desiredBaseMapName;
+    private Boolean cachedTriggerResult; // Caches the result of selling trigger checks
     private static final int BASE_DOCKING_DISTANCE = 300;
     private static final int MIN_PALLADIUM_STACK = 15;
     private static final int SELL_INTERVAL_MS = 750;
@@ -83,6 +84,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private static final long DOCKING_LOAD_DELAY_MS = 2_000L;
     private static final long TRADE_WINDOW_POPULATE_DELAY_MS = 1_000L;
     private static final long CLOSE_TRADE_DELAY_MS = 1_000L;
+    private static final long TRIGGER_STATE_CACHE_DELAY_MS = 2_000L; // Duration between re-evaluating the selling
+                                                                     // trigger
 
     private enum ActiveMode {
         NONE,
@@ -108,7 +111,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         FAIL_SAFE,
         COOL_DOWN,
         LOAD,
-        CLOSE_TRADE
+        CLOSE_TRADE,
+        TRIGGER_STATE_CACHE
     }
 
     public OreSeller(PluginAPI api) {
@@ -194,7 +198,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (failSafe.isArmed()) {
             if (this.isFailSafeExemptState()) {
                 // Recheck selling trigger in exempt states
-                if (!this.shouldTriggerSelling()) {
+                if (!this.shouldTriggerSelling(true)) {
                     this.finish(true);
                     return; // Abort if auto-refine or auto upgrade weapons reduced the cargo fill
                 }
@@ -438,6 +442,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.previousPetEnabled = null;
         this.previousPetGear = null;
         this.timer(TimerSlot.LOAD).disarm();
+        this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
+        this.cachedTriggerResult = null;
 
         boolean prepared;
         switch (mode) {
@@ -492,6 +498,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.SELL_DELAY).disarm();
         this.timer(TimerSlot.LOAD).disarm();
         this.timer(TimerSlot.CLOSE_TRADE).disarm();
+        this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
+        this.cachedTriggerResult = null;
         this.postSafetyState = null;
         if (this.safetyFinderOnly != null) {
             this.safetyFinderOnly.setRefreshing(false);
@@ -865,7 +873,30 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Determines if current cargo exceeds the user defined threshold.
      */
     private boolean shouldTriggerSelling() {
-        return this.getCargoPercent() >= this.normalizeTriggerThreshold();
+        return this.shouldTriggerSelling(false);
+    }
+
+    private boolean shouldTriggerSelling(boolean forceRefresh) {
+        Timer triggerTimer = this.timer(TimerSlot.TRIGGER_STATE_CACHE);
+
+        if (forceRefresh) {
+            this.cachedTriggerResult = null;
+            triggerTimer.disarm();
+        }
+
+        if (this.cachedTriggerResult != null && triggerTimer.isActive()) {
+            // Return cached result if still valid
+            return this.cachedTriggerResult;
+        }
+
+        // Recalculate trigger state
+        double cargoPercent = this.getCargoPercent();
+        double threshold = this.normalizeTriggerThreshold();
+        boolean result = (cargoPercent >= threshold);
+
+        this.cachedTriggerResult = result;
+        triggerTimer.activate(TRIGGER_STATE_CACHE_DELAY_MS);
+        return result;
     }
 
     /**
@@ -998,6 +1029,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.SELL_DELAY).disarm();
         this.timer(TimerSlot.LOAD).disarm();
         this.timer(TimerSlot.CLOSE_TRADE).disarm();
+        this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
+        this.cachedTriggerResult = null;
         this.postSafetyState = null;
         if (this.safetyFinderOnly != null) {
             this.safetyFinderOnly.setRefreshing(false);
