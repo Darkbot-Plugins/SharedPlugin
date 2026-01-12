@@ -43,7 +43,7 @@ git clone git@github.com:<your-username>/SharedPlugin.git
 cd SharedPlugin
 ```
 
-3) In the fork create a branch
+3) Create a branch in your fork
 
 ```bash
 git checkout -b my-feature-branch
