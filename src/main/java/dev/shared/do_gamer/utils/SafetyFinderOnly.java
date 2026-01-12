@@ -46,7 +46,7 @@ public class SafetyFinderOnly extends SafetyFinder {
         }
 
         this.escape = Escaping.WAITING;
-        if (!this.refreshing && this.doneRepairing() && !this.hasEnemy()) {
+        if (!this.refreshing) {
             this.escape = Escaping.NONE;
             return true;
         }
