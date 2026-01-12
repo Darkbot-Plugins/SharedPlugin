@@ -13,6 +13,7 @@ import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
 import dev.shared.do_gamer.utils.CaptchaBoxDetector;
+import dev.shared.do_gamer.utils.SafetyFinderOnly;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -40,7 +41,6 @@ import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.shared.modules.TemporalModule;
 import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.shared.utils.PortalJumper;
-import eu.darkbot.shared.utils.SafetyFinder;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full")
@@ -59,7 +59,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final HeroItemsAPI items;
     private final AttackAPI attacker;
     private final PortalJumper portalJumper;
-    private final SafetyFinder safetyFinder;
+    private final SafetyFinderOnly safetyFinderOnly;
 
     private OreSellerConfig config;
     private ActiveMode activeMode = ActiveMode.NONE;
@@ -128,10 +128,10 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.portalJumper = new PortalJumper(api);
         this.traveler = new MapTraveler(this.pet, this.hero, this.starSystem, this.movement,
                 this.portalJumper, this.entities, events);
-        this.safetyFinder = new SafetyFinder(this.hero, this.attacker, this.items, this.movement,
+        this.safetyFinderOnly = new SafetyFinderOnly(this.hero, this.attacker, this.items, this.movement,
                 this.starSystem, configApi, this.entities, this.traveler, this.portalJumper);
         events.registerListener(this.traveler);
-        events.registerListener(this.safetyFinder);
+        events.registerListener(this.safetyFinderOnly);
 
         for (TimerSlot slot : TimerSlot.values()) {
             this.timers.put(slot, Timer.get());
@@ -487,8 +487,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.LOAD).disarm();
         this.timer(TimerSlot.CLOSE_TRADE).disarm();
         this.postSafetyState = null;
-        if (this.safetyFinder != null) {
-            this.safetyFinder.setRefreshing(false);
+        if (this.safetyFinderOnly != null) {
+            this.safetyFinderOnly.setRefreshing(false);
         }
         this.activeMode = ActiveMode.NONE;
         this.state = State.IDLE;
@@ -527,13 +527,13 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.movement.stop(false);
             return true; // No need for safety finder in GG maps
         }
-        if (this.safetyFinder == null) {
+        if (this.safetyFinderOnly == null) {
             logger.warning("Safety finder unavailable for ore selling");
             return false;
         }
         this.postSafetyState = nextState;
         this.state = State.SAFE_POSITIONING;
-        this.safetyFinder.setRefreshing(true);
+        this.safetyFinderOnly.setRefreshing(true);
         return true;
     }
 
@@ -594,27 +594,15 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Handles safe positioning before non-base selling.
      */
     private void handleSafePositioning() {
-        if (this.safetyFinder == null || this.postSafetyState == null) {
+        if (this.safetyFinderOnly == null || this.postSafetyState == null) {
             this.finish(false);
             return;
         }
 
-        SafetyFinder.Escaping escapeState = this.safetyFinder.state();
-        if (escapeState != SafetyFinder.Escaping.WAITING && escapeState != SafetyFinder.Escaping.NONE) {
-            this.safetyFinder.setRefreshing(true);
-        } else if (escapeState == SafetyFinder.Escaping.WAITING) {
-            this.safetyFinder.setRefreshing(false);
-        }
-
-        if (!this.safetyFinder.tick()) {
+        if (!this.safetyFinderOnly.reachSafety()) {
             return;
         }
 
-        if (this.safetyFinder.state() != SafetyFinder.Escaping.NONE) {
-            return;
-        }
-
-        this.safetyFinder.setRefreshing(false);
         this.movement.stop(false);
         this.state = this.postSafetyState;
         this.postSafetyState = null;
@@ -1005,8 +993,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.LOAD).disarm();
         this.timer(TimerSlot.CLOSE_TRADE).disarm();
         this.postSafetyState = null;
-        if (this.safetyFinder != null) {
-            this.safetyFinder.setRefreshing(false);
+        if (this.safetyFinderOnly != null) {
+            this.safetyFinderOnly.setRefreshing(false);
         }
         this.activeMode = ActiveMode.NONE;
         this.state = State.IDLE;
