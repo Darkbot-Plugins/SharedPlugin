@@ -889,9 +889,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         // Recalculate trigger state
-        double cargoPercent = this.getCargoPercent();
-        double threshold = this.normalizeTriggerThreshold();
-        boolean result = (cargoPercent >= threshold);
+        boolean result = (this.getCargoPercent() >= this.normalizeTriggerThreshold());
 
         this.cachedTriggerResult = result;
         triggerTimer.activate(TRIGGER_STATE_CACHE_DELAY_MS);
