@@ -193,6 +193,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         Timer failSafe = this.timer(TimerSlot.FAIL_SAFE);
         if (failSafe.isArmed()) {
             if (this.isFailSafeExemptState()) {
+                // Recheck selling trigger in exempt states
+                if (!this.shouldTriggerSelling()) {
+                    this.finish(true);
+                    return; // Abort if auto-refine or auto upgrade weapons reduced the cargo fill
+                }
+
                 // Reset the fail-safe timer in exempt states
                 long timeout = this.resolveFailSafeMillis(this.activeMode);
                 failSafe.activate(timeout);
