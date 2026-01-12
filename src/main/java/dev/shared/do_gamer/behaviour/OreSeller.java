@@ -84,8 +84,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private static final long DOCKING_LOAD_DELAY_MS = 2_000L;
     private static final long TRADE_WINDOW_POPULATE_DELAY_MS = 1_000L;
     private static final long CLOSE_TRADE_DELAY_MS = 1_000L;
-    private static final long TRIGGER_STATE_CACHE_DELAY_MS = 2_000L; // Duration between re-evaluating the selling
-                                                                     // trigger
+    private static final long TRIGGER_STATE_CACHE_DELAY_MS = 2_000L; // Duration between re-evaluating selling trigger
 
     private enum ActiveMode {
         NONE,
