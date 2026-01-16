@@ -6,8 +6,6 @@ import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
@@ -45,8 +43,6 @@ import eu.darkbot.util.Timer;
 
 @Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full")
 public class OreSeller extends TemporalModule implements Behavior, Configurable<OreSellerConfig> {
-
-    private static final Logger logger = Logger.getLogger(OreSeller.class.getName());
 
     private final HeroAPI hero;
     private final MovementAPI movement;
@@ -206,7 +202,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 long timeout = this.resolveFailSafeMillis(this.activeMode);
                 failSafe.activate(timeout);
             } else if (failSafe.isInactive()) {
-                logger.warning("Ore seller timed out");
+                System.out.println("Ore seller timed out");
                 this.finish(false);
                 return;
             }
@@ -515,7 +511,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private boolean prepareBaseModeState() {
         this.desiredBaseMap = this.resolveDesiredBaseMap();
         if (this.desiredBaseMap == null) {
-            logger.warning("Unable to resolve target base map for ore selling");
+            System.out.println("Unable to resolve target base map for ore selling");
             return false;
         }
 
@@ -541,7 +537,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return true; // No need for safety finder in GG maps
         }
         if (this.safetyFinderOnly == null) {
-            logger.warning("Safety finder unavailable for ore selling");
+            System.out.println("Safety finder unavailable for ore selling");
             return false;
         }
         this.postSafetyState = nextState;
@@ -585,7 +581,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private void handleMoveToRefinery() {
         Station.Refinery refinery = this.resolveRefinery();
         if (refinery == null) {
-            logger.warning("No refinery found on current map for ore selling");
+            System.out.println("No refinery found on current map for ore selling");
             this.finish(false);
             return;
         }
@@ -835,7 +831,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.pet.setGear(PetGear.TRADER);
             loadTimer.activate(delay);
         } catch (ItemNotEquippedException e) {
-            logger.log(Level.WARNING, "Failed to equip PET trader gear for ore selling", e);
+            System.out.println("Failed to equip PET trader gear for ore selling");
             this.finish(false);
         }
     }
@@ -1015,7 +1011,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      */
     private void finish(boolean success) {
         if (!success) {
-            logger.fine("Ore seller aborted before finishing run");
+            System.out.println("Ore seller aborted before finishing run");
         }
         this.oreApi.showTrade(false, null);
         if (this.previousPetEnabled != null || this.previousPetGear != null) {

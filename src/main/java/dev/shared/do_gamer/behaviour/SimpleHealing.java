@@ -2,8 +2,6 @@ package dev.shared.do_gamer.behaviour;
 
 import java.util.HashSet;
 import java.util.Set;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import dev.shared.do_gamer.config.SimpleHealingConfig;
 import eu.darkbot.api.PluginAPI;
@@ -36,7 +34,6 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     private static final int ABILITY_USE_RETRY_DELAY_MS = 250;
     private static final double MAX_REPAIR_TARGET_DISTANCE = 750.0;
     private final Timer petComboCooldown = Timer.get(PET_COMBO_COOLDOWN_MS);
-    private static final Logger logger = Logger.getLogger(SimpleHealing.class.getName());
 
     public SimpleHealing(PluginAPI api) {
         this.hero = api.requireAPI(HeroAPI.class);
@@ -140,7 +137,7 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
         } catch (ItemNotEquippedException ignored) {
             // Item not equipped, not critical exception and should be ignored
         } catch (Exception e) {
-            logger.log(Level.WARNING, "Failed to set PET gear to COMBO_REPAIR", e);
+            System.out.println("Failed to set PET gear to COMBO_REPAIR");
         }
     }
 
