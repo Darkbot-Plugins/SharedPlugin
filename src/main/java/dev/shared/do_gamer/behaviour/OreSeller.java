@@ -145,6 +145,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     @Override
     public void onTickBehavior() {
         if (!this.isReadyForBehavior()) {
+            this.finish();
             return;
         }
 
@@ -184,17 +185,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return;
         }
 
-        if (!this.isReadyForBehavior()) {
-            this.finish(false);
-            return;
-        }
-
         Timer failSafe = this.timer(TimerSlot.FAIL_SAFE);
         if (failSafe.isArmed()) {
             if (this.isFailSafeExemptState()) {
                 // Recheck selling trigger in exempt states
                 if (!this.shouldTriggerSelling(true)) {
-                    this.finish(true);
+                    this.finish();
                     return; // Abort if auto-refine or auto upgrade weapons reduced the cargo fill
                 }
 
@@ -203,7 +199,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 failSafe.activate(timeout);
             } else if (failSafe.isInactive()) {
                 System.out.println("Ore seller timed out");
-                this.finish(false);
+                this.finish();
                 return;
             }
         }
@@ -222,7 +218,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 this.handleSelling();
                 break;
             case CLOSE_TRADE:
-                this.handleCloseTrade();
+                this.finish();
                 break;
             case SAFE_POSITIONING:
                 this.handleSafePositioning();
@@ -234,7 +230,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 this.handleDronePreparing();
                 break;
             default:
-                this.finish(true);
+                this.finish();
                 break;
         }
     }
@@ -457,7 +453,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         if (!prepared) {
-            this.abortStart();
+            this.finish();
             return;
         }
 
@@ -483,26 +479,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 break;
         }
         return seconds * 1000L;
-    }
-
-    /**
-     * Resets transient state when a run cannot begin.
-     */
-    private void abortStart() {
-        this.timer(TimerSlot.FAIL_SAFE).disarm();
-        this.timer(TimerSlot.SELL_DELAY).disarm();
-        this.timer(TimerSlot.LOAD).disarm();
-        this.timer(TimerSlot.CLOSE_TRADE).disarm();
-        this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
-        this.cachedTriggerResult = null;
-        this.postSafetyState = null;
-        if (this.safetyFinderOnly != null) {
-            this.safetyFinderOnly.setRefreshing(false);
-        }
-        this.activeMode = ActiveMode.NONE;
-        this.state = State.IDLE;
-        this.sellPlan = Collections.emptyList();
-        this.targetRefinery = null;
     }
 
     /**
@@ -553,7 +529,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (this.desiredBaseMap == null) {
             this.desiredBaseMap = this.resolveDesiredBaseMap();
             if (this.desiredBaseMap == null) {
-                this.finish(false);
+                this.finish();
                 return;
             }
             if (this.previousPetEnabled == null) {
@@ -582,7 +558,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         Station.Refinery refinery = this.resolveRefinery();
         if (refinery == null) {
             System.out.println("No refinery found on current map for ore selling");
-            this.finish(false);
+            this.finish();
             return;
         }
 
@@ -604,7 +580,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      */
     private void handleSafePositioning() {
         if (this.safetyFinderOnly == null || this.postSafetyState == null) {
-            this.finish(false);
+            this.finish();
             return;
         }
 
@@ -681,7 +657,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private void handleOpenTrade() {
         Station.Refinery refinery = this.resolveRefinery();
         if (refinery == null) {
-            this.finish(false);
+            this.finish();
             return;
         }
 
@@ -762,19 +738,9 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         } else if (this.activeMode == ActiveMode.DRONE) {
             this.state = State.DRONE_PREPARING;
         } else {
-            this.finish(false);
+            this.finish();
         }
         this.timer(TimerSlot.CLOSE_TRADE).disarm();
-    }
-
-    /**
-     * Closes the trade window after finishing the sell plan.
-     */
-    private void handleCloseTrade() {
-        if (!this.oreApi.showTrade(false, null)) {
-            return;
-        }
-        this.finish(true);
     }
 
     /**
@@ -782,7 +748,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      */
     private void handlePetPreparing() {
         if (!this.canUsePetTrader()) {
-            this.finish(false);
+            this.finish();
             return;
         }
 
@@ -832,7 +798,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             loadTimer.activate(delay);
         } catch (ItemNotEquippedException e) {
             System.out.println("Failed to equip PET trader gear for ore selling");
-            this.finish(false);
+            this.finish();
         }
     }
 
@@ -841,7 +807,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      */
     private void handleDronePreparing() {
         if (!this.canUseTradeDrone()) {
-            this.finish(false);
+            this.finish();
             return;
         }
 
@@ -1007,13 +973,15 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
-     * Cleans up transient state after finishing a selling run.
+     * Cleans up transient state and resets the module to idle.
      */
-    private void finish(boolean success) {
-        if (!success) {
-            System.out.println("Ore seller aborted before finishing run");
-        }
+    private void finish() {
         this.oreApi.showTrade(false, null);
+
+        if (this.activeMode == ActiveMode.NONE && this.state == State.IDLE) {
+            return; // Already finished
+        }
+
         if (this.previousPetEnabled != null || this.previousPetGear != null) {
             this.restorePetSettings();
         }
