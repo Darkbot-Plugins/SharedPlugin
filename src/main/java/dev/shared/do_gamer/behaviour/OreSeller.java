@@ -406,10 +406,10 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
-     * Confirms the PET trader gear is equipped and usable.
+     * Confirms the PET trader gear is equipped and ready for use.
      */
     private boolean canUsePetTrader() {
-        return this.pet.hasGear(PetGear.TRADER);
+        return this.pet.hasGear(PetGear.TRADER) && !this.pet.hasCooldown(PetGear.TRADER);
     }
 
     /**
