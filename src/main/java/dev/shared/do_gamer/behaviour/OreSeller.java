@@ -377,7 +377,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
-     * Checks for nearby NPCs or present on the map.
+     * Checks for nearby NPCs within a defined threshold distance.
      */
     private boolean hasNearbyNpc() {
         if (this.entities == null || this.hero == null) {
