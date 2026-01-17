@@ -73,6 +73,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private static final int BASE_DOCKING_DISTANCE = 300;
     private static final int MIN_PALLADIUM_STACK = 15;
     private static final int SELL_INTERVAL_MS = 750;
+    private static final double NPC_DISTANCE_THRESHOLD = 4000.0;
     private static final double MIN_TRIGGER_PERCENT = 0.05;
     private static final double MAX_TRIGGER_PERCENT = 0.99;
     private static final long MIN_ACTIVATION_DELAY_MS = 250L;
@@ -338,8 +339,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return false;
         }
 
-        // Keep inactive in GG maps when in base mode or any NPCs are present
-        if (this.isGGMap() && (SellModeOptions.BASE.equals(this.config.mode) || this.hasActiveNpc())) {
+        // Keep inactive in GG maps when in base mode or any NPCs are nearby
+        if (this.isGGMap() && (SellModeOptions.BASE.equals(this.config.mode) || this.hasNearbyNpc())) {
             return false;
         }
 
@@ -376,10 +377,14 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
-     * Checks if have any NPCs present on the current map (useful for GG maps).
+     * Checks for nearby NPCs or present on the map.
      */
-    private boolean hasActiveNpc() {
-        return this.entities != null && !this.entities.getNpcs().isEmpty();
+    private boolean hasNearbyNpc() {
+        if (this.entities == null || this.hero == null) {
+            return false; // Safety check
+        }
+
+        return this.entities.getNpcs().stream().anyMatch(npc -> this.hero.distanceTo(npc) <= NPC_DISTANCE_THRESHOLD);
     }
 
     /**
