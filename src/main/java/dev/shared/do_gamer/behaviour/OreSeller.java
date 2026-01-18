@@ -74,7 +74,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private static final int BASE_DOCKING_DISTANCE = 300;
     private static final int MIN_PALLADIUM_STACK = 15;
     private static final int SELL_INTERVAL_MS = 750;
-    private static final double NPC_DISTANCE_THRESHOLD = 4000.0;
+    private static final double NPC_DISTANCE_THRESHOLD = 3000.0;
     private static final double MIN_TRIGGER_PERCENT = 0.05;
     private static final double MAX_TRIGGER_PERCENT = 0.99;
     private static final long MIN_ACTIVATION_DELAY_MS = 250L;
@@ -790,12 +790,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         PetGear gear = this.pet.getGear();
-        if (gear == PetGear.TRADER) {
+        if (gear != PetGear.PASSIVE) {
             try {
-                this.pet.setGear(PetGear.PASSIVE); // Unequip trader gear
+                this.pet.setGear(PetGear.PASSIVE); // Unequip gear first
                 loadTimer.activate(delay);
             } catch (ItemNotEquippedException ignored) {
-                // Ignored exception, we just wanted to unequip trader gear
+                // Ignored exception, we just wanted to unequip gear
             }
             return;
         }
