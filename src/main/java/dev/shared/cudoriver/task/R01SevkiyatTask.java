@@ -14,17 +14,15 @@ public class R01SevkiyatTask implements Task {
     private int currentSlot = 1;
     private boolean collecting = true;
 
-    // Ayarların: 4 slot ve 3 saat bekleme
+    // 4 slot ve 3 saat bekleme
     private static final int FIRST_SLOT_ID = 1;
     private static final int LAST_SLOT_ID = 4;
     private static final long ACTION_DELAY = 10800000L;
     private static final int R01_RETRIEVER_ID = 1;
 
     @Inject
-    public R01SevkiyatTask(API api) {
-        // Hata veren metotları tamamen baypas ediyoruz
-        // Doğrudan API nesnesinden BackpageAPI'yi istiyoruz.
-        this.backpage = (BackpageAPI) api;
+    public R01SevkiyatTask(BackpageAPI backpage) {
+        this.backpage = backpage;
     }
 
     @Override
