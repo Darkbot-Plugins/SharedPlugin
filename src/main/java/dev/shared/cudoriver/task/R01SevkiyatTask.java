@@ -6,7 +6,7 @@ import eu.darkbot.api.extensions.Task;
 import eu.darkbot.api.managers.BackpageAPI;
 import eu.darkbot.api.utils.Inject;
 
-@Feature(name = "R01 Sevkiyat Modülü", description = "R01 görevlerini otomatik toplar ve başlatır")
+@Feature(name = "R01 Dispatch Module", description = "Automatically collects and starts R01 dispatch tasks")
 public class R01SevkiyatTask implements Task {
 
     private final BackpageAPI backpage;
