@@ -1,7 +1,7 @@
 {
 	"name": "SharedPlugin",
 	"author": "Several Devs",
-	"version": "0.4.2",
+	"version": "0.6.0",
 	"minVersion": "1.131.6 beta 3",
 	"supportedVersion": "1.132.0 alpha 2",
 	"basePackage": "dev.shared",
@@ -11,8 +11,10 @@
 		"dev.shared.do_gamer.behaviour.solaris_inc.SolarisInc",
 		"dev.shared.do_gamer.module.spaceball.Spaceball",
 		"dev.shared.do_gamer.behaviour.FixPetStuck",
-		"dev.shared.do_gamer.behaviour.RepairPet"
+		"dev.shared.do_gamer.behaviour.RepairPet",
+		"dev.shared.do_gamer.task.CloseAdOffer",
+		"dev.shared.do_gamer.behaviour.AvoidDrawFire"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
-	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/download/v0.4.2/SharedPlugin.jar"
+	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/latest/download/SharedPlugin.jar"
 }
