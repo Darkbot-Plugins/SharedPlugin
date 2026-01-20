@@ -16,7 +16,7 @@ import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
 
-@Feature(name = "Crowd Avoidance", description = "Avoids crowded areas.")
+@Feature(name = "Crowd Avoidance", description = "Detects crowded areas around the ship and moves away from them.")
 public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConfig> {
 
     private final HeroAPI hero;
