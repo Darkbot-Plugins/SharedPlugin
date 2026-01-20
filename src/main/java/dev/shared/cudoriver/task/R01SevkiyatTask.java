@@ -32,9 +32,9 @@ public class R01SevkiyatTask implements Task {
 
         try {
             if (collecting) {
-                backpage.getConnection("indexInternal.es?action=internalDispatch&subaction=collect&slotId=" + currentSlot);
+                backpage.getHttp("indexInternal.es?action=internalDispatch&subaction=collect&slotId=" + currentSlot);
             } else {
-                backpage.getConnection("indexInternal.es?action=internalDispatch&subaction=init&retrieverId=" + R01_RETRIEVER_ID + "&slotId=" + currentSlot);
+                backpage.getHttp("indexInternal.es?action=internalDispatch&subaction=init&retrieverId=" + R01_RETRIEVER_ID + "&slotId=" + currentSlot);
             }
             updateState();
         } catch (Exception e) {
