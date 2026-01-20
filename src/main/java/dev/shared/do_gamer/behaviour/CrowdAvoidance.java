@@ -116,12 +116,14 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             len = 1.0;
         }
 
-        double nx = vx / len;
-        double ny = vy / len;
+        if (len < this.config.avoidDistance) {
+            double nx = vx / len;
+            double ny = vy / len;
 
-        double targetX = cx + nx * this.config.avoidDistance;
-        double targetY = cy + ny * this.config.avoidDistance;
+            double targetX = cx + nx * this.config.avoidDistance;
+            double targetY = cy + ny * this.config.avoidDistance;
 
-        this.movement.moveTo(targetX, targetY);
+            this.movement.moveTo(targetX, targetY);
+        }
     }
 }
