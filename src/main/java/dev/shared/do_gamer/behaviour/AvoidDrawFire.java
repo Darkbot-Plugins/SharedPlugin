@@ -23,7 +23,7 @@ public class AvoidDrawFire implements Behavior, Configurable<AvoidDrawFireConfig
     private final PetAPI pet;
     private final AttackAPI attacker;
     private AvoidDrawFireConfig config;
-    private static final long ATTACK_STOP_DURATION_MS = 5_000L;
+    private static final long ATTACK_STOP_DURATION_MS = 10_000L;
     private static final int USE_RETRY_DELAY_MS = 250;
 
     public AvoidDrawFire(PluginAPI api) {
@@ -42,9 +42,14 @@ public class AvoidDrawFire implements Behavior, Configurable<AvoidDrawFireConfig
     public void onTickBehavior() {
         // Check if the hero has the Draw Fire effect
         if (this.hero.hasEffect(EntityEffect.DRAW_FIRE)) {
+            // Set hero to run mode to help evade attacks
+            this.hero.setRunMode();
+
             // Stop attacking to reduce threat
-            this.attacker.stopAttack();
-            this.attacker.setBlacklisted(ATTACK_STOP_DURATION_MS);
+            if (this.attacker.hasTarget()) {
+                this.attacker.stopAttack();
+                this.attacker.setBlacklisted(ATTACK_STOP_DURATION_MS);
+            }
 
             // Set PET to passive mode to avoid drawing fire
             if (this.pet.isEnabled() && this.pet.isActive()) {
