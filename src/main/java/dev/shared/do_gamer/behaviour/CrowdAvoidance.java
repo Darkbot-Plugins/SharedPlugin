@@ -24,6 +24,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private final MovementAPI movement;
     private CrowdAvoidanceConfig config;
     private static final double MIN_DISTANCE_TO_SAFE_POINT = 500.0;
+    private static final double AVOIDANCE_DISTANCE = 1000.0;
 
     public CrowdAvoidance(PluginAPI api) {
         this.hero = api.requireAPI(HeroAPI.class);
@@ -116,12 +117,14 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             len = 1.0;
         }
 
-        if (len < this.config.avoidDistance) {
+        double distance = (double) this.config.radius + AVOIDANCE_DISTANCE;
+
+        if (len < distance) {
             double nx = vx / len;
             double ny = vy / len;
 
-            double targetX = cx + nx * this.config.avoidDistance;
-            double targetY = cy + ny * this.config.avoidDistance;
+            double targetX = cx + nx * distance;
+            double targetY = cy + ny * distance;
 
             this.movement.moveTo(targetX, targetY);
         }

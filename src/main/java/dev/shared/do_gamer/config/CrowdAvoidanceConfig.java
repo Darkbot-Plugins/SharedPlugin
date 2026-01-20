@@ -20,8 +20,4 @@ public class CrowdAvoidanceConfig {
 
     @Option("do_gamer.crowd_avoidance.allies")
     public boolean allies = false;
-
-    @Option("do_gamer.crowd_avoidance.avoid_distance")
-    @Number(min = 1000, step = 500, max = 6000)
-    public int avoidDistance = 2000;
 }
