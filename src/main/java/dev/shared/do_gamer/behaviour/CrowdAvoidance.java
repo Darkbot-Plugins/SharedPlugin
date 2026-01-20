@@ -1,0 +1,127 @@
+package dev.shared.do_gamer.behaviour;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import dev.shared.do_gamer.config.CrowdAvoidanceConfig;
+import dev.shared.do_gamer.utils.CaptchaBoxDetector;
+import eu.darkbot.api.PluginAPI;
+import eu.darkbot.api.config.ConfigSetting;
+import eu.darkbot.api.extensions.Behavior;
+import eu.darkbot.api.extensions.Configurable;
+import eu.darkbot.api.extensions.Feature;
+import eu.darkbot.api.game.entities.Entity;
+import eu.darkbot.api.game.entities.Ship;
+import eu.darkbot.api.managers.EntitiesAPI;
+import eu.darkbot.api.managers.HeroAPI;
+import eu.darkbot.api.managers.MovementAPI;
+
+@Feature(name = "Crowd Avoidance", description = "Avoids crowded areas.")
+public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConfig> {
+
+    private final HeroAPI hero;
+    private final EntitiesAPI entities;
+    private final MovementAPI movement;
+    private CrowdAvoidanceConfig config;
+    private static final double MIN_DISTANCE_TO_SAFE_POINT = 500.0;
+
+    public CrowdAvoidance(PluginAPI api) {
+        this.hero = api.requireAPI(HeroAPI.class);
+        this.entities = api.requireAPI(EntitiesAPI.class);
+        this.movement = api.requireAPI(MovementAPI.class);
+    }
+
+    @Override
+    public void setConfig(ConfigSetting<CrowdAvoidanceConfig> config) {
+        this.config = config.getValue();
+    }
+
+    @Override
+    public void onTickBehavior() {
+        if (!this.isActive()) {
+            return;
+        }
+
+        List<Ship> ships = this.getShips();
+        if (ships.size() >= this.config.numb) {
+            this.moveAway(ships);
+        }
+    }
+
+    private boolean isActive() {
+        // Keep inactive if near safe points
+        if (this.entities.getPortals().stream().anyMatch(this::checkSafePoint)
+                || this.entities.getStations().stream().anyMatch(this::checkSafePoint)) {
+            return false;
+        }
+
+        // Keep inactive if captcha boxes detected
+        if (CaptchaBoxDetector.hasCaptchaBoxes(this.entities)) {
+            return false;
+        }
+
+        return this.config.npcs || this.config.enemies || this.config.allies;
+    }
+
+    private boolean checkSafePoint(Entity entity) {
+        return entity.distanceTo(this.hero) <= MIN_DISTANCE_TO_SAFE_POINT;
+    }
+
+    private boolean checkRadius(Ship ship) {
+        return ship.distanceTo(this.hero) <= this.config.radius;
+    }
+
+    private List<Ship> getShips() {
+        List<Ship> ships = new ArrayList<>();
+
+        if (this.config.npcs) {
+            // Collect NPC ships
+            this.entities.getNpcs().stream().filter(this::checkRadius).forEach(ships::add);
+        }
+
+        if (this.config.enemies && this.config.allies) {
+            // Collect any player ships
+            this.entities.getPlayers().stream().filter(this::checkRadius).forEach(ships::add);
+        } else if (this.config.enemies) {
+            // Collect only enemy player ships
+            this.entities.getPlayers().stream()
+                    .filter(player -> player.getEntityInfo().isEnemy() && this.checkRadius(player))
+                    .forEach(ships::add);
+        } else if (this.config.allies) {
+            // Collect only ally player ships
+            this.entities.getPlayers().stream()
+                    .filter(player -> !player.getEntityInfo().isEnemy() && this.checkRadius(player))
+                    .forEach(ships::add);
+        }
+
+        return ships;
+    }
+
+    private void moveAway(List<Ship> ships) {
+        double cx = 0;
+        double cy = 0;
+        for (Ship s : ships) {
+            cx += s.getX();
+            cy += s.getY();
+        }
+        cx /= ships.size();
+        cy /= ships.size();
+
+        double vx = this.hero.getX() - cx;
+        double vy = this.hero.getY() - cy;
+        double len = Math.hypot(vx, vy);
+        if (len < 1e-6) {
+            vx = 1.0;
+            vy = 0.0;
+            len = 1.0;
+        }
+
+        double nx = vx / len;
+        double ny = vy / len;
+
+        double targetX = cx + nx * this.config.avoidDistance;
+        double targetY = cy + ny * this.config.avoidDistance;
+
+        this.movement.moveTo(targetX, targetY);
+    }
+}
