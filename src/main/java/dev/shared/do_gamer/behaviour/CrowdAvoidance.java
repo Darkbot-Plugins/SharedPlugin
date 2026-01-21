@@ -15,13 +15,16 @@ import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
 import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.game.enums.EntityEffect;
+import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
+import eu.darkbot.shared.modules.MapModule;
 
 @Feature(name = "Crowd Avoidance", description = "Detects crowded areas around the ship and moves away from them.")
 public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConfig> {
 
+    private final BotAPI bot;
     private final HeroAPI hero;
     private final EntitiesAPI entities;
     private final MovementAPI movement;
@@ -31,6 +34,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private static final double AVOIDANCE_DISTANCE = 1000.0;
 
     public CrowdAvoidance(PluginAPI api) {
+        this.bot = api.requireAPI(BotAPI.class);
         this.hero = api.requireAPI(HeroAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
@@ -56,6 +60,11 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private boolean isActive() {
         // Keep inactive if collecting
         if (this.hero.hasEffect(EntityEffect.BOX_COLLECTING) || this.hero.hasEffect(EntityEffect.BOOTY_COLLECTING)) {
+            return false;
+        }
+
+        // Keep inactive while traveling
+        if (this.bot.getModule() instanceof MapModule) {
             return false;
         }
 
