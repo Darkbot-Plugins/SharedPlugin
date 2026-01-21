@@ -16,6 +16,7 @@ import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
+import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.game.items.ItemFlag;
@@ -344,6 +345,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         // Keep inactive while attacking
         if (this.attacker.hasTarget() && this.attacker.isAttacking()) {
+            return false;
+        }
+
+        // Keep inactive if jumping through portal (not applicable in base mode)
+        if (!SellModeOptions.BASE.equals(this.config.mode)
+                && this.entities.getPortals().stream().anyMatch(Portal::isJumping)) {
             return false;
         }
 
