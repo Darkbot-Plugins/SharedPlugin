@@ -17,6 +17,7 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - Close AD Offer: Automatically closes AD Offer on the left side (temporary solution until the bot is fixed). By @do-gamer
 - Auto Refiner: Automatically refines materials (Prometid, Duranium, Promerium) when cargo reaches a specified threshold. By @kopoklesz
 - Avoid Draw Fire: If has Draw Fire effect, then stops attacking and sets the PET into passive mode. May also use EMP-01. By @do-gamer
+- Crowd Avoidance: Detects crowded areas around the ship and moves away from them. By @do-gamer
 
 ## Contributing
 
