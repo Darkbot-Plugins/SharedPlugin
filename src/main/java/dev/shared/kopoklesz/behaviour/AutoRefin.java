@@ -26,6 +26,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
     private final GuiManager guiManager;
     private final IDarkBotAPI darkbotApi;
     private final StatsAPI stats;
+    private final Main main;
 
     private AutoRefinConfig config;
 
@@ -34,13 +35,15 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
     private boolean lastRefineAttemptFailed = false;
 
     public AutoRefin(OreAPI ores,
-                      GuiManager guiManager,
-                      IDarkBotAPI darkbotApi,
-                      StatsAPI stats) {
+                        GuiManager guiManager,
+                        IDarkBotAPI darkbotApi,
+                        StatsAPI stats,
+                        Main main) {
         this.ores = ores;
         this.guiManager = guiManager;
         this.darkbotApi = darkbotApi;
         this.stats = stats;
+        this.main = main;
     }
 
     // config file
@@ -69,6 +72,9 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
                         this::maxRefine
                 ));
 
+        lastRefineAttemptFailed = true; // assume refine attempt will fail
+        lastCargoAmount = currentCargo; // update last cargo amount
+
         // Find the ore with the highest refineable amount
         refineMap.entrySet().stream()
                 .filter(e -> e.getValue() > 0)
@@ -77,24 +83,16 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
                     darkbotApi.refine(
                             darkbotApi.readLong(guiManager.getAddress() + 0x78),
                             entry.getKey(),
-                            entry.getValue()
-                    );
-                    lastCargoAmount = currentCargo;
-                    lastRefineAttemptFailed = false;
+                            entry.getValue());
+                    lastRefineAttemptFailed = false; // refine attempt succeeded
                 });
-
-        // If no ore could be refined, mark as failed and store cargo amount
-        if (refineMap.values().stream().noneMatch(v -> v > 0)) {
-            lastRefineAttemptFailed = true;
-            lastCargoAmount = currentCargo;
-        }
     }
 
     /////////////////////////////////////////////////// helper methods ///////////////////////////////////////////////////
     private boolean isReadyForRefining() {
         if (config == null || !config.enabled) return false;
 
-        if (!darkbotApi.hasCapability(Capability.DIRECT_REFINE)) return false;
+        if (main.config.MISCELLANEOUS.AUTO_REFINE || !darkbotApi.hasCapability(Capability.DIRECT_REFINE)) return false;
 
         if (guiManager.getAddress() == 0) return false;
 
