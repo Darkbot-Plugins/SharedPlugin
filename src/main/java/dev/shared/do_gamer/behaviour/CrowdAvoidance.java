@@ -11,7 +11,9 @@ import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.entities.Entity;
+import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
+import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
@@ -23,7 +25,8 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private final EntitiesAPI entities;
     private final MovementAPI movement;
     private CrowdAvoidanceConfig config;
-    private static final double MIN_DISTANCE_TO_SAFE_POINT = 500.0;
+    private static final double MIN_DISTANCE_TO_PORTAL = 500.0;
+    private static final double MIN_DISTANCE_TO_STATION = 1000.0;
     private static final double AVOIDANCE_DISTANCE = 1000.0;
 
     public CrowdAvoidance(PluginAPI api) {
@@ -51,8 +54,8 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
 
     private boolean isActive() {
         // Keep inactive if near safe points
-        if (this.entities.getPortals().stream().anyMatch(this::checkSafePoint)
-                || this.entities.getStations().stream().anyMatch(this::checkSafePoint)) {
+        if (this.entities.getPortals().stream().anyMatch(this::checkPortal)
+                || this.entities.getStations().stream().anyMatch(this::checkStation)) {
             return false;
         }
 
@@ -64,8 +67,16 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         return this.config.consider.npcs || this.config.consider.enemies || this.config.consider.allies;
     }
 
-    private boolean checkSafePoint(Entity entity) {
-        return entity.distanceTo(this.hero) <= MIN_DISTANCE_TO_SAFE_POINT;
+    private boolean checkPortal(Portal portal) {
+        return this.checkSafePoint(portal, MIN_DISTANCE_TO_PORTAL);
+    }
+
+    private boolean checkStation(Station station) {
+        return this.checkSafePoint(station, MIN_DISTANCE_TO_STATION);
+    }
+
+    private boolean checkSafePoint(Entity entity, double minDistance) {
+        return entity.distanceTo(this.hero) <= minDistance;
     }
 
     private boolean checkRadius(Ship ship) {
