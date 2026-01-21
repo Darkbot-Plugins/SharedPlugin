@@ -14,6 +14,7 @@ import eu.darkbot.api.game.entities.Entity;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
 import eu.darkbot.api.game.entities.Station;
+import eu.darkbot.api.game.enums.EntityEffect;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
@@ -53,6 +54,11 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     }
 
     private boolean isActive() {
+        // Keep inactive if collecting
+        if (this.hero.hasEffect(EntityEffect.BOX_COLLECTING) || this.hero.hasEffect(EntityEffect.BOOTY_COLLECTING)) {
+            return false;
+        }
+
         // Keep inactive if near safe points
         if (this.entities.getPortals().stream().anyMatch(this::checkPortal)
                 || this.entities.getStations().stream().anyMatch(this::checkStation)) {
