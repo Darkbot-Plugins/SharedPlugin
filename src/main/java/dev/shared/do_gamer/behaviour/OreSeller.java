@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
@@ -17,7 +16,6 @@ import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
-import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.game.items.ItemFlag;
@@ -76,7 +74,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private static final int SELL_INTERVAL_MS = 750;
     private static final double NPC_DISTANCE_THRESHOLD = 3000.0;
     private static final double MIN_TRIGGER_PERCENT = 0.05;
-    private static final double MAX_TRIGGER_PERCENT = 0.99;
     private static final long MIN_ACTIVATION_DELAY_MS = 250L;
     private static final long TRAVEL_LOAD_DELAY_MS = 3_000L;
     private static final long DOCKING_LOAD_DELAY_MS = 2_000L;
@@ -350,11 +347,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return false;
         }
 
-        // Keep inactive if jumping through portal
-        if (this.entities.getPortals().stream().anyMatch(Portal::isJumping)) {
-            return false;
-        }
-
         // Keep inactive if captcha boxes detected
         return !CaptchaBoxDetector.hasCaptchaBoxes(this.entities);
     }
@@ -493,6 +485,16 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
+     * Checks if the hero is currently on the desired base map.
+     */
+    private boolean isOnBaseMap() {
+        if (this.desiredBaseMapName == null) {
+            return false;
+        }
+        return this.hero.getMap().getName().equals(this.desiredBaseMapName);
+    }
+
+    /**
      * Determines travel needs and sets up the base selling state.
      */
     private boolean prepareBaseModeState() {
@@ -502,7 +504,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return false;
         }
 
-        if (Objects.equals(this.starSystem.getCurrentMap(), this.desiredBaseMap)) {
+        if (this.isOnBaseMap()) {
             this.state = State.MOVE_TO_REFINERY;
         } else {
             if (this.previousPetEnabled == null) {
@@ -540,7 +542,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (this.desiredBaseMap == null) {
             this.desiredBaseMap = this.resolveDesiredBaseMap();
             if (this.desiredBaseMap == null) {
-                this.finish();
                 return;
             }
             if (this.previousPetEnabled == null) {
@@ -549,7 +550,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.traveler.setTarget(this.desiredBaseMap);
         }
 
-        if (Objects.equals(this.starSystem.getCurrentMap(), this.desiredBaseMap)) {
+        if (this.isOnBaseMap()) {
             if (this.wait(this.timer(TimerSlot.LOAD), TRAVEL_LOAD_DELAY_MS)) {
                 return;
             }
@@ -885,7 +886,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      */
     private double normalizeTriggerThreshold() {
         double value = this.config.triggerPercent;
-        return Math.max(MIN_TRIGGER_PERCENT, Math.min(MAX_TRIGGER_PERCENT, value));
+        return Math.max(MIN_TRIGGER_PERCENT, value);
     }
 
     /**
