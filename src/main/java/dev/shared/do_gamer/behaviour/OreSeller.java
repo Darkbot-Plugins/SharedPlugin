@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
 
 import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
@@ -492,6 +491,16 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
+     * Checks if the hero is currently on the desired base map.
+     */
+    private boolean isOnBaseMap() {
+        if (this.desiredBaseMapName == null) {
+            return false;
+        }
+        return this.hero.getMap().getName().equals(this.desiredBaseMapName);
+    }
+
+    /**
      * Determines travel needs and sets up the base selling state.
      */
     private boolean prepareBaseModeState() {
@@ -501,7 +510,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return false;
         }
 
-        if (Objects.equals(this.starSystem.getCurrentMap(), this.desiredBaseMap)) {
+        if (this.isOnBaseMap()) {
             this.state = State.MOVE_TO_REFINERY;
         } else {
             if (this.previousPetEnabled == null) {
@@ -539,7 +548,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (this.desiredBaseMap == null) {
             this.desiredBaseMap = this.resolveDesiredBaseMap();
             if (this.desiredBaseMap == null) {
-                this.finish();
                 return;
             }
             if (this.previousPetEnabled == null) {
@@ -548,7 +556,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.traveler.setTarget(this.desiredBaseMap);
         }
 
-        if (Objects.equals(this.starSystem.getCurrentMap(), this.desiredBaseMap)) {
+        if (this.isOnBaseMap()) {
             if (this.wait(this.timer(TimerSlot.LOAD), TRAVEL_LOAD_DELAY_MS)) {
                 return;
             }
