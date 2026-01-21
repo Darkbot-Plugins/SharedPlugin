@@ -1,6 +1,7 @@
 package dev.shared.do_gamer.behaviour;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 import dev.shared.do_gamer.config.CrowdAvoidanceConfig;
@@ -127,24 +128,21 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
 
     private void moveAway(List<Ship> ships) {
         // Find the closest ship
-        Ship closest = ships.stream()
-                .min((s1, s2) -> Double.compare(this.hero.distanceTo(s1), this.hero.distanceTo(s2)))
-                .orElse(null);
-
+        Ship closest = ships.stream().min(Comparator.comparingDouble(this.hero::distanceTo)).orElse(null);
         if (closest == null) {
             return;
         }
 
         double angle = closest.angleTo(this.hero);
-        double moveDistance = (double) this.hero.getSpeed();
+        double speed = (double) this.hero.getSpeed();
         double distance = (double) this.config.radius + AVOIDANCE_DISTANCE; // Desired distance to keep away
 
         double targetX = closest.getX() - Math.cos(angle) * distance;
         double targetY = closest.getY() - Math.sin(angle) * distance;
 
-        moveDistance = moveDistance - this.hero.distanceTo(targetX, targetY);
-        if (moveDistance > 0) {
-            angle += moveDistance / ADJUSTMENT_FACTOR; // Adjust angle slightly based on speed
+        double overshoot = speed - this.hero.distanceTo(targetX, targetY);
+        if (overshoot > 0) {
+            angle += overshoot / ADJUSTMENT_FACTOR; // Adjust angle slightly based on speed
             targetX = closest.getX() - Math.cos(angle) * distance;
             targetY = closest.getY() - Math.sin(angle) * distance;
         }
