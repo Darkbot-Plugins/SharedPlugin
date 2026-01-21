@@ -9,15 +9,20 @@ public class CrowdAvoidanceConfig {
     public int numb = 5;
 
     @Option("do_gamer.crowd_avoidance.radius")
-    @Number(min = 100, step = 100, max = 2000)
+    @Number(min = 50, step = 50, max = 2000)
     public int radius = 300;
 
-    @Option("do_gamer.crowd_avoidance.npcs")
-    public boolean npcs = true;
+    @Option("do_gamer.crowd_avoidance.consider")
+    public ConsiderConfig consider = new ConsiderConfig();
 
-    @Option("do_gamer.crowd_avoidance.enemies")
-    public boolean enemies = true;
+    public static class ConsiderConfig {
+        @Option("do_gamer.crowd_avoidance.consider.npcs")
+        public boolean npcs = true;
 
-    @Option("do_gamer.crowd_avoidance.allies")
-    public boolean allies = false;
+        @Option("do_gamer.crowd_avoidance.consider.enemies")
+        public boolean enemies = true;
+
+        @Option("do_gamer.crowd_avoidance.consider.allies")
+        public boolean allies = false;
+    }
 }

@@ -61,7 +61,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             return false;
         }
 
-        return this.config.npcs || this.config.enemies || this.config.allies;
+        return this.config.consider.npcs || this.config.consider.enemies || this.config.consider.allies;
     }
 
     private boolean checkSafePoint(Entity entity) {
@@ -75,20 +75,20 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private List<Ship> getShips() {
         List<Ship> ships = new ArrayList<>();
 
-        if (this.config.npcs) {
+        if (this.config.consider.npcs) {
             // Collect NPC ships
             this.entities.getNpcs().stream().filter(this::checkRadius).forEach(ships::add);
         }
 
-        if (this.config.enemies && this.config.allies) {
+        if (this.config.consider.enemies && this.config.consider.allies) {
             // Collect any player ships
             this.entities.getPlayers().stream().filter(this::checkRadius).forEach(ships::add);
-        } else if (this.config.enemies) {
+        } else if (this.config.consider.enemies) {
             // Collect only enemy player ships
             this.entities.getPlayers().stream()
                     .filter(player -> player.getEntityInfo().isEnemy() && this.checkRadius(player))
                     .forEach(ships::add);
-        } else if (this.config.allies) {
+        } else if (this.config.consider.allies) {
             // Collect only ally player ships
             this.entities.getPlayers().stream()
                     .filter(player -> !player.getEntityInfo().isEnemy() && this.checkRadius(player))
