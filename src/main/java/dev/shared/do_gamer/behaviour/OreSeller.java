@@ -76,7 +76,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private static final int SELL_INTERVAL_MS = 750;
     private static final double NPC_DISTANCE_THRESHOLD = 3000.0;
     private static final double MIN_TRIGGER_PERCENT = 0.05;
-    private static final double MAX_TRIGGER_PERCENT = 0.99;
     private static final long MIN_ACTIVATION_DELAY_MS = 250L;
     private static final long TRAVEL_LOAD_DELAY_MS = 3_000L;
     private static final long DOCKING_LOAD_DELAY_MS = 2_000L;
@@ -885,7 +884,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      */
     private double normalizeTriggerThreshold() {
         double value = this.config.triggerPercent;
-        return Math.max(MIN_TRIGGER_PERCENT, Math.min(MAX_TRIGGER_PERCENT, value));
+        return Math.max(MIN_TRIGGER_PERCENT, value);
     }
 
     /**
