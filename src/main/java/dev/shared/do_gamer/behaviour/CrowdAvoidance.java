@@ -21,7 +21,6 @@ import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.shared.modules.MapModule;
-import eu.darkbot.shared.utils.SafetyFinder;
 
 @Feature(name = "Crowd Avoidance", description = "Detects crowded areas around the ship and moves away from them.")
 public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConfig> {
@@ -30,7 +29,6 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private final HeroAPI hero;
     private final EntitiesAPI entities;
     private final MovementAPI movement;
-    private final SafetyFinder safetyFinder;
     private CrowdAvoidanceConfig config;
     private static final double MIN_DISTANCE_TO_PORTAL = 500.0;
     private static final double MIN_DISTANCE_TO_STATION = 1000.0;
@@ -42,7 +40,6 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         this.hero = api.requireAPI(HeroAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
-        this.safetyFinder = api.requireInstance(SafetyFinder.class);
     }
 
     @Override
@@ -81,11 +78,6 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
 
         // Keep inactive if captcha boxes detected
         if (CaptchaBoxDetector.hasCaptchaBoxes(this.entities)) {
-            return false;
-        }
-
-        // Keep inactive while safety finder is active
-        if (this.safetyFinder != null && this.safetyFinder.state() != SafetyFinder.Escaping.NONE) {
             return false;
         }
 
