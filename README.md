@@ -16,6 +16,7 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - Repair PET: Repairs your PET when its health drops below a certain threshold. By @do-gamer
 - Close AD Offer: Automatically closes AD Offer on the left side (temporary solution until the bot is fixed). By @do-gamer
 - Avoid Draw Fire: If has Draw Fire effect, then stops attacking and sets the PET into passive mode. May also use EMP-01. By @do-gamer
+- Crowd Avoidance: Detects crowded areas around the ship and moves away from them. By @do-gamer
 
 ## Contributing
 
