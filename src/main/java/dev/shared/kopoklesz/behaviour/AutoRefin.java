@@ -1,5 +1,9 @@
 package dev.shared.kopoklesz.behaviour;
 
+import java.util.Arrays;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import com.github.manolo8.darkbot.Main;
 import com.github.manolo8.darkbot.core.IDarkBotAPI;
 import com.github.manolo8.darkbot.core.api.Capability;
@@ -11,14 +15,8 @@ import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.managers.OreAPI;
+import eu.darkbot.api.managers.OreAPI.Ore;
 import eu.darkbot.api.managers.StatsAPI;
-
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.Map;
-import java.util.stream.Collectors;
-
-import static eu.darkbot.api.managers.OreAPI.*;
 
 @Feature(name = "Auto refiner", description = "Automatically refine materials")
 public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
@@ -36,10 +34,10 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
     private boolean lastRefineAttemptFailed = false;
 
     public AutoRefin(OreAPI ores,
-                        GuiManager guiManager,
-                        IDarkBotAPI darkbotApi,
-                        StatsAPI stats,
-                        Main main) {
+            GuiManager guiManager,
+            IDarkBotAPI darkbotApi,
+            StatsAPI stats,
+            Main main) {
         this.ores = ores;
         this.guiManager = guiManager;
         this.darkbotApi = darkbotApi;
@@ -56,7 +54,17 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
     // behavior
     @Override
     public void onTickBehavior() {
-        if (!isReadyForRefining()) return; // check if we can refine
+        if (!isReadyForRefining())
+            return; // check if we can refine
+
+        if (getCargoPercent() < config.triggerPercent) {
+            // Reset tracking variables when cargo is below trigger percent
+            if (lastCargoAmount != -1) {
+                lastCargoAmount = -1;
+                lastRefineAttemptFailed = false;
+            }
+            return;
+        }
 
         int currentCargo = stats.getCargo();
 
@@ -89,20 +97,18 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
                 });
     }
 
-    /////////////////////////////////////////////////// helper methods ///////////////////////////////////////////////////
+    /////////////////////////////// helper methods ///////////////////////////////
     private boolean isReadyForRefining() {
-        if (config == null || !config.enabled) return false;
+        if (config == null || !config.enabled)
+            return false;
 
-        if (main.config.MISCELLANEOUS.AUTO_REFINE || !darkbotApi.hasCapability(Capability.DIRECT_REFINE)) return false;
+        if (main.config.MISCELLANEOUS.AUTO_REFINE || !darkbotApi.hasCapability(Capability.DIRECT_REFINE))
+            return false;
 
-        if (guiManager.getAddress() == 0) return false;
-
-        if (getCargoPercent() <= config.triggerPercent) return false;
-
-        return true;
+        return (guiManager.getAddress() != 0);
     }
 
-    private boolean shouldRefineOre(OreAPI.Ore ore) {
+    private boolean shouldRefineOre(Ore ore) {
         if (config == null || config.ores == null)
             return false;
         switch (ore) {
@@ -117,7 +123,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
         }
     }
 
-    private int maxRefine(OreAPI.Ore ore) {
+    private int maxRefine(Ore ore) {
         switch (ore) {
             case PROMETID:
                 return Math.min(ores.getAmount(Ore.PROMETIUM) / 20, ores.getAmount(Ore.ENDURIUM) / 10);

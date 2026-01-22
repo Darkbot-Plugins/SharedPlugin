@@ -1,0 +1,39 @@
+name: release
+
+permissions:
+  contents: write
+
+env:
+  GRADLE_VERSION: "8.6"
+  JAVA_VERSION: "11"
+
+on:
+  release:
+    types:
+      - published
+
+jobs:
+  build-sign-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          java-version: "${{ env.JAVA_VERSION }}"
+          distribution: "temurin"
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@v2.5.1
+        with:
+          gradle-version: ${{ env.GRADLE_VERSION }}
+          arguments: build
+      - name: Decode keystore
+        run: |
+          echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > .keystore
+      - name: Sign jar
+        run: |
+          jarsigner -tsa http://timestamp.digicert.com -keystore .keystore build/libs/SharedPlugin.jar "${{ secrets.SIGNING_KEY_ALIAS }}" -storepass "${{ secrets.SIGNING_KEYSTORE_PASSWORD }}"
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/libs/SharedPlugin.jar
