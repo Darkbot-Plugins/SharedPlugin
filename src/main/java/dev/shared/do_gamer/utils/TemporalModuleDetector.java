@@ -16,7 +16,7 @@ public final class TemporalModuleDetector {
      * Checks if the current bot module is an instance of TemporalModule.
      */
     public static boolean isUsing(BotAPI bot) {
-        if (bot == null || bot.getModule() == null) {
+        if (bot == null) {
             return false;
         }
         return (bot.getModule() instanceof TemporalModule);
