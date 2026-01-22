@@ -6,10 +6,12 @@ import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
+import eu.darkbot.api.game.enums.EntityEffect;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
+import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 
@@ -17,6 +19,7 @@ import eu.darkbot.api.managers.StarSystemAPI;
 public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
 
     private final BotAPI bot;
+    private final HeroAPI hero;
     private final PetAPI pet;
     private final AttackAPI attacker;
     private final EntitiesAPI entities;
@@ -30,6 +33,7 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
 
     public FixPetStuck(PluginAPI api) {
         this.bot = api.requireAPI(BotAPI.class);
+        this.hero = api.requireAPI(HeroAPI.class);
         this.pet = api.requireAPI(PetAPI.class);
         this.attacker = api.requireAPI(AttackAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
@@ -63,8 +67,8 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
             return; // PET is disabled, nothing to monitor
         }
 
-        if (!this.attacker.hasTarget() || !this.attacker.isAttacking()) {
-            return; // Not in combat, no need to monitor PET
+        if (!this.isInCombat() && !this.isCollecting()) {
+            return; // Not in combat or collecting, no need to monitor PET
         }
 
         if (this.pet.isActive()) {
@@ -100,6 +104,14 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
 
     private boolean isInGracePeriod() {
         return this.lastReloadAt > 0 && (System.currentTimeMillis() - this.lastReloadAt) < POST_RELOAD_GRACE_MS;
+    }
+
+    private boolean isInCombat() {
+        return this.attacker.hasTarget() && this.attacker.isAttacking();
+    }
+
+    private boolean isCollecting() {
+        return this.hero.hasEffect(EntityEffect.BOX_COLLECTING) || this.hero.hasEffect(EntityEffect.BOOTY_COLLECTING);
     }
 
     private void triggerReload() {
