@@ -88,8 +88,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
                 });
     }
 
-    /////////////////////////////////////////////////// helper methods
-    /////////////////////////////////////////////////// ///////////////////////////////////////////////////
+    /////////////////////////////// helper methods ///////////////////////////////
     private boolean isReadyForRefining() {
         if (config == null || !config.enabled)
             return false;
@@ -103,7 +102,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
         return (getCargoPercent() > config.triggerPercent);
     }
 
-    private boolean shouldRefineOre(OreAPI.Ore ore) {
+    private boolean shouldRefineOre(Ore ore) {
         if (config == null || config.ores == null)
             return false;
         switch (ore) {
@@ -118,7 +117,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
         }
     }
 
-    private int maxRefine(OreAPI.Ore ore) {
+    private int maxRefine(Ore ore) {
         switch (ore) {
             case PROMETID:
                 return Math.min(ores.getAmount(Ore.PROMETIUM) / 20, ores.getAmount(Ore.ENDURIUM) / 10);
