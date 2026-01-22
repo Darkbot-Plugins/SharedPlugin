@@ -59,8 +59,10 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
 
         if (getCargoPercent() < config.triggerPercent) {
             // Reset tracking variables when cargo is below trigger percent
-            lastCargoAmount = stats.getCargo();
-            lastRefineAttemptFailed = false;
+            if (lastCargoAmount != -1) {
+                lastCargoAmount = -1;
+                lastRefineAttemptFailed = false;
+            }
             return;
         }
 
