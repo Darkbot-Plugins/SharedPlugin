@@ -25,9 +25,7 @@ import eu.darkbot.api.game.other.EntityInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
-import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
-import eu.darkbot.api.managers.EventBrokerAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
@@ -38,7 +36,6 @@ import eu.darkbot.api.managers.StatsAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.shared.modules.TemporalModule;
 import eu.darkbot.shared.utils.MapTraveler;
-import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full")
@@ -54,7 +51,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final MapTraveler traveler;
     private final HeroItemsAPI items;
     private final AttackAPI attacker;
-    private final PortalJumper portalJumper;
     private final SafetyFinderOnly safetyFinderOnly;
 
     private OreSellerConfig config;
@@ -121,16 +117,9 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.pet = api.requireAPI(PetAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
-        ConfigAPI configApi = api.requireAPI(ConfigAPI.class);
 
-        EventBrokerAPI events = api.requireAPI(EventBrokerAPI.class);
-        this.portalJumper = new PortalJumper(api);
-        this.traveler = new MapTraveler(this.pet, this.hero, this.starSystem, this.movement,
-                this.portalJumper, this.entities, events);
-        this.safetyFinderOnly = new SafetyFinderOnly(this.hero, this.attacker, this.items, this.movement,
-                this.starSystem, configApi, this.entities, this.traveler, this.portalJumper);
-        events.registerListener(this.traveler);
-        events.registerListener(this.safetyFinderOnly);
+        this.safetyFinderOnly = SafetyFinderOnly.create(api);
+        this.traveler = this.safetyFinderOnly.getTraveler();
 
         for (TimerSlot slot : TimerSlot.values()) {
             this.timers.put(slot, Timer.get());
