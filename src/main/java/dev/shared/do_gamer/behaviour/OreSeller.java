@@ -10,7 +10,7 @@ import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
 import dev.shared.do_gamer.utils.CaptchaBoxDetector;
-import dev.shared.do_gamer.utils.SafetyFinderOnly;
+import dev.shared.do_gamer.utils.CustomSafetyFinder;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -51,7 +51,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final MapTraveler traveler;
     private final HeroItemsAPI items;
     private final AttackAPI attacker;
-    private final SafetyFinderOnly safetyFinderOnly;
+    private final CustomSafetyFinder customSafetyFinder;
 
     private OreSellerConfig config;
     private ActiveMode activeMode = ActiveMode.NONE;
@@ -118,8 +118,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
 
-        this.safetyFinderOnly = SafetyFinderOnly.create(api);
-        this.traveler = this.safetyFinderOnly.getTraveler();
+        this.customSafetyFinder = CustomSafetyFinder.create(api);
+        this.traveler = this.customSafetyFinder.getTraveler();
 
         for (TimerSlot slot : TimerSlot.values()) {
             this.timers.put(slot, Timer.get());
@@ -521,13 +521,13 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.movement.stop(false);
             return true; // No need for safety finder in GG maps
         }
-        if (this.safetyFinderOnly == null) {
+        if (this.customSafetyFinder == null) {
             System.out.println("Safety finder unavailable for ore selling");
             return false;
         }
         this.postSafetyState = nextState;
         this.state = State.SAFE_POSITIONING;
-        this.safetyFinderOnly.setRefreshing(true);
+        this.customSafetyFinder.setRefreshing(true);
         return true;
     }
 
@@ -587,12 +587,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Handles safe positioning before non-base selling.
      */
     private void handleSafePositioning() {
-        if (this.safetyFinderOnly == null || this.postSafetyState == null) {
+        if (this.customSafetyFinder == null || this.postSafetyState == null) {
             this.finish();
             return;
         }
 
-        if (!this.safetyFinderOnly.reachSafety()) {
+        if (!this.customSafetyFinder.reachSafety()) {
             return;
         }
 
@@ -1001,8 +1001,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
         this.cachedTriggerResult = null;
         this.postSafetyState = null;
-        if (this.safetyFinderOnly != null) {
-            this.safetyFinderOnly.setRefreshing(false);
+        if (this.customSafetyFinder != null) {
+            this.customSafetyFinder.setRefreshing(false);
         }
         this.activeMode = ActiveMode.NONE;
         this.state = State.IDLE;

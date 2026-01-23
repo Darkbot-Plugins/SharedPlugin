@@ -15,9 +15,9 @@ import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.shared.utils.SafetyFinder;
 
 /**
- * Customized SafetyFinder: Avoid portal jumps and move only to safe areas.
+ * Customized SafetyFinder: provide no-jump safety finding functionality.
  */
-public class SafetyFinderOnly extends SafetyFinder {
+public class CustomSafetyFinder extends SafetyFinder {
     private final MapTraveler traveler;
 
     /**
@@ -56,12 +56,12 @@ public class SafetyFinderOnly extends SafetyFinder {
     /**
      * Creates an instance of SafetyFinderOnly.
      */
-    public static SafetyFinderOnly create(PluginAPI api) {
+    public static CustomSafetyFinder create(PluginAPI api) {
         Init init = new Init(api);
-        return new SafetyFinderOnly(init);
+        return new CustomSafetyFinder(init);
     }
 
-    private SafetyFinderOnly(Init init) {
+    private CustomSafetyFinder(Init init) {
         super(init.hero, init.attacker, init.items, init.movement, init.starSystem,
                 init.config, init.entities, init.traveler, init.portalJumper);
         this.traveler = init.traveler;
@@ -75,8 +75,10 @@ public class SafetyFinderOnly extends SafetyFinder {
         return this.traveler;
     }
 
-    @Override
-    public boolean tick() {
+    /**
+     * Executes a single tick of the no-jump safety routine.
+     */
+    public boolean noJumpTick() {
         if (this.shouldTimeout()) {
             return false;
         }
@@ -103,7 +105,6 @@ public class SafetyFinderOnly extends SafetyFinder {
             this.escape = Escaping.NONE;
             return true;
         }
-
         return false;
     }
 
@@ -118,11 +119,11 @@ public class SafetyFinderOnly extends SafetyFinder {
             this.setRefreshing(false);
         }
 
-        if (!this.tick()) {
+        if (!this.noJumpTick()) {
             return false;
         }
 
-        if (this.state() != Escaping.NONE) {
+        if (escapeState != Escaping.NONE) {
             return false;
         }
 
