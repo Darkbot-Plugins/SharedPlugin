@@ -1,6 +1,14 @@
 package dev.shared.do_gamer.utils;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.stream.Collectors;
+
 import eu.darkbot.api.PluginAPI;
+import eu.darkbot.api.config.types.SafetyInfo;
+import eu.darkbot.api.game.entities.BattleStation;
+import eu.darkbot.api.game.entities.Entity;
+import eu.darkbot.api.game.entities.Ship;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
@@ -130,4 +138,56 @@ public class CustomSafetyFinder extends SafetyFinder {
         this.setRefreshing(false);
         return true;
     }
+
+    // ############################
+    // Temporal fix for CBS issue
+    // ############################
+
+    @Override
+    protected SafetyInfo getSafety() {
+        List<SafetyInfo> safeties = config.getLegacy()
+                .getSafeties(starSystem.getCurrentMap())
+                .stream()
+                .filter(s -> s.getEntity().map(Entity::isValid).orElse(false))
+                .filter(this::canUse) // Use custom "canUse" method
+                .map(s -> {
+                    s.setDistance(Math.max(0, movement.getDistanceBetween(hero, s) - s.getRadius()));
+                    return s;
+                })
+                .sorted(Comparator.comparingDouble(SafetyInfo::getDistance))
+                .collect(Collectors.toList());
+        if (safeties.isEmpty())
+            return null;
+
+        SafetyInfo best = safeties.get(0);
+
+        if (escape == Escaping.REPAIR || escape == Escaping.REFRESH ||
+                runClosestDistance.getValue() == 0 ||
+                best.getDistance() < runClosestDistance.getValue())
+            return best;
+
+        List<Ship> enemies = ships.stream().filter(this::runFrom).collect(Collectors.toList());
+
+        return safeties.stream()
+                .filter(s -> s.getDistance() < enemies.stream()
+                        .mapToDouble(enemy -> movement.getDistanceBetween(enemy, s))
+                        .min().orElse(Double.POSITIVE_INFINITY))
+                .findFirst()
+                .orElse(best);
+    }
+
+    private boolean canUse(SafetyInfo safety) {
+        if (safety.getRunMode() == SafetyInfo.RunMode.NEVER) {
+            return false; // Always skip if run mode is NEVER
+        }
+        if (safety.getType() == SafetyInfo.Type.CBS) {
+            return safety.getEntity()
+                    .map(c -> c instanceof BattleStation.Hull ? (BattleStation.Hull) c : null)
+                    .map(cbs -> !(cbs.getEntityInfo().isEnemy()
+                            || (cbs.getHullId() == 0 && safety.getCbsMode() == SafetyInfo.CbsMode.ALLY)))
+                    .orElse(false);
+        }
+        return safety.getRunMode().ordinal() <= this.escape.ordinal();
+    }
+
 }
