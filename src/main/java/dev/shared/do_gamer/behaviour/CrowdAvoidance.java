@@ -148,8 +148,8 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             targetY = closest.getY() - Math.sin(angle) * distance;
         }
 
-        this.movement.moveTo(targetX, targetY);
         this.markBoxesAsCollected();
+        this.movement.moveTo(targetX, targetY);
     }
 
     /**
