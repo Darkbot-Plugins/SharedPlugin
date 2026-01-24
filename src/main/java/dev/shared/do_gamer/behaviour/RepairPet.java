@@ -74,7 +74,7 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
         return this.attacker.hasTarget() && this.attacker.isAttacking();
     }
 
-    private boolean isPetLinkUsed() {
+    private boolean isHpLinkUsed() {
         return this.pet.getGear() == PetGear.HP_LINK;
     }
 
@@ -83,7 +83,7 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
             return false; // Do not repair if PET is inactive
         }
 
-        if (this.isPetLinkUsed()) {
+        if (this.isHpLinkUsed()) {
             return false; // Do not repair if HP Link is used
         }
 
