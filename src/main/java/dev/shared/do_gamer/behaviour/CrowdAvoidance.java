@@ -112,14 +112,14 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             // Collect any player ships
             this.entities.getPlayers().stream().filter(this::checkRadius).forEach(ships::add);
         } else if (this.config.consider.enemies) {
-            // Collect only enemy player ships
+            // Collect only enemy player ships and consider blacklisted as enemies too
             this.entities.getPlayers().stream()
-                    .filter(player -> player.getEntityInfo().isEnemy() && this.checkRadius(player))
+                    .filter(p -> (p.getEntityInfo().isEnemy() || p.isBlacklisted()) && this.checkRadius(p))
                     .forEach(ships::add);
         } else if (this.config.consider.allies) {
             // Collect only ally player ships
             this.entities.getPlayers().stream()
-                    .filter(player -> !player.getEntityInfo().isEnemy() && this.checkRadius(player))
+                    .filter(p -> !p.getEntityInfo().isEnemy() && this.checkRadius(p))
                     .forEach(ships::add);
         }
 
