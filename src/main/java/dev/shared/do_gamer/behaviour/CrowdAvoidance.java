@@ -34,6 +34,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private static final double MIN_DISTANCE_TO_STATION = 1000.0;
     private static final double AVOIDANCE_DISTANCE = 1500.0;
     private static final double ADJUSTMENT_FACTOR = 3000.0;
+    private static final double BOXES_MARK_RADIUS = 500.0;
 
     public CrowdAvoidance(PluginAPI api) {
         this.bot = api.requireAPI(BotAPI.class);
@@ -156,7 +157,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
      */
     private void markBoxesAsCollected() {
         this.entities.getBoxes().stream()
-                .filter(box -> box.distanceTo(this.hero) <= this.config.radius)
+                .filter(box -> box.distanceTo(this.hero) <= BOXES_MARK_RADIUS)
                 .forEach(box -> {
                     box.setCollected();
                     // Re-mark every third retry to avoid instant attempts
