@@ -11,6 +11,7 @@ import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
+import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Entity;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
@@ -112,14 +113,14 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             // Collect any player ships
             this.entities.getPlayers().stream().filter(this::checkRadius).forEach(ships::add);
         } else if (this.config.consider.enemies) {
-            // Collect only enemy player ships
+            // Collect only enemy player ships and consider blacklisted as enemies too
             this.entities.getPlayers().stream()
-                    .filter(player -> player.getEntityInfo().isEnemy() && this.checkRadius(player))
+                    .filter(p -> (p.getEntityInfo().isEnemy() || p.isBlacklisted()) && this.checkRadius(p))
                     .forEach(ships::add);
         } else if (this.config.consider.allies) {
-            // Collect only ally player ships
+            // Collect only ally player ships and exclude blacklisted
             this.entities.getPlayers().stream()
-                    .filter(player -> !player.getEntityInfo().isEnemy() && this.checkRadius(player))
+                    .filter(p -> !p.getEntityInfo().isEnemy() && !p.isBlacklisted() && this.checkRadius(p))
                     .forEach(ships::add);
         }
 
@@ -147,6 +148,16 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             targetY = closest.getY() - Math.sin(angle) * distance;
         }
 
+        this.markBoxesAsCollected();
         this.movement.moveTo(targetX, targetY);
+    }
+
+    /**
+     * Marks boxes as collected to prevent interference during avoidance maneuvers
+     */
+    private void markBoxesAsCollected() {
+        this.entities.getBoxes().stream()
+                .filter(box -> box.distanceTo(this.hero) <= this.config.radius)
+                .forEach(Box::setCollected);
     }
 }

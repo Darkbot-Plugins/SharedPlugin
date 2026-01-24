@@ -4,6 +4,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import dev.shared.do_gamer.config.SimpleHealingConfig;
+import dev.shared.do_gamer.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -15,6 +16,7 @@ import eu.darkbot.api.game.items.ItemFlag;
 import eu.darkbot.api.game.items.SelectableItem.Ability;
 import eu.darkbot.api.game.other.Health;
 import eu.darkbot.api.managers.AttackAPI;
+import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.PetAPI;
@@ -23,6 +25,7 @@ import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Healing", description = "Activate the ship's healing ability and use the PET healing gear.")
 public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig> {
+    private final BotAPI bot;
     private final HeroAPI hero;
     private final HeroItemsAPI items;
     private final PetAPI pet;
@@ -36,6 +39,7 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     private final Timer petComboCooldown = Timer.get(PET_COMBO_COOLDOWN_MS);
 
     public SimpleHealing(PluginAPI api) {
+        this.bot = api.requireAPI(BotAPI.class);
         this.hero = api.requireAPI(HeroAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
         this.pet = api.requireAPI(PetAPI.class);
@@ -77,7 +81,7 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     }
 
     private void handlePetGear(Health health) {
-        if (!this.isEnabledPetGear())
+        if (!this.isEnabledPetGear() || TemporalModuleDetector.isUsing(this.bot))
             return;
         // Try to use Combo Repair
         if (this.pet.hasGear(PetGear.COMBO_REPAIR) && this.checkPetCombo(health)) {

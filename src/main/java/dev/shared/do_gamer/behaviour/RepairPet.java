@@ -1,6 +1,7 @@
 package dev.shared.do_gamer.behaviour;
 
 import dev.shared.do_gamer.config.RepairPetConfig;
+import dev.shared.do_gamer.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -8,12 +9,14 @@ import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.managers.AttackAPI;
+import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Repair PET", description = "Repairs your PET when its health drops below a certain threshold.")
 public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
+    private final BotAPI bot;
     private final PetAPI pet;
     private final AttackAPI attacker;
 
@@ -26,6 +29,7 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
     private static final double COMPLETION_THRESHOLD = 0.99;
 
     public RepairPet(PluginAPI api) {
+        this.bot = api.requireAPI(BotAPI.class);
         this.pet = api.requireAPI(PetAPI.class);
         this.attacker = api.requireAPI(AttackAPI.class);
     }
@@ -75,9 +79,9 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
             return false; // Do not repair if PET is inactive
         }
 
-        if (this.isAttacking()) {
+        if (this.isAttacking() || TemporalModuleDetector.isUsing(this.bot)) {
             this.delay.activate(DELAY_MS);
-            return false; // Do not repair while attacking
+            return false; // Do not repair while attacking or using temporal module
         }
 
         if (this.delay.isActive()) {

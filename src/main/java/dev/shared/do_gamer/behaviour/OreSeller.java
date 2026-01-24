@@ -10,7 +10,7 @@ import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
 import dev.shared.do_gamer.utils.CaptchaBoxDetector;
-import dev.shared.do_gamer.utils.SafetyFinderOnly;
+import dev.shared.do_gamer.utils.CustomSafetyFinder;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -25,9 +25,7 @@ import eu.darkbot.api.game.other.EntityInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
-import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
-import eu.darkbot.api.managers.EventBrokerAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
@@ -38,7 +36,6 @@ import eu.darkbot.api.managers.StatsAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.shared.modules.TemporalModule;
 import eu.darkbot.shared.utils.MapTraveler;
-import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full")
@@ -54,8 +51,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final MapTraveler traveler;
     private final HeroItemsAPI items;
     private final AttackAPI attacker;
-    private final PortalJumper portalJumper;
-    private final SafetyFinderOnly safetyFinderOnly;
+    private final CustomSafetyFinder customSafetyFinder;
 
     private OreSellerConfig config;
     private ActiveMode activeMode = ActiveMode.NONE;
@@ -121,16 +117,9 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.pet = api.requireAPI(PetAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
-        ConfigAPI configApi = api.requireAPI(ConfigAPI.class);
 
-        EventBrokerAPI events = api.requireAPI(EventBrokerAPI.class);
-        this.portalJumper = new PortalJumper(api);
-        this.traveler = new MapTraveler(this.pet, this.hero, this.starSystem, this.movement,
-                this.portalJumper, this.entities, events);
-        this.safetyFinderOnly = new SafetyFinderOnly(this.hero, this.attacker, this.items, this.movement,
-                this.starSystem, configApi, this.entities, this.traveler, this.portalJumper);
-        events.registerListener(this.traveler);
-        events.registerListener(this.safetyFinderOnly);
+        this.customSafetyFinder = CustomSafetyFinder.create(api);
+        this.traveler = this.customSafetyFinder.getTraveler();
 
         for (TimerSlot slot : TimerSlot.values()) {
             this.timers.put(slot, Timer.get());
@@ -532,13 +521,13 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.movement.stop(false);
             return true; // No need for safety finder in GG maps
         }
-        if (this.safetyFinderOnly == null) {
+        if (this.customSafetyFinder == null) {
             System.out.println("Safety finder unavailable for ore selling");
             return false;
         }
         this.postSafetyState = nextState;
         this.state = State.SAFE_POSITIONING;
-        this.safetyFinderOnly.setRefreshing(true);
+        this.customSafetyFinder.setRefreshing(true);
         return true;
     }
 
@@ -598,12 +587,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Handles safe positioning before non-base selling.
      */
     private void handleSafePositioning() {
-        if (this.safetyFinderOnly == null || this.postSafetyState == null) {
+        if (this.customSafetyFinder == null || this.postSafetyState == null) {
             this.finish();
             return;
         }
 
-        if (!this.safetyFinderOnly.reachSafety()) {
+        if (!this.customSafetyFinder.reachSafety()) {
             return;
         }
 
@@ -936,12 +925,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 return this.config.ores.duranium;
             case PROMERIUM:
                 return this.config.ores.promerium;
-            case SEPROM:
-                return this.config.ores.seprom;
             case PALLADIUM:
                 return this.shouldSellPalladium(mode);
-            case OSMIUM:
-                return this.config.ores.osmium;
             default:
                 return false;
         }
@@ -1012,8 +997,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
         this.cachedTriggerResult = null;
         this.postSafetyState = null;
-        if (this.safetyFinderOnly != null) {
-            this.safetyFinderOnly.setRefreshing(false);
+        if (this.customSafetyFinder != null) {
+            this.customSafetyFinder.setRefreshing(false);
         }
         this.activeMode = ActiveMode.NONE;
         this.state = State.IDLE;

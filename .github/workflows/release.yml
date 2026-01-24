@@ -1,4 +1,4 @@
-name: release
+name: Jar build & sign
 
 permissions:
   contents: write
@@ -11,12 +11,19 @@ on:
   release:
     types:
       - published
+  workflow_run:
+    workflows:
+      - Release on version change
+    types:
+      - completed
 
 jobs:
   build-sign-upload:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
@@ -27,6 +34,11 @@ jobs:
         with:
           gradle-version: ${{ env.GRADLE_VERSION }}
           arguments: build
+      - name: Resolve tag
+        id: resolve_tag
+        run: |
+          git fetch --tags --force
+          echo "TAG_NAME=$(git describe --tags --abbrev=0)" >> $GITHUB_OUTPUT
       - name: Decode keystore
         run: |
           echo "${{ secrets.SIGNING_KEYSTORE_BASE64 }}" | base64 -d > .keystore
@@ -36,4 +48,5 @@ jobs:
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.resolve_tag.outputs.TAG_NAME }}
           files: build/libs/SharedPlugin.jar

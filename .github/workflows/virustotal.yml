@@ -1,4 +1,4 @@
-name: released
+name: Virustotal Scan
 
 permissions:
   contents: read
@@ -7,6 +7,11 @@ on:
   release:
     types:
       - published
+  workflow_run:
+    workflows:
+      - Jar build & sign
+    types:
+      - completed
 
 jobs:
   virustotal:
