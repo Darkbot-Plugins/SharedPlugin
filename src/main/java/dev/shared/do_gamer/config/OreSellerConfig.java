@@ -110,13 +110,7 @@ public class OreSellerConfig {
         @Option("do_gamer.ore_seller.ores.promerium")
         public boolean promerium = true;
 
-        @Option("do_gamer.ore_seller.ores.seprom")
-        public boolean seprom = false;
-
         @Option("do_gamer.ore_seller.ores.palladium")
         public boolean palladium = false;
-
-        @Option("do_gamer.ore_seller.ores.osmium")
-        public boolean osmium = false;
     }
 }

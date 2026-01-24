@@ -9,7 +9,7 @@ public class CrowdAvoidanceConfig {
     public int numb = 5;
 
     @Option("do_gamer.crowd_avoidance.radius")
-    @Number(min = 100, step = 100, max = 2000)
+    @Number(min = 100, step = 100, max = 4000)
     public int radius = 300;
 
     @Option("do_gamer.crowd_avoidance.consider")
