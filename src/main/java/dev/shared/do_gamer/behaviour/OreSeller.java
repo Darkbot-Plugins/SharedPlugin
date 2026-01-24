@@ -925,12 +925,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 return this.config.ores.duranium;
             case PROMERIUM:
                 return this.config.ores.promerium;
-            case SEPROM:
-                return this.config.ores.seprom;
             case PALLADIUM:
                 return this.shouldSellPalladium(mode);
-            case OSMIUM:
-                return this.config.ores.osmium;
             default:
                 return false;
         }
