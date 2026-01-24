@@ -148,19 +148,19 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             targetY = closest.getY() - Math.sin(angle) * distance;
         }
 
-        this.markBoxesAsCollected();
+        this.markBoxesAsCollected(closest);
         this.movement.moveTo(targetX, targetY);
     }
 
     /**
      * Marks boxes as collected to prevent interference during avoidance maneuvers
      */
-    private void markBoxesAsCollected() {
+    private void markBoxesAsCollected(Ship ship) {
         this.entities.getBoxes().stream()
-                .filter(box -> box.distanceTo(this.hero) <= BOXES_MARK_RADIUS)
+                .filter(box -> box.distanceTo(ship) <= BOXES_MARK_RADIUS)
                 .forEach(box -> {
                     box.setCollected();
-                    // Re-mark every third retry to avoid instant attempts
+                    // Re-mark every 3 retries to avoid instant attempts
                     // (see "getNextWait" method in "Box" entity)
                     if (box.getRetries() % 3 == 0) {
                         box.setCollected();
