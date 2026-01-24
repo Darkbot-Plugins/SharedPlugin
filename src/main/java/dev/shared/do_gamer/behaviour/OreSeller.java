@@ -35,7 +35,6 @@ import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.api.managers.StatsAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.shared.modules.TemporalModule;
-import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full")
@@ -48,7 +47,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final StatsAPI stats;
     private final PetAPI pet;
     private final StarSystemAPI starSystem;
-    private final MapTraveler traveler;
     private final HeroItemsAPI items;
     private final AttackAPI attacker;
     private final CustomSafetyFinder customSafetyFinder;
@@ -119,7 +117,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.items = api.requireAPI(HeroItemsAPI.class);
 
         this.customSafetyFinder = CustomSafetyFinder.create(api);
-        this.traveler = this.customSafetyFinder.getTraveler();
 
         for (TimerSlot slot : TimerSlot.values()) {
             this.timers.put(slot, Timer.get());
@@ -507,7 +504,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 this.previousPetEnabled = this.pet.isEnabled();
             }
             this.state = State.TRAVEL_TO_BASE;
-            this.traveler.setTarget(this.desiredBaseMap);
+            this.customSafetyFinder.getTraveler().setTarget(this.desiredBaseMap);
         }
         return true;
     }
@@ -543,7 +540,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             if (this.previousPetEnabled == null) {
                 this.previousPetEnabled = this.pet.isEnabled();
             }
-            this.traveler.setTarget(this.desiredBaseMap);
+            this.customSafetyFinder.getTraveler().setTarget(this.desiredBaseMap);
         }
 
         if (this.isOnBaseMap()) {
@@ -556,7 +553,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         this.timer(TimerSlot.LOAD).disarm();
 
-        this.traveler.tick();
+        this.customSafetyFinder.getTraveler().tick();
     }
 
     /**
