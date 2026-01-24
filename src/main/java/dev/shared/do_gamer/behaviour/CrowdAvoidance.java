@@ -157,7 +157,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
      */
     private void markBoxesAsCollected(Ship ship) {
         this.entities.getBoxes().stream()
-                .filter(box -> box.distanceTo(ship) <= BOXES_MARK_RADIUS)
+                .filter(box -> box.distanceTo(ship) <= BOXES_MARK_RADIUS && !box.isCollected())
                 .forEach(box -> {
                     box.setCollected();
                     // Re-mark every 3 retries to avoid instant attempts
