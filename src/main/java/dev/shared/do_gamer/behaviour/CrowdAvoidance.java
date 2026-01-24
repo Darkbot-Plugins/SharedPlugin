@@ -11,7 +11,6 @@ import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
-import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Entity;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
@@ -158,6 +157,13 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private void markBoxesAsCollected() {
         this.entities.getBoxes().stream()
                 .filter(box -> box.distanceTo(this.hero) <= this.config.radius)
-                .forEach(Box::setCollected);
+                .forEach(box -> {
+                    box.setCollected();
+                    // Re-mark every third retry to avoid instant attempts
+                    // (see "getNextWait" method in "Box" entity)
+                    if (box.getRetries() % 3 == 0) {
+                        box.setCollected();
+                    }
+                });
     }
 }
