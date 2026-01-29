@@ -45,6 +45,17 @@ public class PetGearHelper {
     }
 
     /**
+     * Sets the PET to passive mode if not already in that mode.
+     */
+    public boolean setPassive() {
+        if (this.pet.getGear() == PetGear.PASSIVE) {
+            return false; // Already passive
+        }
+        this.tryUse(PetGear.PASSIVE);
+        return true;
+    }
+
+    /**
      * Checks if the PET can use the specified gear.
      */
     public boolean canUse(PetGear gear) {
@@ -56,6 +67,35 @@ public class PetGearHelper {
      */
     private boolean isRestricted(PetGear gear) {
         PetGear currentGear = this.pet.getGear();
-        return currentGear != gear && RESTRICTED_GEARS.contains(currentGear);
+        return currentGear != null && currentGear != gear && RESTRICTED_GEARS.contains(currentGear);
+    }
+
+    /**
+     * Checks if the PET is currently using the specified gear.
+     */
+    public boolean isUsing(PetGear gear) {
+        PetGear currentGear = this.pet.getGear();
+        return currentGear != null && this.pet.getGear() == gear;
+    }
+
+    /**
+     * Checks if the PET is enabled.
+     */
+    public boolean isEnabled() {
+        return this.pet.isEnabled();
+    }
+
+    /**
+     * Sets the PET enabled or disabled.
+     */
+    public void setEnabled(boolean enabled) {
+        this.pet.setEnabled(enabled);
+    }
+
+    /**
+     * Checks if the PET is active.
+     */
+    public boolean isActive() {
+        return this.pet.isActive();
     }
 }

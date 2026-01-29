@@ -11,6 +11,7 @@ import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
 import dev.shared.do_gamer.utils.CaptchaBoxDetector;
 import dev.shared.do_gamer.utils.CustomSafetyFinder;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
@@ -31,10 +32,8 @@ import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.api.managers.OreAPI;
-import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.api.managers.StatsAPI;
-import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.shared.modules.TemporalModule;
 import eu.darkbot.util.Timer;
 
@@ -46,11 +45,11 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final EntitiesAPI entities;
     private final OreAPI oreApi;
     private final StatsAPI stats;
-    private final PetAPI pet;
     private final StarSystemAPI starSystem;
     private final HeroItemsAPI items;
     private final AttackAPI attacker;
     private final CustomSafetyFinder safetyFinder;
+    private final PetGearHelper petGearHelper;
 
     private OreSellerConfig config;
     private ActiveMode activeMode = ActiveMode.NONE;
@@ -113,11 +112,11 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.oreApi = api.requireAPI(OreAPI.class);
         this.stats = api.requireAPI(StatsAPI.class);
-        this.pet = api.requireAPI(PetAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
 
         this.safetyFinder = CustomSafetyFinder.create(api);
+        this.petGearHelper = new PetGearHelper(api);
 
         for (TimerSlot slot : TimerSlot.values()) {
             this.timers.put(slot, Timer.get());
@@ -282,11 +281,10 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 }
                 break;
             case PET:
-                if (!this.pet.isActive()) {
+                if (!this.petGearHelper.isActive()) {
                     return "waiting on PET";
                 }
-                PetGear gear = this.pet.getGear();
-                if (gear != null && gear != PetGear.TRADER) {
+                if (!this.petGearHelper.isUsing(PetGear.TRADER)) {
                     return "switching to trader gear";
                 }
                 return "PET ready";
@@ -389,7 +387,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Confirms the PET trader gear is equipped and ready for use.
      */
     private boolean canUsePetTrader() {
-        return this.pet.hasGear(PetGear.TRADER) && !this.pet.hasCooldown(PetGear.TRADER);
+        return this.petGearHelper.canUse(PetGear.TRADER);
     }
 
     /**
@@ -481,9 +479,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (this.isOnBaseMap()) {
             this.state = State.MOVE_TO_REFINERY;
         } else {
-            if (this.previousPetEnabled == null) {
-                this.previousPetEnabled = this.pet.isEnabled();
-            }
             this.state = State.TRAVEL_TO_BASE;
         }
     }
@@ -509,9 +504,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.desiredBaseMap = this.resolveDesiredBaseMap();
             if (this.desiredBaseMap == null) {
                 return;
-            }
-            if (this.previousPetEnabled == null) {
-                this.previousPetEnabled = this.pet.isEnabled();
             }
             this.safetyFinder.getTraveler().setTarget(this.desiredBaseMap);
         }
@@ -694,15 +686,11 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Ensures the PET trader gear remains equipped during selling.
      */
     private void ensurePetTraderGearDuringSelling() {
-        if (this.activeMode != ActiveMode.PET || !this.pet.isActive()) {
+        if (this.activeMode != ActiveMode.PET || !this.petGearHelper.isActive()) {
             return; // Only relevant in PET mode
         }
 
-        try {
-            this.pet.setGear(PetGear.TRADER);
-        } catch (ItemNotEquippedException ignored) {
-            // Ignored exception, we just wanted to ensure trader gear is equipped
-        }
+        this.petGearHelper.tryUse(PetGear.TRADER);
     }
 
     /**
@@ -743,41 +731,31 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         if (this.previousPetEnabled == null) {
-            this.previousPetEnabled = this.pet.isEnabled();
+            this.previousPetEnabled = this.petGearHelper.isEnabled();
         }
 
-        if (this.config.pet.keepEnabled && !this.pet.isEnabled()) {
-            this.pet.setEnabled(true);
+        if (this.config.pet.keepEnabled && !this.petGearHelper.isEnabled()) {
+            this.petGearHelper.setEnabled(true);
             loadTimer.activate(delay);
-            return;
+            return; // Wait for PET to enable
         }
 
-        if (!this.pet.isActive()) {
-            return;
+        if (!this.petGearHelper.isActive()) {
+            return; // Waiting for PET to become active
         }
 
-        PetGear gear = this.pet.getGear();
-        if (gear != PetGear.PASSIVE) {
-            try {
-                this.pet.setGear(PetGear.PASSIVE); // Unequip gear first
-                loadTimer.activate(delay);
-            } catch (ItemNotEquippedException ignored) {
-                // Ignored exception, we just wanted to unequip gear
-            }
-            return;
-        }
-
-        if (this.previousPetGear == null) {
-            this.previousPetGear = gear;
-        }
-
-        try {
-            this.pet.setGear(PetGear.TRADER);
+        if (this.petGearHelper.setPassive()) {
             loadTimer.activate(delay);
-        } catch (ItemNotEquippedException e) {
-            System.out.println("Failed to equip PET trader gear for ore selling");
-            this.finish();
+            return; // Wait for PET to switch to passive
         }
+
+        if (this.petGearHelper.tryUse(PetGear.TRADER)) {
+            loadTimer.activate(delay);
+            return; // Wait for PET to switch to trader gear
+        }
+
+        System.out.println("Failed to equip PET trader gear for ore selling");
+        this.finish();
     }
 
     /**
@@ -990,21 +968,13 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     }
 
     /**
-     * Brings the PET back to the gear/enabled state it had before selling.
+     * Brings the PET back to its previous settings after selling.
      */
     private void restorePetSettings() {
-        if (this.previousPetGear != null) {
-            try {
-                this.pet.setGear(this.previousPetGear);
-            } catch (ItemNotEquippedException ignored) {
-                // Nothing to do
-            }
-        }
         if (this.previousPetEnabled != null) {
-            this.pet.setEnabled(this.previousPetEnabled);
+            this.petGearHelper.setEnabled(this.previousPetEnabled);
         }
         this.previousPetEnabled = null;
-        this.previousPetGear = null;
     }
 
     /**
