@@ -116,6 +116,15 @@ public class CustomSafetyFinder extends SafetyFinder {
         return false;
     }
 
+    @Override
+    protected void moveToSafety(SafetyInfo safety) {
+        super.moveToSafety(safety);
+        // Stop attacking while moving to safety
+        if (this.attacker.isAttacking()) {
+            this.attacker.stopAttack();
+        }
+    }
+
     /**
      * Runs the no-jump safety routine until the ship reaches a safe spot.
      */
