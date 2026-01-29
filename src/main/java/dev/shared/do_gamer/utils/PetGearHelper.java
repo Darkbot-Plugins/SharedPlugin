@@ -4,6 +4,7 @@ import java.util.List;
 
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.game.enums.PetGear;
+import eu.darkbot.api.game.other.Health;
 import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
 
@@ -97,5 +98,12 @@ public class PetGearHelper {
      */
     public boolean isActive() {
         return this.pet.isActive();
+    }
+
+    /**
+     * Gets the PET's health.
+     */
+    public Health getHealth() {
+        return this.pet.getHealth();
     }
 }
