@@ -5,7 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import dev.shared.do_gamer.config.CrowdAvoidanceConfig;
-import dev.shared.utils.CaptchaBoxDetector;
+import dev.shared.do_gamer.utils.CaptchaBoxDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
