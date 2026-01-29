@@ -744,11 +744,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return; // Waiting for PET to become active
         }
 
-        if (this.petGearHelper.setPassive()) {
-            loadTimer.activate(delay);
-            return; // Wait for PET to switch to passive
-        }
-
         if (this.petGearHelper.tryUse(PetGear.TRADER)) {
             loadTimer.activate(delay);
             return; // Wait for PET to switch to trader gear
