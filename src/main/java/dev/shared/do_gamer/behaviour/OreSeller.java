@@ -11,6 +11,7 @@ import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
 import dev.shared.do_gamer.utils.CaptchaBoxDetector;
 import dev.shared.do_gamer.utils.CustomSafetyFinder;
+import dev.shared.do_gamer.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -404,6 +405,11 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Initializes transient state to begin a selling run.
      */
     private void startSequence(ActiveMode mode, List<OreAPI.Ore> plan) {
+        if (TemporalModuleDetector.isUsing(this.bot)) {
+            this.finish();
+            return; // Avoid conflicts with other temporal modules
+        }
+
         this.activeMode = mode;
         this.sellPlan = plan == null ? Collections.emptyList() : plan;
         this.sellIndex = 0;
@@ -420,25 +426,18 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
         this.cachedTriggerResult = null;
 
-        boolean prepared;
         switch (mode) {
             case BASE:
-                prepared = this.prepareBaseModeState();
+                this.prepareBaseModeState();
                 break;
             case PET:
-                prepared = this.prepareNonBaseSellingState(State.PET_PREPARING);
+                this.prepareNonBaseSellingState(State.PET_PREPARING);
                 break;
             case DRONE:
-                prepared = this.prepareNonBaseSellingState(State.DRONE_PREPARING);
+                this.prepareNonBaseSellingState(State.DRONE_PREPARING);
                 break;
             default:
-                prepared = false;
                 break;
-        }
-
-        if (!prepared) {
-            this.finish();
-            return;
         }
 
         this.bot.setModule(this);
@@ -478,13 +477,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     /**
      * Determines travel needs and sets up the base selling state.
      */
-    private boolean prepareBaseModeState() {
-        this.desiredBaseMap = this.resolveDesiredBaseMap();
-        if (this.desiredBaseMap == null) {
-            System.out.println("Unable to resolve target base map for ore selling");
-            return false;
-        }
-
+    private void prepareBaseModeState() {
         if (this.isOnBaseMap()) {
             this.state = State.MOVE_TO_REFINERY;
         } else {
@@ -492,28 +485,20 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 this.previousPetEnabled = this.pet.isEnabled();
             }
             this.state = State.TRAVEL_TO_BASE;
-            this.safetyFinder.getTraveler().setTarget(this.desiredBaseMap);
         }
-        return true;
     }
 
     /**
      * Sets up the non-base selling state with safety positioning.
      */
-    private boolean prepareNonBaseSellingState(State nextState) {
+    private void prepareNonBaseSellingState(State nextState) {
         if (this.isGGMap()) {
             this.state = nextState;
             this.movement.stop(false);
-            return true; // No need for safety finder in GG maps
-        }
-        if (this.safetyFinder == null) {
-            System.out.println("Safety finder unavailable for ore selling");
-            return false;
+            return; // No need for safety finder in GG maps
         }
         this.postSafetyState = nextState;
         this.state = State.SAFE_POSITIONING;
-        this.safetyFinder.setRefreshing(true);
-        return true;
     }
 
     /**
