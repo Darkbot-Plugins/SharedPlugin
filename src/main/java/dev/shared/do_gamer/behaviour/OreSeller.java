@@ -136,13 +136,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         }
 
         if (this.activeMode != ActiveMode.NONE) {
-            if (this.bot.getModule() != this) {
-                this.bot.setModule(this);
-            }
-            return;
-        }
-
-        if (this.isCooldownActive() || this.bot.getModule() == this) {
+            this.bot.setModule(this); // Keep control
             return;
         }
 
@@ -161,16 +155,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
     @Override
     public boolean canRefresh() {
-        // Prevent refresh while active
-        return !this.isActive();
+        // Prevent refresh
+        return false;
     }
 
     @Override
     public void onTickModule() {
-        if (!this.isActive()) {
-            return;
-        }
-
         Timer failSafe = this.timer(TimerSlot.FAIL_SAFE);
         if (failSafe.isArmed()) {
             if (this.isFailSafeExemptState()) {
@@ -324,6 +314,11 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return false;
         }
 
+        // Keep inactive during cooldown
+        if (this.isCooldownActive()) {
+            return false;
+        }
+
         // Keep inactive in GG maps when in base mode or any NPCs are nearby
         if (this.isGGMap() && (SellModeOptions.BASE.equals(this.config.mode) || this.hasNearbyNpc())) {
             return false;
@@ -342,13 +337,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         // Keep inactive if captcha boxes detected
         return !CaptchaBoxDetector.hasCaptchaBoxes(this.entities);
-    }
-
-    /**
-     * Determines if this module currently controls the bot and has a mode selected.
-     */
-    private boolean isActive() {
-        return this.bot.getModule() == this && this.activeMode != ActiveMode.NONE;
     }
 
     /**
