@@ -43,6 +43,7 @@ import eu.darkbot.util.Timer;
 
 @Feature(name = "Fast Travel", description = "Fast travel between maps using Jump CPU (AJP-01).")
 public class FastTravel extends TemporalModule implements Behavior, Configurable<FastTravelConfig> {
+    private final Random random = new Random();
     private final ConfigAPI configApi;
     private final StarSystemAPI starSystem;
     private final HeroAPI hero;
@@ -53,6 +54,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     private final EntitiesAPI entities;
     private final GameScreenAPI gameScreen;
     private final AttackAPI attack;
+    private static final long VALIDATION_RETRY_INTERVAL_MS = 5_000L;
 
     private FastTravelConfig config;
     private final Timer timer = Timer.get();
@@ -218,7 +220,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
             return;
         }
 
-        this.timer.activate(5_000); // Recheck in 5s
+        this.timer.activate(VALIDATION_RETRY_INTERVAL_MS); // Recheck in 5s
     }
 
     private void handleSafePositioning() {
@@ -280,7 +282,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
                     .filter(m -> !m.equals(currentMap) && !m.equals(destMap))
                     .collect(Collectors.toList());
 
-            String randomMap = candidates.get(new Random().nextInt(candidates.size()));
+            String randomMap = candidates.get(this.random.nextInt(candidates.size()));
 
             // Click random map first
             Constants.Coordinate p = this.getMapCoordinates(randomMap);
