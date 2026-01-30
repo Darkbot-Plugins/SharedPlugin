@@ -1,4 +1,4 @@
-package dev.shared.do_gamer.utils;
+package dev.shared.utils;
 
 import java.util.Comparator;
 import java.util.List;

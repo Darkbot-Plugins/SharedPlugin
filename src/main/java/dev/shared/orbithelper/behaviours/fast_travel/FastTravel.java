@@ -11,8 +11,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import dev.shared.do_gamer.utils.CaptchaBoxDetector;
 import dev.shared.orbithelper.config.FastTravelConfig;
+import dev.shared.utils.CaptchaBoxDetector;
+
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
