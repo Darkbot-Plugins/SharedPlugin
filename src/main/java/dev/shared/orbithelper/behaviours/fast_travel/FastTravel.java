@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 
 import dev.shared.orbithelper.config.FastTravelConfig;
 import dev.shared.utils.CaptchaBoxDetector;
-
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -198,10 +197,10 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         int mapId = this.configApi.getConfigValue("general.working_map");
         String map = this.starSystem.getOrCreateMap(mapId).getShortName();
 
-        if (map.matches("5-[1-4]")) {
+        if (map.matches("^5-[1-4]$")) {
             // Special case for 5-x maps to go to 4-5
             map = "4-5";
-        } else if (map.matches("[1-3]BL")) {
+        } else if (map.matches("^[1-3]BL$")) {
             // Special case for BL maps to go to x-8
             map = map.charAt(0) + "-8";
         }
