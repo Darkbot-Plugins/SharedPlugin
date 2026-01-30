@@ -527,6 +527,9 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     // Check if current module is restricted for fast travel
     private boolean isRestrictedModule() {
         String module = this.configApi.getConfigValue("general.current_module");
+        if (module.isEmpty()) {
+            return false;
+        }
         String[] parts = module.split("\\.");
         String name = parts[parts.length - 1];
         return Constants.RESTRICTED_MODULES.contains(name);
