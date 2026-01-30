@@ -9,8 +9,8 @@ import java.util.Locale;
 import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
-import dev.shared.do_gamer.utils.CaptchaBoxDetector;
-import dev.shared.do_gamer.utils.CustomSafetyFinder;
+import dev.shared.utils.CaptchaBoxDetector;
+import dev.shared.utils.CustomSafetyFinder;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -35,7 +35,6 @@ import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.api.managers.StatsAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.shared.modules.TemporalModule;
-import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full")
@@ -48,10 +47,9 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final StatsAPI stats;
     private final PetAPI pet;
     private final StarSystemAPI starSystem;
-    private final MapTraveler traveler;
     private final HeroItemsAPI items;
     private final AttackAPI attacker;
-    private final CustomSafetyFinder customSafetyFinder;
+    private final CustomSafetyFinder safetyFinder;
 
     private OreSellerConfig config;
     private ActiveMode activeMode = ActiveMode.NONE;
@@ -118,8 +116,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
 
-        this.customSafetyFinder = CustomSafetyFinder.create(api);
-        this.traveler = this.customSafetyFinder.getTraveler();
+        this.safetyFinder = CustomSafetyFinder.create(api);
 
         for (TimerSlot slot : TimerSlot.values()) {
             this.timers.put(slot, Timer.get());
@@ -507,7 +504,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 this.previousPetEnabled = this.pet.isEnabled();
             }
             this.state = State.TRAVEL_TO_BASE;
-            this.traveler.setTarget(this.desiredBaseMap);
+            this.safetyFinder.getTraveler().setTarget(this.desiredBaseMap);
         }
         return true;
     }
@@ -521,13 +518,13 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.movement.stop(false);
             return true; // No need for safety finder in GG maps
         }
-        if (this.customSafetyFinder == null) {
+        if (this.safetyFinder == null) {
             System.out.println("Safety finder unavailable for ore selling");
             return false;
         }
         this.postSafetyState = nextState;
         this.state = State.SAFE_POSITIONING;
-        this.customSafetyFinder.setRefreshing(true);
+        this.safetyFinder.setRefreshing(true);
         return true;
     }
 
@@ -543,7 +540,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             if (this.previousPetEnabled == null) {
                 this.previousPetEnabled = this.pet.isEnabled();
             }
-            this.traveler.setTarget(this.desiredBaseMap);
+            this.safetyFinder.getTraveler().setTarget(this.desiredBaseMap);
         }
 
         if (this.isOnBaseMap()) {
@@ -556,7 +553,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         this.timer(TimerSlot.LOAD).disarm();
 
-        this.traveler.tick();
+        this.safetyFinder.getTraveler().tick();
     }
 
     /**
@@ -587,12 +584,12 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Handles safe positioning before non-base selling.
      */
     private void handleSafePositioning() {
-        if (this.customSafetyFinder == null || this.postSafetyState == null) {
+        if (this.safetyFinder == null || this.postSafetyState == null) {
             this.finish();
             return;
         }
 
-        if (!this.customSafetyFinder.reachSafety()) {
+        if (!this.safetyFinder.reachSafety()) {
             return;
         }
 
@@ -997,8 +994,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
         this.cachedTriggerResult = null;
         this.postSafetyState = null;
-        if (this.customSafetyFinder != null) {
-            this.customSafetyFinder.setRefreshing(false);
+        if (this.safetyFinder != null) {
+            this.safetyFinder.setRefreshing(false);
         }
         this.activeMode = ActiveMode.NONE;
         this.state = State.IDLE;

@@ -5,13 +5,12 @@ import java.util.Comparator;
 import java.util.List;
 
 import dev.shared.do_gamer.config.CrowdAvoidanceConfig;
-import dev.shared.do_gamer.utils.CaptchaBoxDetector;
+import dev.shared.utils.CaptchaBoxDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
-import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Entity;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
@@ -35,6 +34,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private static final double MIN_DISTANCE_TO_STATION = 1000.0;
     private static final double AVOIDANCE_DISTANCE = 1500.0;
     private static final double ADJUSTMENT_FACTOR = 3000.0;
+    private static final double BOXES_MARK_RADIUS = 500.0;
 
     public CrowdAvoidance(PluginAPI api) {
         this.bot = api.requireAPI(BotAPI.class);
@@ -148,16 +148,23 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             targetY = closest.getY() - Math.sin(angle) * distance;
         }
 
-        this.markBoxesAsCollected();
+        this.markBoxesAsCollected(closest);
         this.movement.moveTo(targetX, targetY);
     }
 
     /**
      * Marks boxes as collected to prevent interference during avoidance maneuvers
      */
-    private void markBoxesAsCollected() {
+    private void markBoxesAsCollected(Ship ship) {
         this.entities.getBoxes().stream()
-                .filter(box -> box.distanceTo(this.hero) <= this.config.radius)
-                .forEach(Box::setCollected);
+                .filter(box -> box.distanceTo(ship) <= BOXES_MARK_RADIUS && !box.isCollected())
+                .forEach(box -> {
+                    box.setCollected();
+                    // Re-mark every 3 retries to avoid instant attempts
+                    // (see "getNextWait" method in "Box" entity)
+                    if (box.getRetries() % 3 == 0) {
+                        box.setCollected();
+                    }
+                });
     }
 }
