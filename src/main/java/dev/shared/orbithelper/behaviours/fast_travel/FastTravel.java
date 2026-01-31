@@ -391,6 +391,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
             return false;
         }
 
+        // Check jump distance
         int jumps = this.getShortestPath(currentMap, destMap);
         return (jumps >= this.config.minJumps);
     }
