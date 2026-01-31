@@ -35,6 +35,7 @@ import eu.darkbot.api.managers.OreAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.api.managers.StatsAPI;
 import eu.darkbot.shared.modules.TemporalModule;
+import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Ore Seller", description = "Sells ores at base, via PET trader gear, or using the HM7 trade drone when cargo is full")
@@ -50,6 +51,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final AttackAPI attacker;
     private final CustomSafetyFinder safetyFinder;
     private final PetGearHelper petGearHelper;
+    private final MapTraveler traveler;
 
     private OreSellerConfig config;
     private ActiveMode activeMode = ActiveMode.NONE;
@@ -114,6 +116,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.stats = api.requireAPI(StatsAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
+        this.traveler = api.requireInstance(MapTraveler.class);
 
         this.safetyFinder = CustomSafetyFinder.create(api);
         this.petGearHelper = new PetGearHelper(api);
@@ -502,13 +505,11 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Handles traveling to the configured base map.
      */
     private void handleTravelToBase() {
+        this.desiredBaseMap = this.resolveDesiredBaseMap();
         if (this.desiredBaseMap == null) {
-            this.desiredBaseMap = this.resolveDesiredBaseMap();
-            if (this.desiredBaseMap == null) {
-                return;
-            }
-            this.safetyFinder.getTraveler().setTarget(this.desiredBaseMap);
+            return;
         }
+        this.traveler.setTarget(this.desiredBaseMap);
 
         if (this.isOnBaseMap()) {
             if (this.wait(this.timer(TimerSlot.LOAD), TRAVEL_LOAD_DELAY_MS)) {
@@ -520,7 +521,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         this.timer(TimerSlot.LOAD).disarm();
 
-        this.safetyFinder.getTraveler().tick();
+        this.traveler.tick();
     }
 
     /**
