@@ -32,20 +32,23 @@ public class GGAlertCloser implements Behavior {
         }
 
         // Scan ranges 1000-1299 and 2000-2099 for alert windows
-        for (int i = 1000; i < 2100; i++) {
-            if (i == 1300) {
-                i = 2000; // Jump to the next range
-            }
+        if (!this.scanRange(1000, 1300)) {
+            this.scanRange(2000, 2100);
+        }
 
+        this.actionTimer.activate(2_000L); // 2 seconds delay
+    }
+
+    private boolean scanRange(int startInclusive, int endExclusive) {
+        for (int i = startInclusive; i < endExclusive; i++) {
             String name = this.getName(i);
             Gui gui = this.gameScreen.getGui(name);
 
             if (this.performClick(gui)) {
-                break; // Break loop to process one window at a time
+                return true; // Process one window at a time
             }
         }
-
-        this.actionTimer.activate(2_000L); // 2 seconds delay
+        return false;
     }
 
     private boolean performClick(Gui gui) {
