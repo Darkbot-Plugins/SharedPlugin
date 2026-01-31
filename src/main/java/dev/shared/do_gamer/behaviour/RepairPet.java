@@ -86,7 +86,7 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
             return false; // Do not repair if HP Link is used
         }
 
-        if (this.isAttacking() || TemporalModuleDetector.isUsing(this.bot)) {
+        if (this.isAttacking() || TemporalModuleDetector.using(this.bot).temporal()) {
             this.delay.activate(DELAY_MS);
             return false; // Do not repair while attacking or using temporal module
         }

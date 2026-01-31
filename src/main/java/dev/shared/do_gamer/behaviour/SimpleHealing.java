@@ -80,7 +80,7 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     }
 
     private void handlePetGear(Health health) {
-        if (!this.isEnabledPetGear() || TemporalModuleDetector.isUsing(this.bot))
+        if (!this.isEnabledPetGear() || TemporalModuleDetector.using(this.bot).temporal())
             return;
         // Try to use Combo Repair
         if (this.petGearHelper.canUse(PetGear.COMBO_REPAIR) && this.checkPetCombo(health)) {
