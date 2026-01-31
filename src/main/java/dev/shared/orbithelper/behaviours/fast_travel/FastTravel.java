@@ -392,7 +392,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         }
 
         int jumps = this.getShortestPath(currentMap, destMap);
-        return (jumps == -1 || jumps < this.config.minJumps);
+        return (jumps == -1 || jumps <= this.config.minJumps);
     }
 
     private int getShortestPath(String start, String end) {
