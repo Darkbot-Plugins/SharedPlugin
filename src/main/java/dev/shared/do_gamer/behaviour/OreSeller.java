@@ -723,7 +723,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         // First ensure PET is passive
         if (this.setPetToPassive) {
-            if (this.petGearHelper.setPassive()) {
+            if (this.petGearHelper.setPassive(true)) {
                 this.setPetToPassive = false;
             }
             return;
