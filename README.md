@@ -18,6 +18,9 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - Auto Refiner: Automatically refines materials (Prometid, Duranium, Promerium) when cargo reaches a specified threshold. By @kopoklesz
 - Avoid Draw Fire: If has Draw Fire effect, then stops attacking and sets the PET into passive mode. May also use EMP-01. By @do-gamer
 - Crowd Avoidance: Detects crowded areas around the ship and moves away from them. By @do-gamer
+- GG Alert Closer: Closes alerts at Galaxy Gates (Hades, LoW and Kuiper). By @do-gamer & @orbithelper
+- Fast Travel: Fast travel between maps using Jump CPU (AJP-01). By @do-gamer & @orbithelper
+- Orbit Helper Quick Login: Adds a button to navigate to Orbit Helper from the menu. By @orbithelper
 
 ## Contributing
 
