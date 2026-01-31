@@ -492,6 +492,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             this.movement.stop(false);
             return; // No need for safety finder in GG maps
         }
+        this.safetyFinder.setRefreshing(true);
         this.postSafetyState = nextState;
         this.state = State.SAFE_POSITIONING;
     }
