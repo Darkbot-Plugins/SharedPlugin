@@ -8,9 +8,12 @@ import java.util.Map;
 import eu.darkbot.api.game.other.EntityInfo;
 
 public class Constants {
+        private Constants() {
+        }
+
         public static class Coordinate {
-                public int x;
-                public int y;
+                public final int x;
+                public final int y;
 
                 public Coordinate(int x, int y) {
                         this.x = x;
@@ -24,7 +27,7 @@ public class Constants {
          * The key is the map identifier (e.g., "1-1", "2-3").
          * The value is the Coordinate object containing x and y values.
          */
-        public static final Map<String, Coordinate> MAP_COORDINATES = new HashMap<>();
+        protected static final Map<String, Coordinate> MAP_COORDINATES = new HashMap<>();
 
         static {
                 // MMO (1-x)
@@ -82,7 +85,7 @@ public class Constants {
          * key: Map Name
          * value: List of connected maps (reachable via portal)
          */
-        public static final Map<String, List<String>> MAP_CONNECTIONS = new HashMap<>();
+        protected static final Map<String, List<String>> MAP_CONNECTIONS = new HashMap<>();
 
         static {
                 // 1-X Maps
@@ -222,7 +225,7 @@ public class Constants {
         /**
          * Map of faction to their respective level requirements.
          */
-        public static final EnumMap<EntityInfo.Faction, Map<String, Integer>> FACTION_LEVELS = new EnumMap<>(
+        protected static final EnumMap<EntityInfo.Faction, Map<String, Integer>> FACTION_LEVELS = new EnumMap<>(
                         EntityInfo.Faction.class);
 
         static {

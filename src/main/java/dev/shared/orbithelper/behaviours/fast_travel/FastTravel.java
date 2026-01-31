@@ -50,7 +50,6 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     private final HeroItemsAPI items;
     private final StatsAPI stats;
     private final MovementAPI movement;
-    private final BotAPI bot;
     private final EntitiesAPI entities;
     private final GameScreenAPI gameScreen;
     private final AttackAPI attack;
@@ -72,7 +71,6 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         this.items = api.requireAPI(HeroItemsAPI.class);
         this.stats = api.requireAPI(StatsAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
-        this.bot = api.requireAPI(BotAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.gameScreen = api.requireAPI(GameScreenAPI.class);
         this.attack = api.requireAPI(AttackAPI.class);
@@ -382,30 +380,13 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
                 || !this.levelAccessible(destMap) // Level restriction
                 || !this.isAvailableCpu() // CPU not available
                 || !this.canJump() // Cannot afford jump
+                || this.isEnemyHomeMap(destMap) // Enemy home map
         ) {
             return false;
         }
 
-        if (destMap.equals("1-1") || destMap.equals("2-1") || destMap.equals("3-1")) {
-            EntityInfo.Faction faction = this.hero.getEntityInfo().getFaction();
-
-            if (faction == EntityInfo.Faction.EIC && (destMap.equals("1-1") || destMap.equals("3-1"))) {
-                return false;
-            }
-            if (faction == EntityInfo.Faction.VRU && (destMap.equals("1-1") || destMap.equals("2-1"))) {
-                return false;
-            }
-            if (faction == EntityInfo.Faction.MMO && (destMap.equals("2-1") || destMap.equals("3-1"))) {
-                return false;
-            }
-        }
-
         int jumps = this.getShortestPath(currentMap, destMap);
-        if (jumps == -1 || jumps < this.config.minJumps) {
-            return false;
-        }
-
-        return true;
+        return (jumps == -1 || jumps < this.config.minJumps);
     }
 
     private int getShortestPath(String start, String end) {
@@ -522,6 +503,25 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         }
         Integer reqLevel = factionMap.get(destMap);
         return reqLevel != null && level >= reqLevel;
+    }
+
+    // Check if destination is an enemy home map
+    private boolean isEnemyHomeMap(String destMap) {
+        if (!"1-1".equals(destMap) && !"2-1".equals(destMap) && !"3-1".equals(destMap)) {
+            return false;
+        }
+
+        EntityInfo.Faction faction = this.hero.getEntityInfo().getFaction();
+        switch (faction) {
+            case EIC:
+                return "1-1".equals(destMap) || "3-1".equals(destMap);
+            case VRU:
+                return "1-1".equals(destMap) || "2-1".equals(destMap);
+            case MMO:
+                return "2-1".equals(destMap) || "3-1".equals(destMap);
+            default:
+                return false;
+        }
     }
 
     // Check if current module is restricted for fast travel
