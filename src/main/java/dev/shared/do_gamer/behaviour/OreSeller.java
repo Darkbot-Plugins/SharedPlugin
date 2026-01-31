@@ -60,7 +60,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private int sellIndex;
     private final EnumMap<TimerSlot, Timer> timers = new EnumMap<>(TimerSlot.class);
     private Boolean previousPetEnabled;
-    private PetGear previousPetGear;
+    private boolean setPetToPassive;
     private GameMap desiredBaseMap;
     private String desiredBaseMapName;
     private Boolean cachedTriggerResult; // Caches the result of selling trigger checks
@@ -419,7 +419,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.timer(TimerSlot.FAIL_SAFE).activate(failSafe);
         this.timer(TimerSlot.SELL_DELAY).disarm();
         this.previousPetEnabled = null;
-        this.previousPetGear = null;
+        this.setPetToPassive = false;
         this.timer(TimerSlot.LOAD).disarm();
         this.timer(TimerSlot.TRIGGER_STATE_CACHE).disarm();
         this.cachedTriggerResult = null;
@@ -429,6 +429,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 this.prepareBaseModeState();
                 break;
             case PET:
+                this.setPetToPassive = true;
                 this.prepareNonBaseSellingState(State.PET_PREPARING);
                 break;
             case DRONE:
@@ -719,6 +720,14 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return;
         }
 
+        // First ensure PET is passive
+        if (this.setPetToPassive) {
+            if (this.petGearHelper.setPassive()) {
+                this.setPetToPassive = false;
+            }
+            return;
+        }
+
         long delay = Math.max(MIN_ACTIVATION_DELAY_MS, this.config.pet.activationDelayMs);
         Timer loadTimer = this.timer(TimerSlot.LOAD);
         if (loadTimer.isActive()) {
@@ -930,7 +939,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
             return; // Already finished
         }
 
-        if (this.previousPetEnabled != null || this.previousPetGear != null) {
+        if (this.previousPetEnabled != null) {
             this.restorePetSettings();
         }
 
@@ -951,6 +960,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.sellIndex = 0;
         this.desiredBaseMap = null;
         this.desiredBaseMapName = null;
+        this.setPetToPassive = false;
 
         long cooldown = Math.max(0, this.config.cooldownSeconds) * 1000L;
         Timer cooldownTimer = this.timer(TimerSlot.COOL_DOWN);
