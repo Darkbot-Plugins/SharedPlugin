@@ -1,4 +1,4 @@
-package dev.shared.do_gamer.utils;
+package dev.shared.utils;
 
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.shared.modules.MapModule;
@@ -48,7 +48,7 @@ public final class TemporalModuleDetector {
             if (this.bot == null) {
                 return false;
             }
-            return (this.bot.getModule() instanceof TemporalModule) && !(this.bot.getModule() instanceof MapModule);
+            return this.temporal() && !(this.bot.getModule() instanceof MapModule);
         }
     }
 }

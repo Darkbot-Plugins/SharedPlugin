@@ -5,7 +5,7 @@ import java.util.Set;
 
 import dev.shared.do_gamer.config.SimpleHealingConfig;
 import dev.shared.do_gamer.utils.PetGearHelper;
-import dev.shared.do_gamer.utils.TemporalModuleDetector;
+import dev.shared.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;

@@ -2,7 +2,7 @@ package dev.shared.do_gamer.behaviour;
 
 import dev.shared.do_gamer.config.RepairPetConfig;
 import dev.shared.do_gamer.utils.PetGearHelper;
-import dev.shared.do_gamer.utils.TemporalModuleDetector;
+import dev.shared.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;

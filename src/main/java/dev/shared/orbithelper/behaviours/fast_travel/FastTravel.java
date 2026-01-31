@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import dev.shared.orbithelper.config.FastTravelConfig;
 import dev.shared.utils.CaptchaBoxDetector;
+import dev.shared.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -210,6 +211,11 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         // Cooldown check
         if (this.timer.isActive()) {
             return;
+        }
+
+        if (TemporalModuleDetector.using(this.bot).notMapModule()) {
+            this.resetState();
+            return; // Avoid conflicts with other temporal modules
         }
 
         if (this.isValid()) {
