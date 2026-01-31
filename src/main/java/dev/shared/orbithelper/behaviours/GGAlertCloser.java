@@ -39,8 +39,8 @@ public class GGAlertCloser implements Behavior {
         this.actionTimer.activate(2_000L); // 2 seconds delay
     }
 
-    private boolean scanRange(int startInclusive, int endExclusive) {
-        for (int i = startInclusive; i < endExclusive; i++) {
+    private boolean scanRange(int start, int end) {
+        for (int i = start; i < end; i++) {
             String name = this.getName(i);
             Gui gui = this.gameScreen.getGui(name);
 
