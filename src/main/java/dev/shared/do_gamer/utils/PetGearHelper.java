@@ -74,13 +74,12 @@ public class PetGearHelper {
         return currentGear != null && currentGear != gear && RESTRICTED_GEARS.contains(currentGear);
     }
 
-
     /**
      * Checks if the PET is currently using the specified gear.
      */
     public boolean isUsing(PetGear gear) {
         PetGear currentGear = this.pet.getGear();
-        return currentGear != null && this.pet.getGear() == gear;
+        return currentGear != null && currentGear == gear;
     }
 
     /**
