@@ -1,6 +1,7 @@
 package dev.shared.do_gamer.behaviour;
 
 import dev.shared.do_gamer.config.FixPetStuckConfig;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -24,6 +25,7 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
     private final AttackAPI attacker;
     private final EntitiesAPI entities;
     private final StarSystemAPI starSystem;
+    private final PetGearHelper petGearHelper;
 
     private FixPetStuckConfig config;
     private long stuckSince = -1L;
@@ -38,6 +40,7 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
         this.attacker = api.requireAPI(AttackAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
+        this.petGearHelper = new PetGearHelper(api);
     }
 
     @Override
@@ -63,7 +66,7 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
      * Monitors the PET status and triggers a reload if it gets stuck.
      */
     private void monitorPet() {
-        if (!this.pet.isEnabled()) {
+        if (!this.petGearHelper.isEnabled()) {
             return; // PET is disabled, nothing to monitor
         }
 

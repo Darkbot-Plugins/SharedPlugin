@@ -5,6 +5,7 @@ import java.util.List;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.game.other.Health;
+import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
 
@@ -14,6 +15,7 @@ import eu.darkbot.api.utils.ItemNotEquippedException;
 public class PetGearHelper {
 
     private final PetAPI pet;
+    private final ConfigAPI configApi;
 
     // List of gears that restrict the use of other gears when active
     private static final List<PetGear> RESTRICTED_GEARS = List.of(
@@ -28,6 +30,7 @@ public class PetGearHelper {
 
     public PetGearHelper(PluginAPI api) {
         this.pet = api.requireAPI(PetAPI.class);
+        this.configApi = api.requireAPI(ConfigAPI.class);
     }
 
     /**
@@ -93,7 +96,8 @@ public class PetGearHelper {
      * Checks if the PET is enabled.
      */
     public boolean isEnabled() {
-        return this.pet.isEnabled();
+        // Use config value to determine if PET is enabled
+        return this.configApi.getConfigValue("pet.enabled");
     }
 
     /**
