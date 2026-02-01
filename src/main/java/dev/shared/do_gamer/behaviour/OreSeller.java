@@ -406,7 +406,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
      * Initializes transient state to begin a selling run.
      */
     private void startSequence(ActiveMode mode, List<OreAPI.Ore> plan) {
-        if (TemporalModuleDetector.using(this.bot).temporal()) {
+        if (TemporalModuleDetector.using(this.bot).isTemporal()) {
             this.finish();
             return; // Avoid conflicts with other temporal modules
         }

@@ -33,7 +33,7 @@ public final class TemporalModuleDetector {
         /**
          * Checks if the current bot module is an instance of TemporalModule.
          */
-        public boolean temporal() {
+        public boolean isTemporal() {
             if (this.bot == null) {
                 return false;
             }
@@ -44,11 +44,21 @@ public final class TemporalModuleDetector {
          * Checks if the current bot module is an instance of TemporalModule
          * but not an instance of MapModule.
          */
-        public boolean notMapModule() {
+        public boolean isTemporalNotMap() {
             if (this.bot == null) {
                 return false;
             }
-            return this.temporal() && !(this.bot.getModule() instanceof MapModule);
+            return this.isTemporal() && !(this.bot.getModule() instanceof MapModule);
+        }
+
+        /**
+         * Checks if the current bot module is an instance of MapModule.
+         */
+        public boolean isMapModule() {
+            if (this.bot == null) {
+                return false;
+            }
+            return this.bot.getModule() instanceof MapModule;
         }
     }
 }

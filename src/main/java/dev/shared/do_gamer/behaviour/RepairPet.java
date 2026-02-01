@@ -82,7 +82,7 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
             return false; // Cannot use repair gear
         }
 
-        if (this.isAttacking() || TemporalModuleDetector.using(this.bot).temporal()) {
+        if (this.isAttacking() || TemporalModuleDetector.using(this.bot).isTemporal()) {
             this.delay.activate(DELAY_MS);
             return false; // Do not repair while attacking or using temporal module
         }

@@ -213,7 +213,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
             return;
         }
 
-        if (TemporalModuleDetector.using(this.bot).notMapModule()) {
+        if (TemporalModuleDetector.using(this.bot).isTemporalNotMap()) {
             this.resetState();
             return; // Avoid conflicts with other temporal modules
         }
