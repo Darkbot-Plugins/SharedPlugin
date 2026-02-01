@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 
 import dev.shared.do_gamer.config.CrowdAvoidanceConfig;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.utils.CaptchaBoxDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
@@ -16,9 +17,13 @@ import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
 import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.game.enums.EntityEffect;
+import eu.darkbot.api.game.items.ItemFlag;
+import eu.darkbot.api.game.items.SelectableItem.Special;
+import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
+import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.shared.modules.MapModule;
 
@@ -29,18 +34,26 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private final HeroAPI hero;
     private final EntitiesAPI entities;
     private final MovementAPI movement;
+    private final HeroItemsAPI items;
+    private final AttackAPI attacker;
+    private final PetGearHelper petGearHelper;
     private CrowdAvoidanceConfig config;
     private static final double MIN_DISTANCE_TO_PORTAL = 500.0;
     private static final double MIN_DISTANCE_TO_STATION = 1000.0;
     private static final double AVOIDANCE_DISTANCE = 1500.0;
     private static final double ADJUSTMENT_FACTOR = 3000.0;
     private static final double BOXES_MARK_RADIUS = 500.0;
+    private static final long ATTACK_STOP_DURATION_MS = 10_000L;
+    private static final int USE_RETRY_DELAY_MS = 250;
 
     public CrowdAvoidance(PluginAPI api) {
         this.bot = api.requireAPI(BotAPI.class);
         this.hero = api.requireAPI(HeroAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
+        this.items = api.requireAPI(HeroItemsAPI.class);
+        this.attacker = api.requireAPI(AttackAPI.class);
+        this.petGearHelper = new PetGearHelper(api);
     }
 
     @Override
@@ -134,6 +147,16 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             return;
         }
 
+        // Handle Draw Fire avoidance if enabled and affected
+        if (this.config.avoidDrawFire.enabled && this.hero.hasEffect(EntityEffect.DRAW_FIRE)) {
+            this.handleDrawFireAvoidance();
+        }
+
+        // Enable run mode for faster evasion during crowd avoidance
+        if (this.config.other.runMode) {
+            this.hero.setRunMode();
+        }
+
         double angle = closest.angleTo(this.hero);
         double speed = (double) this.hero.getSpeed();
         double distance = (double) this.config.radius + AVOIDANCE_DISTANCE; // Desired distance to keep away
@@ -150,6 +173,30 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
 
         this.markBoxesAsCollected(closest);
         this.movement.moveTo(targetX, targetY);
+    }
+
+    private boolean canUseEmp() {
+        return this.items.getItem(Special.EMP_01, ItemFlag.AVAILABLE, ItemFlag.READY, ItemFlag.USABLE)
+                .filter(item -> item.getQuantity() > 0).isPresent();
+    }
+
+    private void handleDrawFireAvoidance() {
+        // Stop attacking to reduce threat
+        if (this.attacker.hasTarget()) {
+            this.attacker.stopAttack();
+            this.attacker.setBlacklisted(ATTACK_STOP_DURATION_MS);
+        }
+
+        // Set PET to passive mode to avoid drawing fire
+        if (this.petGearHelper.isEnabled() && this.petGearHelper.isActive()) {
+            this.petGearHelper.setPassive();
+        }
+
+        // Optionally use EMP if configured
+        if (this.config.avoidDrawFire.useEmp && this.canUseEmp()) {
+            this.items.useItem(Special.EMP_01, USE_RETRY_DELAY_MS,
+                    ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED);
+        }
     }
 
     /**
