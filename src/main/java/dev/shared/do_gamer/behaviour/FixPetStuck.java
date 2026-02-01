@@ -13,7 +13,6 @@ import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
-import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 
 @Feature(name = "Fix PET stuck", description = "Reloads the game when the PET window gets stuck")
@@ -21,7 +20,6 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
 
     private final BotAPI bot;
     private final HeroAPI hero;
-    private final PetAPI pet;
     private final AttackAPI attacker;
     private final EntitiesAPI entities;
     private final StarSystemAPI starSystem;
@@ -36,7 +34,6 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
     public FixPetStuck(PluginAPI api) {
         this.bot = api.requireAPI(BotAPI.class);
         this.hero = api.requireAPI(HeroAPI.class);
-        this.pet = api.requireAPI(PetAPI.class);
         this.attacker = api.requireAPI(AttackAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
@@ -74,7 +71,7 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
             return; // Not in combat or collecting, no need to monitor PET
         }
 
-        if (this.pet.isActive()) {
+        if (this.petGearHelper.isActive()) {
             // PET is functioning properly, reset the timer
             this.reset();
             return;
