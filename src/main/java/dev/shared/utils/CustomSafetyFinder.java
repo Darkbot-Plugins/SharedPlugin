@@ -16,7 +16,6 @@ import eu.darkbot.api.managers.EventBrokerAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
-import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.shared.utils.PortalJumper;
@@ -26,7 +25,6 @@ import eu.darkbot.shared.utils.SafetyFinder;
  * Customized SafetyFinder: provide no-jump safety finding functionality.
  */
 public class CustomSafetyFinder extends SafetyFinder {
-    private final MapTraveler traveler;
 
     /**
      * Initializes required APIs and utilities.
@@ -39,7 +37,6 @@ public class CustomSafetyFinder extends SafetyFinder {
         private final StarSystemAPI starSystem;
         private final ConfigAPI config;
         private final EntitiesAPI entities;
-        private final PetAPI pet;
         private final EventBrokerAPI events;
         private final MapTraveler traveler;
         private final PortalJumper portalJumper;
@@ -52,12 +49,9 @@ public class CustomSafetyFinder extends SafetyFinder {
             this.starSystem = api.requireAPI(StarSystemAPI.class);
             this.config = api.requireAPI(ConfigAPI.class);
             this.entities = api.requireAPI(EntitiesAPI.class);
-            this.pet = api.requireAPI(PetAPI.class);
             this.events = api.requireAPI(EventBrokerAPI.class);
-
+            this.traveler = api.requireInstance(MapTraveler.class);
             this.portalJumper = new PortalJumper(api);
-            this.traveler = new MapTraveler(this.pet, this.hero, this.starSystem, this.movement,
-                    this.portalJumper, this.entities, this.events);
         }
     }
 
@@ -72,15 +66,9 @@ public class CustomSafetyFinder extends SafetyFinder {
     private CustomSafetyFinder(Init init) {
         super(init.hero, init.attacker, init.items, init.movement, init.starSystem,
                 init.config, init.entities, init.traveler, init.portalJumper);
-        this.traveler = init.traveler;
 
-        // Register event listeners
-        init.events.registerListener(this.traveler);
+        // Register event listener
         init.events.registerListener(this);
-    }
-
-    public MapTraveler getTraveler() {
-        return this.traveler;
     }
 
     /**
@@ -114,6 +102,15 @@ public class CustomSafetyFinder extends SafetyFinder {
             return true;
         }
         return false;
+    }
+
+    @Override
+    protected void moveToSafety(SafetyInfo safety) {
+        super.moveToSafety(safety);
+        // Stop attacking while moving to safety
+        if (this.attacker.isAttacking()) {
+            this.attacker.stopAttack();
+        }
     }
 
     /**

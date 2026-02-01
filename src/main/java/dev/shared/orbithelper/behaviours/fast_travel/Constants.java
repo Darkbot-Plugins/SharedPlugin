@@ -8,9 +8,12 @@ import java.util.Map;
 import eu.darkbot.api.game.other.EntityInfo;
 
 public class Constants {
+        private Constants() {
+        }
+
         public static class Coordinate {
-                public int x;
-                public int y;
+                public final int x;
+                public final int y;
 
                 public Coordinate(int x, int y) {
                         this.x = x;
@@ -24,7 +27,7 @@ public class Constants {
          * The key is the map identifier (e.g., "1-1", "2-3").
          * The value is the Coordinate object containing x and y values.
          */
-        public static final Map<String, Coordinate> MAP_COORDINATES = new HashMap<>();
+        protected static final Map<String, Coordinate> MAP_COORDINATES = new HashMap<>();
 
         static {
                 // MMO (1-x)
@@ -82,7 +85,7 @@ public class Constants {
          * key: Map Name
          * value: List of connected maps (reachable via portal)
          */
-        public static final Map<String, List<String>> MAP_CONNECTIONS = new HashMap<>();
+        protected static final Map<String, List<String>> MAP_CONNECTIONS = new HashMap<>();
 
         static {
                 // 1-X Maps
@@ -93,8 +96,7 @@ public class Constants {
                 MAP_CONNECTIONS.put("1-5", List.of("4-4", "1-6", "1-7", "4-5"));
                 MAP_CONNECTIONS.put("1-6", List.of("1-5", "1-8"));
                 MAP_CONNECTIONS.put("1-7", List.of("1-5", "1-8"));
-                MAP_CONNECTIONS.put("1-8", List.of("1-6", "1-7", "1-BL"));
-                MAP_CONNECTIONS.put("1-BL", List.of("1-8", "2-BL", "3-BL"));
+                MAP_CONNECTIONS.put("1-8", List.of("1-6", "1-7"));
 
                 // 2-X Maps
                 MAP_CONNECTIONS.put("2-1", List.of("2-2"));
@@ -104,8 +106,7 @@ public class Constants {
                 MAP_CONNECTIONS.put("2-5", List.of("4-4", "4-5", "2-6", "2-7"));
                 MAP_CONNECTIONS.put("2-6", List.of("2-5", "2-8"));
                 MAP_CONNECTIONS.put("2-7", List.of("2-5", "2-8"));
-                MAP_CONNECTIONS.put("2-8", List.of("2-6", "2-7", "2-BL"));
-                MAP_CONNECTIONS.put("2-BL", List.of("2-8", "1-BL", "3-BL"));
+                MAP_CONNECTIONS.put("2-8", List.of("2-6", "2-7"));
 
                 // 3-X Maps
                 MAP_CONNECTIONS.put("3-1", List.of("3-2"));
@@ -115,21 +116,14 @@ public class Constants {
                 MAP_CONNECTIONS.put("3-5", List.of("4-4", "4-5", "3-6", "3-7"));
                 MAP_CONNECTIONS.put("3-6", List.of("3-5", "3-8"));
                 MAP_CONNECTIONS.put("3-7", List.of("3-5", "3-8"));
-                MAP_CONNECTIONS.put("3-8", List.of("3-7", "3-6", "3-BL"));
-                MAP_CONNECTIONS.put("3-BL", List.of("3-8", "1-BL", "2-BL"));
+                MAP_CONNECTIONS.put("3-8", List.of("3-7", "3-6"));
 
                 // 4-X Maps
                 MAP_CONNECTIONS.put("4-1", List.of("4-2", "4-3", "4-4", "1-4"));
                 MAP_CONNECTIONS.put("4-2", List.of("4-1", "4-3", "4-4", "2-4"));
                 MAP_CONNECTIONS.put("4-3", List.of("4-1", "4-2", "4-4", "3-4"));
                 MAP_CONNECTIONS.put("4-4", List.of("4-1", "4-2", "4-3", "1-5", "2-5", "3-5"));
-                MAP_CONNECTIONS.put("4-5", List.of("1-5", "2-5", "3-5", "5-1"));
-
-                // 5-X Maps
-                MAP_CONNECTIONS.put("5-1", List.of("5-2"));
-                MAP_CONNECTIONS.put("5-2", List.of("5-3", "5-4"));
-                MAP_CONNECTIONS.put("5-3", List.of("4-4"));
-                MAP_CONNECTIONS.put("5-4", List.of("4-4"));
+                MAP_CONNECTIONS.put("4-5", List.of("1-5", "2-5", "3-5"));
         }
 
         /**
@@ -222,7 +216,7 @@ public class Constants {
         /**
          * Map of faction to their respective level requirements.
          */
-        public static final EnumMap<EntityInfo.Faction, Map<String, Integer>> FACTION_LEVELS = new EnumMap<>(
+        protected static final EnumMap<EntityInfo.Faction, Map<String, Integer>> FACTION_LEVELS = new EnumMap<>(
                         EntityInfo.Faction.class);
 
         static {

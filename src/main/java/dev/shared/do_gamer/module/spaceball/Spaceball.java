@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 
 import dev.shared.do_gamer.config.SpaceballConfig;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
@@ -24,9 +25,7 @@ import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
-import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
-import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.shared.utils.MapTraveler;
 
 @Feature(name = "SpaceBall", description = "Attack SpaceBall without fleeing away and collect cargo boxes around the gate")
@@ -38,11 +37,11 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     private final EntitiesAPI entities;
     private final BotAPI bot;
     private final HeroAPI hero;
-    private final PetAPI pet;
     private final MovementAPI movement;
     private final StarSystemAPI starSystem;
     private final BackpageAPI backpage;
     private final MapTraveler traveler;
+    private final PetGearHelper petGearHelper;
     private boolean isSpaceball;
     private long lastTargetLostTime;
     private SpaceballConfig config;
@@ -74,11 +73,11 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.bot = api.requireAPI(BotAPI.class);
         this.hero = api.requireAPI(HeroAPI.class);
-        this.pet = api.requireAPI(PetAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.backpage = api.requireAPI(BackpageAPI.class);
         this.traveler = traveler;
+        this.petGearHelper = new PetGearHelper(api);
         this.isSpaceball = false;
         this.lastTargetLostTime = 0;
         this.nullTargetCounter = 0;
@@ -620,7 +619,7 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     private void moveToExit() {
         // Moving to exit map
         this.hero.setRoamMode();
-        this.pet.setEnabled(false);
+        this.petGearHelper.setEnabled(false);
         if (!this.traveler.isDone()) {
             this.traveler.setTarget(this.starSystem.getOrCreateMap(this.getExitMap()));
             this.traveler.tick();
@@ -730,27 +729,17 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     }
 
     private void petGuard() {
-        try {
-            this.pet.setGear(PetGear.GUARD);
-        } catch (ItemNotEquippedException e) {
-            // Ignore any exceptions
-        }
+        this.petGearHelper.setGuard();
     }
 
     private void petPassive() {
-        try {
-            this.pet.setGear(PetGear.PASSIVE);
-        } catch (ItemNotEquippedException e) {
-            // Ignore any exceptions
-        }
+        this.petGearHelper.setPassive();
     }
 
     private void petCollect() {
-        try {
-            this.pet.setGear(PetGear.LOOTER);
-        } catch (ItemNotEquippedException e) {
+        if (!this.petGearHelper.tryUse(PetGear.LOOTER)) {
             // If Auto-looter gear is not equipped, set to passive
-            this.petPassive();
+            this.petGearHelper.setPassive();
         }
     }
 
