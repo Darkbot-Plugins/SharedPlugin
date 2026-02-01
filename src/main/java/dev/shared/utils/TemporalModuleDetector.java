@@ -42,7 +42,7 @@ public final class TemporalModuleDetector {
 
         /**
          * Checks if the current bot module is an instance of TemporalModule
-         * but not an instance of MapModule.
+         * but not an instance of MapModule (traveling).
          */
         public boolean isTemporalNotMap() {
             if (this.bot == null) {
@@ -52,7 +52,7 @@ public final class TemporalModuleDetector {
         }
 
         /**
-         * Checks if the current bot module is an instance of MapModule.
+         * Checks if the current bot module is an instance of MapModule (traveling).
          */
         public boolean isMapModule() {
             if (this.bot == null) {

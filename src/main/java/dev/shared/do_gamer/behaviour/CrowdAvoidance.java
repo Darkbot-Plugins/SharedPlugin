@@ -7,6 +7,7 @@ import java.util.List;
 import dev.shared.do_gamer.config.CrowdAvoidanceConfig;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.utils.CaptchaBoxDetector;
+import dev.shared.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -25,7 +26,6 @@ import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
-import eu.darkbot.shared.modules.MapModule;
 
 @Feature(name = "Crowd Avoidance", description = "Detects crowded areas around the ship and moves away from them.")
 public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConfig> {
@@ -80,7 +80,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         }
 
         // Keep inactive while traveling
-        if (this.bot.getModule() instanceof MapModule) {
+        if (TemporalModuleDetector.using(this.bot).isMapModule()) {
             return false;
         }
 
