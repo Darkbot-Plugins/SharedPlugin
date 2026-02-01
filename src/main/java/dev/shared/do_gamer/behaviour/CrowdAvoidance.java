@@ -14,7 +14,6 @@ import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.entities.Entity;
-import eu.darkbot.api.game.entities.Player;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
 import eu.darkbot.api.game.entities.Station;
@@ -178,11 +177,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
 
     // Check if any ship has Draw Fire effect active
     private boolean isDrawFireActive(List<Ship> ships) {
-        return ships.stream()
-                .filter(Player.class::isInstance)
-                .map(Player.class::cast)
-                .anyMatch(player -> player.getShipType().startsWith("ship_citadel")
-                        && player.hasEffect(EntityEffect.DRAW_FIRE));
+        return ships.stream().anyMatch(ship -> ship.hasEffect(EntityEffect.DRAW_FIRE));
     }
 
     // Check if EMP can be used
