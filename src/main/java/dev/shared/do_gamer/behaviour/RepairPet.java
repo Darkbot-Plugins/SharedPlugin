@@ -1,7 +1,8 @@
 package dev.shared.do_gamer.behaviour;
 
 import dev.shared.do_gamer.config.RepairPetConfig;
-import dev.shared.do_gamer.utils.TemporalModuleDetector;
+import dev.shared.do_gamer.utils.PetGearHelper;
+import dev.shared.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -10,15 +11,13 @@ import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
-import eu.darkbot.api.managers.PetAPI;
-import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Repair PET", description = "Repairs your PET when its health drops below a certain threshold.")
 public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
     private final BotAPI bot;
-    private final PetAPI pet;
     private final AttackAPI attacker;
+    private final PetGearHelper petGearHelper;
 
     private RepairPetConfig config;
     private boolean repairing = false;
@@ -30,8 +29,8 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
 
     public RepairPet(PluginAPI api) {
         this.bot = api.requireAPI(BotAPI.class);
-        this.pet = api.requireAPI(PetAPI.class);
         this.attacker = api.requireAPI(AttackAPI.class);
+        this.petGearHelper = new PetGearHelper(api);
     }
 
     @Override
@@ -61,21 +60,17 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
             return;
         }
 
-        if (this.pet.getHealth().hpPercent() < this.normalizeTriggerThreshold()) {
+        if (this.petGearHelper.getHealth().hpPercent() < this.normalizeTriggerThreshold()) {
             this.repairing = true;
         }
     }
 
     private boolean isActive() {
-        return this.pet.isEnabled() && this.pet.isActive();
+        return this.petGearHelper.isEnabled() && this.petGearHelper.isActive();
     }
 
     private boolean isAttacking() {
         return this.attacker.hasTarget() && this.attacker.isAttacking();
-    }
-
-    private boolean isHpLinkUsed() {
-        return this.pet.getGear() == PetGear.HP_LINK;
     }
 
     private boolean canRepair() {
@@ -83,11 +78,11 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
             return false; // Do not repair if PET is inactive
         }
 
-        if (this.isHpLinkUsed()) {
-            return false; // Do not repair if HP Link is used
+        if (!this.petGearHelper.canUse(PetGear.REPAIR)) {
+            return false; // Cannot use repair gear
         }
 
-        if (this.isAttacking() || TemporalModuleDetector.isUsing(this.bot)) {
+        if (this.isAttacking() || TemporalModuleDetector.using(this.bot).isTemporal()) {
             this.delay.activate(DELAY_MS);
             return false; // Do not repair while attacking or using temporal module
         }
@@ -110,15 +105,12 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
             return;
         }
 
-        try {
-            this.pet.setGear(PetGear.REPAIR);
-        } catch (ItemNotEquippedException ignored) {
-            // Repair gear not equipped, cannot repair
+        if (!this.petGearHelper.tryUse(PetGear.REPAIR)) {
             this.repairing = false;
             return;
         }
 
-        if (this.pet.getHealth().hpPercent() >= COMPLETION_THRESHOLD) {
+        if (this.petGearHelper.getHealth().hpPercent() >= COMPLETION_THRESHOLD) {
             this.repairing = false; // Repair complete
         }
     }

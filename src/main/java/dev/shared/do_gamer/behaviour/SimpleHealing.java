@@ -4,7 +4,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import dev.shared.do_gamer.config.SimpleHealingConfig;
-import dev.shared.do_gamer.utils.TemporalModuleDetector;
+import dev.shared.do_gamer.utils.PetGearHelper;
+import dev.shared.utils.TemporalModuleDetector;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Behavior;
@@ -19,8 +20,6 @@ import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
-import eu.darkbot.api.managers.PetAPI;
-import eu.darkbot.api.utils.ItemNotEquippedException;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Healing", description = "Activate the ship's healing ability and use the PET healing gear.")
@@ -28,8 +27,8 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     private final BotAPI bot;
     private final HeroAPI hero;
     private final HeroItemsAPI items;
-    private final PetAPI pet;
     private final AttackAPI attack;
+    private final PetGearHelper petGearHelper;
     private SimpleHealingConfig config;
     private final Set<ShipAbility> supportedShips = new HashSet<>();
     private ShipAbility currentShip = null; // Current ship being used
@@ -42,8 +41,8 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
         this.bot = api.requireAPI(BotAPI.class);
         this.hero = api.requireAPI(HeroAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
-        this.pet = api.requireAPI(PetAPI.class);
         this.attack = api.requireAPI(AttackAPI.class);
+        this.petGearHelper = new PetGearHelper(api);
 
         // Define supported ships and their abilities
         this.supportedShips.add(new ShipAbility("solace", Ability.SOLACE));
@@ -81,11 +80,11 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
     }
 
     private void handlePetGear(Health health) {
-        if (!this.isEnabledPetGear() || TemporalModuleDetector.isUsing(this.bot))
+        if (!this.isEnabledPetGear() || TemporalModuleDetector.using(this.bot).isTemporal())
             return;
         // Try to use Combo Repair
-        if (this.pet.hasGear(PetGear.COMBO_REPAIR) && this.checkPetCombo(health)) {
-            if (this.attack.hasTarget() && this.attack.isAttacking()) {
+        if (this.petGearHelper.canUse(PetGear.COMBO_REPAIR) && this.checkPetCombo(health)) {
+            if (this.attack.isAttacking()) {
                 this.attack.stopAttack(); // Stop attacking to avoid skip a gear
             }
             this.usePetCombo();
@@ -107,7 +106,7 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
 
     // Check if PET gear is enabled
     private boolean isEnabledPetGear() {
-        return this.config.petCombo.enabled && this.pet.isActive();
+        return this.config.petCombo.enabled && this.petGearHelper.isActive();
     }
 
     // Validate if the ship matches the current ship type
@@ -131,17 +130,10 @@ public class SimpleHealing implements Behavior, Configurable<SimpleHealingConfig
             return; // has cooldown
         }
 
-        try {
-            // Use PET gear
-            this.pet.setGear(PetGear.COMBO_REPAIR);
+        // Use PET gear
+        if (this.petGearHelper.tryUse(PetGear.COMBO_REPAIR)) {
             // Activate cooldown
-            if (this.pet.getGear() == PetGear.COMBO_REPAIR) {
-                this.petComboCooldown.activate();
-            }
-        } catch (ItemNotEquippedException ignored) {
-            // Item not equipped, not critical exception and should be ignored
-        } catch (Exception e) {
-            System.out.println("Failed to set PET gear to COMBO_REPAIR");
+            this.petComboCooldown.activate();
         }
     }
 

@@ -1,7 +1,7 @@
 {
 	"name": "SharedPlugin",
 	"author": "Several Devs",
-	"version": "0.9.0",
+	"version": "0.9.1",
 	"minVersion": "1.131.6 beta 3",
 	"supportedVersion": "1.132.0 alpha 2",
 	"basePackage": "dev.shared",
@@ -14,7 +14,6 @@
 		"dev.shared.do_gamer.behaviour.RepairPet",
 		"dev.shared.do_gamer.task.CloseAdOffer",
 		"dev.shared.kopoklesz.behaviour.AutoRefin",
-		"dev.shared.do_gamer.behaviour.AvoidDrawFire",
 		"dev.shared.do_gamer.behaviour.CrowdAvoidance",
 		"dev.shared.orbithelper.behaviours.GGAlertCloser",
 		"dev.shared.orbithelper.behaviours.fast_travel.FastTravel",
