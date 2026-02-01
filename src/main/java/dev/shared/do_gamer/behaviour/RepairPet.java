@@ -73,17 +73,13 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
         return this.attacker.hasTarget() && this.attacker.isAttacking();
     }
 
-    private boolean isHpLinkUsed() {
-        return this.petGearHelper.isUsing(PetGear.HP_LINK);
-    }
-
     private boolean canRepair() {
         if (!this.isActive()) {
             return false; // Do not repair if PET is inactive
         }
 
-        if (this.isHpLinkUsed()) {
-            return false; // Do not repair if HP Link is used
+        if (!this.petGearHelper.canUse(PetGear.REPAIR)) {
+            return false; // Cannot use repair gear
         }
 
         if (this.isAttacking() || TemporalModuleDetector.using(this.bot).temporal()) {
