@@ -14,6 +14,7 @@ import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.entities.Entity;
+import eu.darkbot.api.game.entities.Player;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Ship;
 import eu.darkbot.api.game.entities.Station;
@@ -148,7 +149,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         }
 
         // Handle Draw Fire avoidance if enabled and affected
-        if (this.config.avoidDrawFire.enabled && this.hero.hasEffect(EntityEffect.DRAW_FIRE)) {
+        if (this.config.avoidDrawFire.enabled && this.isDrawFireActive(ships)) {
             this.handleDrawFireAvoidance();
         }
 
@@ -175,6 +176,16 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         this.movement.moveTo(targetX, targetY);
     }
 
+    // Check if any ship has Draw Fire effect active
+    private boolean isDrawFireActive(List<Ship> ships) {
+        return ships.stream()
+                .filter(Player.class::isInstance)
+                .map(Player.class::cast)
+                .anyMatch(player -> player.getShipType().startsWith("ship_citadel")
+                        && player.hasEffect(EntityEffect.DRAW_FIRE));
+    }
+
+    // Check if EMP can be used
     private boolean canUseEmp() {
         return this.items.getItem(Special.EMP_01, ItemFlag.AVAILABLE, ItemFlag.READY, ItemFlag.USABLE)
                 .filter(item -> item.getQuantity() > 0).isPresent();
