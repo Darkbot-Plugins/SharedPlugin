@@ -199,7 +199,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         if (map.matches("^5-[1-4]$")) {
             // Special case for 5-x maps to go to 4-5
             map = "4-5";
-        } else if (map.matches("^[1-3]BL$")) {
+        } else if (map.matches("^[1-3]BL$") && !this.currentMap().matches("^[1-3]-8$")) {
             // Special case for BL maps to go to x-8
             map = map.charAt(0) + "-8";
         } else if (map.matches("^[1-3]-1$")) {
