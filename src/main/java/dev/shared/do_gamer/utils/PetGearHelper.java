@@ -52,14 +52,14 @@ public class PetGearHelper {
      * Sets the PET to passive mode.
      */
     public boolean setPassive() {
-        return this.tryUse(PetGear.PASSIVE);
+        return this.setPassive(false);
     }
 
     /**
      * Sets the PET to passive mode with usage confirmation.
      */
     public boolean setPassive(boolean confirm) {
-        return this.setPassive() && (!confirm || this.isUsing(PetGear.PASSIVE));
+        return this.tryUse(PetGear.PASSIVE) && (!confirm || this.isUsing(PetGear.PASSIVE));
     }
 
     /**
