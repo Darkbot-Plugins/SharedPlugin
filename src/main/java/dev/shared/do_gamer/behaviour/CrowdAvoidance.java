@@ -155,14 +155,12 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             this.entities.getNpcs().stream().filter(this::checkRadius).forEach(ships::add);
         }
 
-        // Collect enemy player ships
-        if (this.config.consider.enemies) {
-            this.entities.getPlayers().stream().filter(this::isValidEnemy).forEach(ships::add);
-        }
-
-        // Collect ally player ships
-        if (this.config.consider.allies) {
-            this.entities.getPlayers().stream().filter(this::isValidAlly).forEach(ships::add);
+        // Collect player ships
+        if (this.config.consider.enemies || this.config.consider.allies) {
+            this.entities.getPlayers().stream()
+                    .filter(p -> (this.config.consider.enemies && this.isValidEnemy(p)) ||
+                            (this.config.consider.allies && this.isValidAlly(p)))
+                    .forEach(ships::add);
         }
 
         return ships;
