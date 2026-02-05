@@ -20,9 +20,11 @@ import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.game.enums.EntityEffect;
 import eu.darkbot.api.game.items.ItemFlag;
 import eu.darkbot.api.game.items.SelectableItem.Special;
+import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
+import eu.darkbot.api.managers.GroupAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
@@ -36,6 +38,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     private final MovementAPI movement;
     private final HeroItemsAPI items;
     private final AttackAPI attacker;
+    private final GroupAPI groupAPI;
     private final PetGearHelper petGearHelper;
     private CrowdAvoidanceConfig config;
     private static final double MIN_DISTANCE_TO_PORTAL = 500.0;
@@ -53,6 +56,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         this.movement = api.requireAPI(MovementAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
         this.attacker = api.requireAPI(AttackAPI.class);
+        this.groupAPI = api.requireAPI(GroupAPI.class);
         this.petGearHelper = new PetGearHelper(api);
     }
 
@@ -68,7 +72,17 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         }
 
         List<Ship> ships = this.getShips();
-        if (ships.size() >= this.config.numb) {
+        if (ships.isEmpty()) {
+            return; // No ships to consider
+        }
+
+        // Handle Draw Fire avoidance if enabled and affected
+        if (this.config.avoidDrawFire.enabled && this.isDrawFireActive(ships)) {
+            this.handleDrawFireAvoidance();
+        }
+
+        // Move away if crowded and not near safe points
+        if (ships.size() >= this.config.numb && !this.isNearSafePoints()) {
             this.moveAway(ships);
         }
     }
@@ -81,12 +95,6 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
 
         // Keep inactive while traveling
         if (TemporalModuleDetector.using(this.bot).isMapModule()) {
-            return false;
-        }
-
-        // Keep inactive if near safe points
-        if (this.entities.getPortals().stream().anyMatch(this::checkPortal)
-                || this.entities.getStations().stream().anyMatch(this::checkStation)) {
             return false;
         }
 
@@ -110,30 +118,48 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         return entity.distanceTo(this.hero) <= minDistance;
     }
 
+    private boolean isNearSafePoints() {
+        return this.entities.getPortals().stream().anyMatch(this::checkPortal)
+                || this.entities.getStations().stream().anyMatch(this::checkStation);
+    }
+
     private boolean checkRadius(Ship ship) {
         return ship.distanceTo(this.hero) <= this.config.radius;
+    }
+
+    private boolean isSameClan(Ship player) {
+        int heroClanId = this.hero.getEntityInfo().getClanId();
+        int playerClanId = player.getEntityInfo().getClanId();
+        return heroClanId != 0 && heroClanId == playerClanId;
+    }
+
+    private boolean isSameGroup(Ship player) {
+        return this.groupAPI.hasGroup() && this.groupAPI.getMember(player) != null;
+    }
+
+    private boolean isValidAlly(Ship player) {
+        return !player.getEntityInfo().isEnemy() && !player.isBlacklisted() && this.checkRadius(player)
+                && !(this.isSameClan(player) || this.isSameGroup(player));
+    }
+
+    private boolean isValidEnemy(Ship player) {
+        return (player.getEntityInfo().isEnemy() || player.isBlacklisted()) && this.checkRadius(player)
+                && !this.isSameGroup(player);
     }
 
     private List<Ship> getShips() {
         List<Ship> ships = new ArrayList<>();
 
+        // Collect NPC ships
         if (this.config.consider.npcs) {
-            // Collect NPC ships
             this.entities.getNpcs().stream().filter(this::checkRadius).forEach(ships::add);
         }
 
-        if (this.config.consider.enemies && this.config.consider.allies) {
-            // Collect any player ships
-            this.entities.getPlayers().stream().filter(this::checkRadius).forEach(ships::add);
-        } else if (this.config.consider.enemies) {
-            // Collect only enemy player ships and consider blacklisted as enemies too
+        // Collect player ships
+        if (this.config.consider.enemies || this.config.consider.allies) {
             this.entities.getPlayers().stream()
-                    .filter(p -> (p.getEntityInfo().isEnemy() || p.isBlacklisted()) && this.checkRadius(p))
-                    .forEach(ships::add);
-        } else if (this.config.consider.allies) {
-            // Collect only ally player ships and exclude blacklisted
-            this.entities.getPlayers().stream()
-                    .filter(p -> !p.getEntityInfo().isEnemy() && !p.isBlacklisted() && this.checkRadius(p))
+                    .filter(p -> (this.config.consider.enemies && this.isValidEnemy(p)) ||
+                            (this.config.consider.allies && this.isValidAlly(p)))
                     .forEach(ships::add);
         }
 
@@ -145,11 +171,6 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         Ship closest = ships.stream().min(Comparator.comparingDouble(this.hero::distanceTo)).orElse(null);
         if (closest == null) {
             return;
-        }
-
-        // Handle Draw Fire avoidance if enabled and affected
-        if (this.config.avoidDrawFire.enabled && this.isDrawFireActive(ships)) {
-            this.handleDrawFireAvoidance();
         }
 
         // Enable run mode for faster evasion during crowd avoidance
@@ -191,6 +212,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         if (this.attacker.hasTarget()) {
             this.attacker.stopAttack();
             this.attacker.setBlacklisted(ATTACK_STOP_DURATION_MS);
+            this.hero.setLocalTarget((Lockable) null);
         }
 
         // Set PET to passive mode to avoid drawing fire
