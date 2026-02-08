@@ -108,7 +108,7 @@ public class CustomSafetyFinder extends SafetyFinder {
     protected void moveToSafety(SafetyInfo safety) {
         super.moveToSafety(safety);
         // Stop attacking while moving to safety
-        if (this.attacker.isAttacking()) {
+        if (this.attacker.isAttacking() && !(this.escape == Escaping.SIGHT && this.stopRunningNoSight.getValue())) {
             this.attacker.stopAttack();
         }
     }
