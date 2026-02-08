@@ -96,8 +96,9 @@ public class PetGearHelper {
      * Checks if the PET is enabled.
      */
     public boolean isEnabled() {
-        // Use config value to determine if PET is enabled
-        return this.configApi.getConfigValue("pet.enabled");
+        // Check both config and PET status
+        boolean configEnabled = this.configApi.getConfigValue("pet.enabled");
+        return configEnabled && this.pet.isEnabled();
     }
 
     /**
