@@ -91,6 +91,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
                 || CaptchaBoxDetector.hasCaptchaBoxes(this.entities) // Captcha is active
                 || this.attack.isAttacking() // Currently Attacking
                 || this.isUnderAttack() // Is under attack
+                || this.isMovingOrJumping() // Currently moving or jumping
         ) {
             this.resetState();
             return;
@@ -246,7 +247,8 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
 
         if (this.hero.distanceTo(safeSpot) < 200) {
             if (this.hero.isMoving()) {
-                this.movement.stop(true);
+                this.movement.stop(false);
+                return;
             }
             this.state = State.OPENING_CPU;
             this.cpuStartTime = System.currentTimeMillis();
@@ -492,6 +494,14 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     private boolean isUnderAttack() {
         return this.entities.getShips().stream().anyMatch(ship -> ship.isAttacking(this.hero))
                 || this.entities.getNpcs().stream().anyMatch(npc -> npc.isAttacking(this.hero));
+    }
+
+    // Check if currently moving or jumping (to avoid interrupting)
+    private boolean isMovingOrJumping() {
+        if (this.state != State.VALIDATING && this.state != State.SAFE_POSITIONING) {
+            return this.hero.isMoving() || this.entities.getPortals().stream().anyMatch(Portal::isJumping);
+        }
+        return false; // Only consider moving/jumping if we are in the process of fast traveling
     }
 
     // Check if destination map is sibling to current map
