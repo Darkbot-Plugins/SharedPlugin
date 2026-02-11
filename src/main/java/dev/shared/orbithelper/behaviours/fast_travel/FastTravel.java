@@ -55,6 +55,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     private final GameScreenAPI gameScreen;
     private final AttackAPI attack;
     private static final long VALIDATION_RETRY_INTERVAL_MS = 5_000L;
+    private static final int MAX_CONSECUTIVE_GLOBAL_TIMEOUTS = 3;
 
     private FastTravelConfig config;
     private final Timer timer = Timer.get();
@@ -361,7 +362,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
                 && (System.currentTimeMillis() - this.cpuStartTime) > (this.config.maxJumpAttemptTime * 1_000L)) {
             this.resetState();
             // After 3 consecutive global timeouts, suggest a game refresh
-            if (this.consecutiveGlobalTimeouts >= 3) {
+            if (this.consecutiveGlobalTimeouts >= MAX_CONSECUTIVE_GLOBAL_TIMEOUTS) {
                 System.out.println("Fast Travel: Requested game refresh due to consecutive timeouts.");
                 this.consecutiveGlobalTimeouts = 0; // Reset counter
                 this.bot.handleRefresh();
