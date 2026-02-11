@@ -63,6 +63,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     private State state = State.VALIDATING;
     private long cpuStartTime = 0;
     private boolean selectedRandom = false;
+    private int consecutiveGlobalTimeouts = 0;
 
     public FastTravel(PluginAPI api) {
         super(api.requireAPI(BotAPI.class));
@@ -345,6 +346,8 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         String destMap = this.destinationMap();
 
         if (currentMap.equals(destMap)) {
+            // Reset the consecutive timeout counter when we've arrived
+            this.consecutiveGlobalTimeouts = 0;
             this.resetState();
             return;
         }
@@ -357,6 +360,15 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         if (this.cpuStartTime > 0
                 && (System.currentTimeMillis() - this.cpuStartTime) > (this.config.maxJumpAttemptTime * 1_000L)) {
             this.resetState();
+            // After 3 consecutive global timeouts, suggest a game refresh
+            if (this.consecutiveGlobalTimeouts >= 3) {
+                System.out.println("Fast Travel: Requested game refresh due to consecutive timeouts.");
+                this.consecutiveGlobalTimeouts = 0; // Reset counter
+                this.bot.handleRefresh();
+                return true;
+            }
+            // Increment consecutive timeout counter
+            this.consecutiveGlobalTimeouts++;
             return true;
         }
         return false;
