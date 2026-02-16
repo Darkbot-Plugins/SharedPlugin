@@ -208,7 +208,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
     }
 
     // Check if any players is currently attacking the hero
-    private boolean iaUnderPlayerAttack(List<Ship> ships) {
+    private boolean isUnderPlayerAttack(List<Ship> ships) {
         return ships.stream().anyMatch(ship -> ship.isAttacking(this.hero));
     }
 
@@ -226,7 +226,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         }
 
         // Optionally use EMP if configured
-        if (this.config.avoidDrawFire.useEmp && this.canUseEmp() && this.iaUnderPlayerAttack(ships)) {
+        if (this.config.avoidDrawFire.useEmp && this.canUseEmp() && this.isUnderPlayerAttack(ships)) {
             this.items.useItem(Special.EMP_01, USE_RETRY_DELAY_MS,
                     ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED);
         }
