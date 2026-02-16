@@ -78,7 +78,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
 
         // Handle Draw Fire avoidance if enabled and affected
         if (this.config.avoidDrawFire.enabled && this.isDrawFireActive(ships)) {
-            this.handleDrawFireAvoidance();
+            this.handleDrawFireAvoidance(ships);
         }
 
         // Move away if crowded and not near safe points
@@ -207,7 +207,12 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
                 .filter(item -> item.getQuantity() > 0).isPresent();
     }
 
-    private void handleDrawFireAvoidance() {
+    // Check if any players is currently attacking the hero
+    private boolean iaUnderPlayerAttack(List<Ship> ships) {
+        return ships.stream().anyMatch(ship -> ship.isAttacking(this.hero));
+    }
+
+    private void handleDrawFireAvoidance(List<Ship> ships) {
         // Stop attacking to reduce threat
         if (this.attacker.hasTarget()) {
             this.attacker.stopAttack();
@@ -221,7 +226,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
         }
 
         // Optionally use EMP if configured
-        if (this.config.avoidDrawFire.useEmp && this.canUseEmp()) {
+        if (this.config.avoidDrawFire.useEmp && this.canUseEmp() && this.iaUnderPlayerAttack(ships)) {
             this.items.useItem(Special.EMP_01, USE_RETRY_DELAY_MS,
                     ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED);
         }
