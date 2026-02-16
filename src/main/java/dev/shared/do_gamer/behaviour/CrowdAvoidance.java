@@ -207,7 +207,7 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
                 .filter(item -> item.getQuantity() > 0).isPresent();
     }
 
-    // Check if any players is currently attacking the hero
+    // Check if any player is currently attacking the hero
     private boolean isUnderPlayerAttack(List<Ship> ships) {
         return ships.stream().anyMatch(ship -> ship.isAttacking(this.hero));
     }
