@@ -66,8 +66,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private GameMap desiredBaseMap;
     private String desiredBaseMapName;
     private Boolean cachedTriggerResult; // Caches the result of selling trigger checks
-    private int consecutiveTimeouts = 0;
-    private static final int MAX_CONSECUTIVE_TIMEOUTS = 3;
     private static final int BASE_DOCKING_DISTANCE = 300;
     private static final int MIN_PALLADIUM_STACK = 15;
     private static final int SELL_INTERVAL_MS = 750;
@@ -180,18 +178,11 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                 long timeout = this.resolveFailSafeMillis(this.activeMode);
                 if (this.hero.isMoving()) {
                     failSafe.activate(timeout);
-                    this.consecutiveTimeouts = 0; // Reset counter
                 } else if (failSafe.isInactive()) {
-                    // After 3 consecutive timeouts, suggest a game refresh
-                    if (this.consecutiveTimeouts >= MAX_CONSECUTIVE_TIMEOUTS) {
-                        this.finish();
-                        System.out.println("Ore Seller: Requested game refresh due to consecutive timeouts.");
-                        this.bot.handleRefresh();
-                        return;
-                    }
-                    // Increment consecutive timeout counter
-                    this.consecutiveTimeouts++;
-                    failSafe.activate(timeout);
+                    this.finish();
+                    System.out.println("Ore Seller: Requested game refresh due to stuck.");
+                    this.bot.handleRefresh();
+                    return;
                 }
             } else if (failSafe.isInactive()) {
                 System.out.println("Ore seller timed out");
@@ -979,7 +970,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.desiredBaseMap = null;
         this.desiredBaseMapName = null;
         this.setPetToPassive = false;
-        this.consecutiveTimeouts = 0;
 
         long cooldown = Math.max(0, this.config.cooldownSeconds) * 1000L;
         Timer cooldownTimer = this.timer(TimerSlot.COOL_DOWN);
