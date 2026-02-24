@@ -175,8 +175,8 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
                 // Reset the fail-safe timer in exempt states.
                 // But only if moving (fix the stuck in the gate jumping)
-                long timeout = this.resolveFailSafeMillis(this.activeMode);
                 if (this.hero.isMoving()) {
+                    long timeout = this.resolveFailSafeMillis(this.activeMode);
                     failSafe.activate(timeout);
                 } else if (failSafe.isInactive()) {
                     this.finish();
