@@ -88,9 +88,9 @@ public class SolarisInc implements Behavior, Configurable<SolarisIncConfig>, Npc
         if (npcNumb >= 1 && this.isStick()) {
             this.lastStickyTime = currentTime;
 
-            if (this.attack.hasTarget()) {
+            Npc npc = this.attack.getTargetAs(Npc.class);
+            if (npc != null) {
                 // If the ship has a target, move to the target
-                Npc npc = (Npc) this.attack.getTarget();
                 this.moveToNpc(npc);
             } else {
                 // If no target, find the closest NPC and move to it
