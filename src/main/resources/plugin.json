@@ -1,7 +1,7 @@
 {
 	"name": "SharedPlugin",
 	"author": "Several Devs",
-	"version": "0.9.12",
+	"version": "0.10.0",
 	"minVersion": "1.131.6 beta 3",
 	"supportedVersion": "1.132.0 alpha 2",
 	"basePackage": "dev.shared",
@@ -17,7 +17,8 @@
 		"dev.shared.do_gamer.behaviour.CrowdAvoidance",
 		"dev.shared.orbithelper.behaviours.GGAlertCloser",
 		"dev.shared.orbithelper.behaviours.fast_travel.FastTravel",
-		"dev.shared.orbithelper.menus.OrbitHelperQuickLogin"
+		"dev.shared.orbithelper.menus.OrbitHelperQuickLogin",
+		"dev.shared.orbithelper.module.daily_quest.DailyQuestModule"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
 	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/latest/download/SharedPlugin.jar"
