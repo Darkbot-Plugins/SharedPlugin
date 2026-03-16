@@ -20,7 +20,7 @@ public class DailyQuestConfig {
 
     @Option("orbithelper.daily_quest.fallback_config")
     @Dropdown(options = FallbackConfigOptions.class)
-    public String fallbackConfig = "STOP_BOT";
+    public String fallbackConfig = FallbackConfigOptions.STOP_BOT;
 
     @Option("orbithelper.daily_quest.switch_ship")
     @Dropdown(options = ShipList.class)
@@ -106,6 +106,7 @@ public class DailyQuestConfig {
         public static final String STOP_BOT = "STOP_BOT";
         public static final String LAST_USED = "LAST_USED";
         public static final String CONFIG = "config";
+        private static final String JSON_EXT = ".json";
 
         @Override
         public java.util.List<String> options() {
@@ -118,12 +119,12 @@ public class DailyQuestConfig {
             File configsDir = new File("configs");
             if (configsDir.isDirectory()) {
                 File[] files = configsDir.listFiles(f -> f.isFile()
-                        && f.getName().endsWith(".json")
-                        && !f.getName().endsWith("_old.json"));
+                        && f.getName().endsWith(JSON_EXT)
+                        && !f.getName().endsWith("_old" + JSON_EXT));
                 if (files != null) {
                     Arrays.sort(files, (a, b) -> a.getName().compareToIgnoreCase(b.getName()));
                     for (File f : files) {
-                        String name = f.getName().replace(".json", "");
+                        String name = f.getName().replace(JSON_EXT, "");
                         if (!opts.contains(name))
                             opts.add(name);
                     }
@@ -139,7 +140,7 @@ public class DailyQuestConfig {
             if (LAST_USED.equals(option))
                 return "Last Used Config";
             if (CONFIG.equals(option))
-                return "config";
+                return CONFIG;
             return option;
         }
 
@@ -170,24 +171,11 @@ public class DailyQuestConfig {
             java.util.List<File> candidates = new ArrayList<>();
 
             // Root config.json → profile name "config"
-            File rootConfig = new File("config.json");
-            if (rootConfig.exists() && !"config".equals(currentProfile))
+            File rootConfig = new File(CONFIG + JSON_EXT);
+            if (rootConfig.exists() && !CONFIG.equals(currentProfile))
                 candidates.add(rootConfig);
 
-            // configs/*.json
-            File configsDir = new File("configs");
-            if (configsDir.isDirectory()) {
-                File[] files = configsDir.listFiles(f -> f.isFile()
-                        && f.getName().endsWith(".json")
-                        && !f.getName().endsWith("_old.json"));
-                if (files != null) {
-                    for (File f : files) {
-                        String name = f.getName().replace(".json", "");
-                        if (!name.equals(currentProfile))
-                            candidates.add(f);
-                    }
-                }
-            }
+            addConfigFileCandidates(new File("configs"), currentProfile, candidates);
 
             if (candidates.isEmpty())
                 return null;
@@ -199,13 +187,27 @@ public class DailyQuestConfig {
                     newest = f;
             }
 
-            // Derive profile name from file name (strip .json)
-            return newest.getName().replace(".json", "");
+            return newest.getName().replace(JSON_EXT, "");
+        }
+
+        private static void addConfigFileCandidates(File configsDir, String currentProfile, java.util.List<File> candidates) {
+            if (!configsDir.isDirectory())
+                return;
+            File[] files = configsDir.listFiles(f -> f.isFile()
+                    && f.getName().endsWith(JSON_EXT)
+                    && !f.getName().endsWith("_old" + JSON_EXT));
+            if (files == null)
+                return;
+            for (File f : files) {
+                String name = f.getName().replace(JSON_EXT, "");
+                if (!name.equals(currentProfile))
+                    candidates.add(f);
+            }
         }
     }
 
     public static class ShipList implements Dropdown.Options<String> {
-        public static Map<String, String> ships = new LinkedHashMap<>();
+        public static final Map<String, String> ships = new LinkedHashMap<>();
 
         @Override
         public List<String> options() {

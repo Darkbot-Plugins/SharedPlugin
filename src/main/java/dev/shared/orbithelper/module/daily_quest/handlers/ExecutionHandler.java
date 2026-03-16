@@ -134,6 +134,8 @@ public class ExecutionHandler {
                     return true;
                 }
                 break;
+            default:
+                break;
         }
         return false;
     }

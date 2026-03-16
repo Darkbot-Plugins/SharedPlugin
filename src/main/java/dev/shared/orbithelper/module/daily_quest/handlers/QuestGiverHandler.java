@@ -271,7 +271,7 @@ public class QuestGiverHandler {
         // Formula: tabsStartX + (tabWidth * tabIndex) - (tabWidth / 2)
         // This lands exactly on the horizontal center of the target slot.
         VirtualWindow tabs = buildTabs();
-        double tabSlotW = tabs.width() / (double) TABS_COUNT;
+        double tabSlotW = tabs.width() / TABS_COUNT;
         int clickX = (int) (tabs.x() + (tabSlotW * TARGET_TAB) - (tabSlotW / 2.0D));
         int clickY = (int) tabs.centerY();
 
@@ -407,7 +407,7 @@ public class QuestGiverHandler {
      */
     private void clickQuestRow(int row) {
         VirtualWindow list = buildQuestList();
-        double rowH = list.height() / (double) LIST_ROWS;
+        double rowH = list.height() / LIST_ROWS;
         int clickX = (int) list.centerX();
         int clickY = (int) (list.y() + (rowH * row) + (rowH / 2.0D));
         doClick(clickX, clickY);

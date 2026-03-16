@@ -327,8 +327,7 @@ public class QuestManager {
 
         if (displayedId == currentQuest.questId) {
             resetQuestSelectState();
-            if (questGui != null && questGui.isVisible())
-                questGui.setVisible(false);
+            hideQuestGui(questGui);
             return true;
         }
 
@@ -356,6 +355,11 @@ public class QuestManager {
             return false;
 
         return advanceSelectScan(questGui);
+    }
+
+    private void hideQuestGui(Gui questGui) {
+        if (questGui != null && questGui.isVisible())
+            questGui.setVisible(false);
     }
 
     private boolean isQuestWindowReady(Gui questGui) {
@@ -723,7 +727,7 @@ public class QuestManager {
         if (execQuest.validMaps.isEmpty())
             return;
 
-        SimulationQuest simQuest = new SimulationQuest(execQuest, questData.isSequential);
+        SimulationQuest simQuest = new SimulationQuest(execQuest);
 
         if (questData.isSequential) {
             if (previousSimQuestBox[0] != null) {
@@ -1123,9 +1127,7 @@ public class QuestManager {
         // In keep-alive mode: check whether the server has now enabled the next step
         if (currentQuest.remaining == SEQUENTIAL_STEP_KEEP_ALIVE) {
             boolean foundNext = checkForNextSequentialStep(displayedQuest);
-            if (foundNext) {
-                currentQuest.remaining = 0;
-            } else if (!hasMoreIncompleteRequirements(displayedQuest)) {
+            if (foundNext || !hasMoreIncompleteRequirements(displayedQuest)) {
                 currentQuest.remaining = 0;
             }
             // Else: still waiting
@@ -1979,7 +1981,7 @@ public class QuestManager {
         final ExecutionQuest quest;
         SimulationQuest nextStep; // Next step in a sequential chain
 
-        SimulationQuest(ExecutionQuest quest, boolean sequential) {
+        SimulationQuest(ExecutionQuest quest) {
             this.quest = quest;
         }
     }
