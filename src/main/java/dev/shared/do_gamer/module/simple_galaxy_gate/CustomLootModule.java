@@ -568,7 +568,7 @@ public class CustomLootModule extends LootModule {
                 .filter(this::isValidKamikazeTarget)
                 .collect(Collectors.toList());
 
-        if (validTargets.size() <= this.config.kamikaze.minNpcs) {
+        if (validTargets.size() < this.config.kamikaze.minNpcs) {
             this.setKamikazeInactive();
             return false; // Not enough valid targets
         }
