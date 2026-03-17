@@ -173,9 +173,17 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
                     return; // Abort if auto-refine or auto upgrade weapons reduced the cargo fill
                 }
 
-                // Reset the fail-safe timer in exempt states
-                long timeout = this.resolveFailSafeMillis(this.activeMode);
-                failSafe.activate(timeout);
+                // Reset the fail-safe timer in exempt states.
+                // But only if moving (fix the stuck in the gate jumping)
+                if (this.hero.isMoving()) {
+                    long timeout = this.resolveFailSafeMillis(this.activeMode);
+                    failSafe.activate(timeout);
+                } else if (failSafe.isInactive()) {
+                    this.finish();
+                    System.out.println("Ore Seller: Requested game refresh due to stuck.");
+                    this.bot.handleRefresh();
+                    return;
+                }
             } else if (failSafe.isInactive()) {
                 System.out.println("Ore seller timed out");
                 this.finish();

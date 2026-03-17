@@ -1,0 +1,688 @@
+package dev.shared.do_gamer.module.simple_galaxy_gate;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.WeakHashMap;
+import java.util.stream.Collectors;
+
+import com.github.manolo8.darkbot.Main;
+import com.github.manolo8.darkbot.core.objects.facades.SettingsProxy;
+
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.KamikazeNpcFlag;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.utils.PetGearHelper;
+import eu.darkbot.api.PluginAPI;
+import eu.darkbot.api.config.ConfigSetting;
+import eu.darkbot.api.config.types.NpcFlag;
+import eu.darkbot.api.config.types.PercentRange;
+import eu.darkbot.api.config.types.ShipMode;
+import eu.darkbot.api.game.entities.Barrier;
+import eu.darkbot.api.game.entities.Box;
+import eu.darkbot.api.game.entities.Npc;
+import eu.darkbot.api.game.enums.EntityEffect;
+import eu.darkbot.api.game.enums.PetGear;
+import eu.darkbot.api.game.other.Locatable;
+import eu.darkbot.api.game.other.Location;
+import eu.darkbot.api.game.other.Lockable;
+import eu.darkbot.api.managers.ConfigAPI;
+import eu.darkbot.api.managers.EntitiesAPI;
+import eu.darkbot.api.managers.GroupAPI;
+import eu.darkbot.shared.modules.LootModule;
+import eu.darkbot.util.Timer;
+
+public class CustomLootModule extends LootModule {
+
+    protected final ConfigSetting<PercentRange> repairHpRange;
+    protected final ConfigSetting<Double> repairRoamingHp;
+    protected final ConfigSetting<Double> repairToShield;
+    protected final ConfigSetting<ShipMode> repairMode;
+    protected final ConfigSetting<Integer> collectRadius;
+    protected final Collection<? extends Barrier> barriers;
+    private final GroupAPI group;
+    private final SettingsProxy settingsProxy;
+    private final PetGearHelper petGearHelper;
+
+    private SimpleGalaxyGateConfig config;
+    private CustomCollectorModule collector;
+    private GateHandler gateHandler;
+    private boolean repair = false;
+    private boolean approachingCenter = false;
+
+    // Kamikaze handling state
+    private enum KamikazeStage {
+        INACTIVE, PRIMED, ACTIVE
+    }
+
+    private KamikazeStage kamikazeStage = KamikazeStage.PRIMED;
+    private final Timer kamikazeTimer = Timer.get();
+    private final Map<Npc, Long> kamikazeLastAiming = new WeakHashMap<>();
+    private static final double KAMIKAZE_MAX_DISTANCE = 3_000.0;
+    private static final double KAMIKAZE_RADIUS = 1_500.0;
+    private static final double KAMIKAZE_MAX_PAIR_DISTANCE = 300.0;
+    private static final int KAMIKAZE_PET_LOW_HP = 10_000;
+    private static final double FAR_TARGET_DISTANCE = 2_000.0;
+    private final Timer kamikazeDelay = Timer.get(5_000L);
+    private final Timer kamikazeStuck = Timer.get(10_000L);
+    private final Timer kamikazeDetonateTimer = Timer.get(10_000L);
+
+    CustomLootModule(PluginAPI api) {
+        super(api);
+
+        EntitiesAPI entities = api.requireAPI(EntitiesAPI.class);
+        this.barriers = entities.getBarriers();
+
+        ConfigAPI configApi = api.requireAPI(ConfigAPI.class);
+        this.repairHpRange = configApi.requireConfig("general.safety.repair_hp_range");
+        this.repairRoamingHp = configApi.requireConfig("general.safety.repair_hp_no_npc");
+        this.repairToShield = configApi.requireConfig("general.safety.repair_to_shield");
+        this.repairMode = configApi.requireConfig("general.safety.repair");
+        this.collectRadius = configApi.requireConfig("collect.radius");
+        this.group = api.requireAPI(GroupAPI.class);
+        this.settingsProxy = Main.INSTANCE.facadeManager.settings;
+        this.petGearHelper = new PetGearHelper(api);
+    }
+
+    /**
+     * Sets the collector module reference.
+     */
+    public void setCollector(CustomCollectorModule collector) {
+        this.collector = collector;
+    }
+
+    /**
+     * Sets the gate handler reference.
+     */
+    public void setGateHandler(GateHandler gateHandler) {
+        this.gateHandler = gateHandler;
+    }
+
+    /**
+     * Sets the module config reference.
+     */
+    public void setModuleConfig(SimpleGalaxyGateConfig config) {
+        this.config = config;
+    }
+
+    @Override
+    public boolean canRefresh() {
+        return false;
+    }
+
+    /**
+     * Gets the list of valid NPCs
+     */
+    public List<Npc> getNpcs() {
+        if (this.npcs == null) {
+            return Collections.emptyList();
+        }
+        return this.npcs.stream()
+                .filter(Objects::nonNull)
+                .filter(n -> !n.getEntityInfo().getUsername().isEmpty())
+                .map(Npc.class::cast)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public void onTickModule() {
+        this.pet.setEnabled(true);
+        if (this.handleKamikaze()) {
+            return; // Skip rest of logic if handling kamikaze
+        }
+        this.repairHandler();
+
+        // Specific gate attack logic
+        if (this.gateHandler.attackTickModule()) {
+            return;
+        }
+        if (this.findTarget()) {
+            // Try to collect boxes while attacking
+            if (this.collector.isNotWaiting()) {
+                this.collector.findBox();
+                Box box = this.collector.currentBox;
+                Npc npc = this.attack.getTargetAs(Npc.class);
+                if (box != null && box.isValid() && this.shouldCollectWhileAttacking(npc, box)) {
+                    StateStore.request(StateStore.State.COLLECTING);
+                    this.collector.tryCollectNearestBox();
+                    if (this.isFarTarget(npc)) {
+                        this.hero.setRoamMode(); // If target is far, switch to roam mode
+                    }
+                } else {
+                    this.moveToAnSafePosition();
+                }
+            }
+            // Attack target
+            this.attack.tryLockAndAttack();
+        }
+    }
+
+    /**
+     * Determines if the bot should try to collect the box while attacking the NPC.
+     */
+    private boolean shouldCollectWhileAttacking(Npc npc, Box box) {
+        double radius = this.collectRadius.getValue();
+        return npc != null && !this.shouldIgnoreBox(npc, box)
+                && (box.distanceTo(this.hero) <= radius || this.isFarTarget(npc));
+    }
+
+    /**
+     * Determines if the bot should ignore the box.
+     */
+    private boolean shouldIgnoreBox(Npc npc, Box box) {
+        return npc.getInfo().hasExtraFlag(NpcFlag.IGNORE_BOXES)
+                || npc.distanceTo(box) < this.getRadius(npc);
+    }
+
+    /**
+     * Determines if the target NPC is considered far from the hero.
+     */
+    private boolean isFarTarget(Npc npc) {
+        return this.hero.distanceTo(npc) >= FAR_TARGET_DISTANCE;
+    }
+
+    @Override
+    protected void setConfig(Locatable direction) {
+        if (this.repair) {
+            return; // Skip while repairing
+        }
+        Npc target = (Npc) this.attack.getTargetAs(Npc.class);
+        if (target != null && target.isValid()) {
+            if (this.hero.distanceTo(target) > FAR_TARGET_DISTANCE) {
+                this.hero.setRoamMode(); // If target is far, switch to roam mode
+            } else {
+                this.hero.setAttackMode(target);
+            }
+        } else {
+            this.hero.setRoamMode();
+        }
+    }
+
+    /**
+     * Skips far target logic when low HP and others are better targets.
+     */
+    private boolean skipFarTarget(Npc target) {
+        if (!this.gateHandler.isSkipFarTargets()) {
+            return false; // Skip disabled
+        }
+
+        double targetDist = target.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
+        double heroDist = this.hero.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
+        return targetDist > Maps.getToleranceDistance()
+                && targetDist > heroDist
+                && target.getHealth().hpPercent() <= 0.25
+                && this.getNpcs().stream().anyMatch(npc -> this.isBetterTarget(npc, targetDist, target));
+    }
+
+    /**
+     * Determines if the given NPC is a better target than the current one
+     * based on HP, distance to center, and position.
+     */
+    private boolean isBetterTarget(Npc npc, double distance, Npc target) {
+        return npc.getHealth().hpPercent() > 0.3
+                && this.shouldKill(npc)
+                && npc.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY()) < (distance - 800.0)
+                && Math.signum(npc.getX() - Maps.getMapCenterX()) == Math.signum(target.getX() - Maps.getMapCenterX())
+                && Math.signum(npc.getY() - Maps.getMapCenterY()) == Math.signum(target.getY() - Maps.getMapCenterY());
+    }
+
+    /**
+     * Gets a comparator for NPCs based on priority, distance to location, and HP
+     * percentage.
+     */
+    public final Comparator<Npc> getNpcComparator(Locatable location) {
+        return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority())
+                .thenComparingDouble(n -> n.distanceTo(location))
+                .thenComparingDouble(n -> n.getHealth().hpPercent());
+    }
+
+    @Override
+    protected Npc closestNpc(Locatable location) {
+        Npc target = this.attack.getTargetAs(Npc.class);
+        Npc best = this.getNpcs().stream()
+                .filter(this::shouldKill)
+                .min(this.getNpcComparator(location))
+                .orElse(null);
+
+        // Return current target if it's the best one
+        if (best == null) {
+            return target;
+        }
+
+        // Skip far target if needed and return best
+        if (target != null && this.skipFarTarget(target)) {
+            return best;
+        }
+
+        // Prefer current target if close enough
+        double shift = 50.0; // Shift to prefer already targeted NPCs
+        boolean isAttackingTarget = target != null && this.hero.isAttacking(target) && this.shouldKill(target);
+        if (isAttackingTarget && target.distanceTo(location) < (best.distanceTo(location) + shift)) {
+            return target;
+        } else {
+            return best;
+        }
+    }
+
+    /**
+     * Checks if the NPC has ISH effect.
+     */
+    private boolean hasIshEffect(Npc npc) {
+        return npc.hasEffect(EntityEffect.NPC_ISH) || npc.hasEffect(EntityEffect.ISH);
+    }
+
+    @Override
+    protected boolean shouldKill(Npc npc) {
+        // Ignore in specials cases
+        if (npc.getInfo().hasExtraFlag(NpcFlag.PASSIVE)
+                || (this.hasIshEffect(npc) && this.getNpcs().stream().anyMatch(n -> !this.hasIshEffect(n)))
+                || (npc.isBlacklisted() && this.getNpcs().stream().anyMatch(n -> !n.isBlacklisted()))) {
+            return false;
+        }
+        // Use gate handler logic
+        GateHandler.KillDecision gateDecision = this.gateHandler.shouldKillNpc(npc);
+        if (gateDecision != GateHandler.KillDecision.DEFAULT) {
+            return gateDecision == GateHandler.KillDecision.YES;
+        }
+        // Default behavior
+        return super.shouldKill(npc) && (!this.onlyKillPreferred.getValue() || this.movement.isInPreferredZone(npc));
+    }
+
+    @Override
+    protected boolean isAttackedByOthers(Npc npc) {
+        return false; // Ignore being attacked by others
+    }
+
+    @Override
+    protected double getRadius(Lockable target) {
+        // While repairing, keep distance
+        if (this.repair) {
+            return this.gateHandler.getRepairRadius();
+        }
+        // If no target, use default radius
+        if (target == null) {
+            return 560.0;
+        }
+
+        // Use specific radius for gate targets if defined, otherwise default NPC radius
+        double radius = this.gateHandler.getTargetRadius(target);
+
+        Npc npc = (Npc) target;
+        if (radius == 0.0) {
+            // Default radius based on NPC info
+            radius = npc.getInfo().getRadius();
+        }
+
+        double distance = npc.distanceTo(this.hero) + 100.0; // Add small buffer to distance
+        // Stay closer to low HP NPCs if no others are nearby
+        if (npc.getHealth().hpPercent() <= 0.25
+                && !npc.getInfo().hasExtraFlag(NpcFlag.AGGRESSIVE_FOLLOW)
+                && this.getNpcs().stream()
+                        .filter(n -> !Objects.equals(n, npc))
+                        .noneMatch(n -> n.distanceTo(this.hero) < distance)) {
+            radius *= 0.75;
+        }
+
+        return this.attack.modifyRadius(radius);
+    }
+
+    /**
+     * Handles the repair logic.
+     */
+    private void repairHandler() {
+        if (this.repair && this.doneRepairing()) {
+            this.repair = false;
+        } else if (!this.repair && this.needsRepairing()) {
+            this.repair = true;
+        }
+    }
+
+    /**
+     * Determines if the hero needs repairing.
+     */
+    private boolean needsRepairing() {
+        return this.hero.getHealth().hpPercent() < ((PercentRange) this.repairHpRange.getValue()).getMin()
+                || this.hero.getHealth().hpPercent() < (Double) this.repairRoamingHp.getValue()
+                        && (!this.attack.hasTarget() || this.attack.getTarget().getHealth().hpPercent() > 0.9);
+    }
+
+    /**
+     * Determines if the hero is done repairing.
+     */
+    private boolean doneRepairing() {
+        if (!this.hero.isInMode((ShipMode) this.repairMode.getValue())
+                && (this.hero.getHealth().hpIncreasedIn(1_000) || this.hero.getHealth().hpPercent() == 1.0)
+                && (this.hero.getHealth().shieldDecreasedIn(1_000) || this.hero.getHealth().shieldPercent() == 0.0)) {
+            this.hero.setMode((ShipMode) this.repairMode.getValue());
+        }
+
+        return this.hero.getHealth().shieldPercent() >= (Double) this.repairToShield.getValue()
+                && this.hero.setMode((ShipMode) this.repairMode.getValue())
+                && this.hero.getHealth().hpPercent() >= ((PercentRange) this.repairHpRange.getValue()).getMax();
+    }
+
+    /**
+     * Determines if need to change direction to approach the center of the map.
+     */
+    private boolean approachToCenter(Npc target) {
+        if (target == null || !this.gateHandler.isApproachToCenter() || !this.barriers.isEmpty()) {
+            return false; // No need to approach
+        }
+        double distanceHero = this.hero.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
+        double distanceTarget = target.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
+        double tolerance = Maps.getToleranceDistance();
+        double buffer = 800;
+        boolean closeEnough = distanceHero < (tolerance - buffer) && distanceTarget < (tolerance - buffer);
+        boolean farEnough = distanceHero > tolerance && distanceTarget > tolerance;
+
+        // Stop approaching center if close enough, start if far enough
+        this.approachingCenter = this.approachingCenter ? !closeEnough : farEnough;
+
+        if (!this.approachingCenter) {
+            return false; // Not approaching center
+        }
+
+        // Calculate angle when approaching
+        double angleHero = this.hero.angleTo(Maps.getMapCenterX(), Maps.getMapCenterY());
+        double angleTarget = target.angleTo(Maps.getMapCenterX(), Maps.getMapCenterY());
+        double angleDiffDeg = Math.toDegrees(angleHero - angleTarget);
+
+        if (Math.abs(angleDiffDeg) < 2.0) {
+            this.backwards = angleDiffDeg < 0;
+        }
+        return true;
+    }
+
+    @Override
+    protected Location getBestDir(Locatable targetLoc, double angle, double angleDiff, double distance) {
+        Npc target = this.attack.getTargetAs(Npc.class);
+        if (this.approachToCenter(target) || this.repair) {
+            return Location.of(targetLoc, angle + angleDiff * (double) (this.backwards ? -1 : 1), distance);
+        }
+        return super.getBestDir(targetLoc, angle, angleDiff, distance);
+    }
+
+    @Override
+    protected double score(Locatable loc) {
+        double base = this.movement.canMove(loc) ? 0 : -1_000;
+        double sum = 0.0;
+        for (Npc npc : this.getNpcs()) {
+            if (this.attack.getTarget() == npc) {
+                continue;
+            }
+            sum += Math.max(0.0, npc.getInfo().getRadius() - npc.distanceTo(loc));
+        }
+        return base - sum;
+    }
+
+    /**
+     * Proxy method to move to NPC while considering safe position.
+     */
+    public void moveToNpc() {
+        if (this.attack.hasTarget()) {
+            super.moveToAnSafePosition();
+        }
+    }
+
+    /**
+     * Checks if the pet is alive.
+     */
+    private boolean isPetAlive() {
+        return this.pet.getHealth().getHp() > 0;
+    }
+
+    /**
+     * Checks if the PET HP is low enough for the kamikaze strategy.
+     */
+    private boolean isPetHpLow() {
+        return this.pet.getHealth().getHp() < KAMIKAZE_PET_LOW_HP;
+    }
+
+    /**
+     * Determines if the PET is ready to be used for the kamikaze.
+     */
+    private boolean petReadyForKamikaze() {
+        if (this.isPetAlive()) {
+            this.kamikazeStuck.disarm();
+            // Note: attack to PET doesn't work in groups, so skip lower HP functionality
+            if (this.isPetHpLow() || this.group.hasGroup()) {
+                return true; // PET is already low on HP
+            }
+            // Lower the PET HP
+            this.attack.setTarget((Lockable) this.pet);
+            this.attack.tryLockTarget();
+            this.hero.launchRocket();
+        } else {
+            // Try to fix PET HP stuck at 0 by reactivating it
+            if (!this.kamikazeStuck.isArmed()) {
+                // Arm the timer to detect if PET HP is stuck at 0 after respawn
+                this.kamikazeStuck.activate();
+            } else if (this.kamikazeStuck.isInactive()) {
+                // Timer expired, try to reactivate PET
+                this.settingsProxy.pressKeybind(SettingsProxy.KeyBind.ACTIVE_PET);
+                this.kamikazeStuck.disarm();
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets the X coordinate for kamikaze strateg.
+     */
+    private double getKamikazeX() {
+        return Maps.getMapCenterX() + this.gateHandler.getKamikazeShiftX();
+    }
+
+    /**
+     * Gets the Y coordinate for kamikaze strategy.
+     */
+    private double getKamikazeY() {
+        return Maps.getMapCenterY() + this.gateHandler.getKamikazeShiftY();
+    }
+
+    // ########################################//
+    // Kamikaze state handling methods (start)
+    private boolean isKamikazeActive() {
+        return this.kamikazeStage == KamikazeStage.ACTIVE;
+    }
+
+    private boolean isKamikazePrimed() {
+        return this.kamikazeStage == KamikazeStage.PRIMED;
+    }
+
+    private void setKamikazeActive() {
+        this.kamikazeStage = KamikazeStage.ACTIVE;
+    }
+
+    private void setKamikazeInactive() {
+        this.kamikazeStage = KamikazeStage.INACTIVE;
+        this.kamikazeDetonateTimer.disarm();
+    }
+
+    private void setKamikazePrimed() {
+        this.kamikazeStage = KamikazeStage.PRIMED;
+    }
+
+    private void setKamikazeCooldown() {
+        this.setKamikazeInactive();
+        this.kamikazeTimer.activate(this.config.kamikaze.cooldown.seconds * 1_000L);
+    }
+
+    private boolean hasKamikazeCooldown() {
+        return this.kamikazeTimer.isActive();
+    }
+    // Kamikaze state handling methods (end)
+    // ########################################//
+
+    /**
+     * Checks if the NPC has been recently aiming at the hero last second.
+     */
+    private boolean recentlyAimingAtHero(Npc npc) {
+        if (npc.isAiming(this.hero)) {
+            this.kamikazeLastAiming.put(npc, System.currentTimeMillis());
+            return true;
+        }
+        Long last = this.kamikazeLastAiming.get(npc);
+        if (last != null && System.currentTimeMillis() - last <= 1_000L) {
+            return true;
+        }
+        this.kamikazeLastAiming.remove(npc);
+        return false;
+    }
+
+    /**
+     * Determines if the NPC is a valid target for the kamikaze strategy.
+     */
+    private boolean isValidKamikazeTarget(Npc npc) {
+        return npc.getInfo().hasExtraFlag(KamikazeNpcFlag.KAMIKAZE) && this.recentlyAimingAtHero(npc)
+                && (this.isKamikazePrimed()
+                        || npc.distanceTo(this.getKamikazeX(), this.getKamikazeY()) <= KAMIKAZE_MAX_DISTANCE);
+    }
+
+    /**
+     * Handles the kamikaze strategy.
+     */
+    private boolean handleKamikaze() {
+        // configuration may not be ready on the very first ticks
+        if (this.config == null || !this.config.kamikaze.enabled || !this.petGearHelper.isEnabled()) {
+            return false;
+        }
+
+        // Reset to primed state when waiting in gate
+        if (StateStore.current() == StateStore.State.WAITING_IN_GATE) {
+            this.setKamikazePrimed();
+        }
+
+        // Handle active kamikaze state if we are currently in it
+        if (this.isKamikazeActive()) {
+            this.handleActiveKamikaze();
+            return true;
+        }
+
+        // Check if we have enough valid targets for kamikaze strategy
+        List<Npc> validTargets = this.getNpcs().stream()
+                .filter(this::isValidKamikazeTarget)
+                .collect(Collectors.toList());
+
+        if (validTargets.size() < this.config.kamikaze.minNpcs) {
+            this.setKamikazeInactive();
+            return false; // Not enough valid targets
+        }
+
+        // Try to activate kamikaze state
+        if (this.tryActivateKamikaze(validTargets)) {
+            return true;
+        }
+
+        // Move around center to group NPCs together
+        this.petGearHelper.setPassive();
+        this.moveAroundPoint(this.getKamikazeX(), this.getKamikazeY(), KAMIKAZE_RADIUS);
+        return true;
+    }
+
+    /**
+     * Prepares the hero and PET for the kamikaze state.
+     */
+    private void enterKamikazeState() {
+        // Stop attacking
+        if (this.attack.isAttacking() && this.isPetHpLow()) {
+            this.attack.stopAttack();
+        }
+
+        // Use kamikaze config
+        this.hero.setMode(this.config.kamikaze.shipMode);
+        StateStore.request(StateStore.State.KAMIKAZE);
+    }
+
+    /**
+     * Handles active kamikaze state actions.
+     */
+    private void handleActiveKamikaze() {
+        this.enterKamikazeState();
+
+        if (!this.isPetAlive()
+                || this.hero.getHealth().hpPercent() <= this.config.kamikaze.hpRange.getMin()
+                || this.hero.getHealth().shieldPercent() <= this.config.kamikaze.shieldRange.getMin()) {
+            this.setKamikazeCooldown();
+        } else {
+            // stop movement, set pet to kamikaze gear and wait
+            if (this.movement.isMoving()) {
+                this.movement.stop(false);
+            }
+            this.petGearHelper.tryUse(PetGear.KAMIKAZE);
+
+            // If the PET fails to detonate quickly, abort kamikaze state
+            if (!this.kamikazeDetonateTimer.isArmed()) {
+                this.kamikazeDetonateTimer.activate();
+            }
+            if (this.kamikazeDetonateTimer.isInactive()) {
+                this.setKamikazeInactive();
+            }
+        }
+    }
+
+    /**
+     * Tries to activate kamikaze state if conditions are met.
+     */
+    private boolean tryActivateKamikaze(List<Npc> validTargets) {
+        this.enterKamikazeState();
+
+        if (!this.hasKamikazeCooldown() && this.petReadyForKamikaze()
+                && this.hero.getHealth().hpPercent() >= this.config.kamikaze.hpRange.getMax()
+                && this.hero.getHealth().shieldPercent() >= this.config.kamikaze.shieldRange.getMax()) {
+            if (this.isNpcsCloseEnough(validTargets)) {
+                if (this.kamikazeDelay.isInactive()) {
+                    this.setKamikazeActive();
+                }
+                return true;
+            }
+            // Additional delay for primed attempt to wait next wave of NPCs
+            if (this.isKamikazePrimed()) {
+                this.kamikazeDelay.activate();
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if the NPCs are close enough to each other for kamikaze.
+     */
+    private boolean isNpcsCloseEnough(List<Npc> validTargets) {
+        double maxPairDist = 0.0;
+        int size = validTargets.size();
+        for (int i = 0; i < size; i++) {
+            for (int j = i + 1; j < size; j++) {
+                double dist = validTargets.get(i).distanceTo(validTargets.get(j));
+                if (dist > maxPairDist) {
+                    maxPairDist = dist;
+                }
+            }
+        }
+        return maxPairDist <= KAMIKAZE_MAX_PAIR_DISTANCE;
+    }
+
+    /**
+     * Moves around a point in a circle with the given radius.
+     */
+    private void moveAroundPoint(double x, double y, double radius) {
+        Location targetLoc = Location.of(x, y);
+        double distance = this.hero.distanceTo(x, y);
+        double angle = targetLoc.angleTo(this.hero);
+
+        double maxRadFix = radius / 2.0;
+        double radiusFix = ((int) Math.max(Math.min(radius - distance, maxRadFix), -maxRadFix));
+        distance = radius + radiusFix;
+        double angleDiff = Math.max((double) this.hero.getSpeed() * 0.625F
+                + 200.0F * 0.625F
+                - this.hero.distanceTo(Location.of(targetLoc, angle, distance)), 0.0F) / distance;
+
+        Location direction = Location.of(targetLoc, angle + angleDiff, distance);
+        this.searchValidLocation(direction, targetLoc, angle, distance);
+        this.movement.moveTo(direction);
+    }
+}

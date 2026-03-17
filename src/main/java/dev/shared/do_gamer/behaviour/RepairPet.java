@@ -11,6 +11,8 @@ import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
+import eu.darkbot.api.managers.EntitiesAPI;
+import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Repair PET", description = "Repairs your PET when its health drops below a certain threshold.")
@@ -18,6 +20,8 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
     private final BotAPI bot;
     private final AttackAPI attacker;
     private final PetGearHelper petGearHelper;
+    private final EntitiesAPI entities;
+    private final HeroAPI hero;
 
     private RepairPetConfig config;
     private boolean repairing = false;
@@ -31,6 +35,8 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
         this.bot = api.requireAPI(BotAPI.class);
         this.attacker = api.requireAPI(AttackAPI.class);
         this.petGearHelper = new PetGearHelper(api);
+        this.entities = api.requireAPI(EntitiesAPI.class);
+        this.hero = api.requireAPI(HeroAPI.class);
     }
 
     @Override
@@ -73,6 +79,12 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
         return this.attacker.hasTarget() && this.attacker.isAttacking();
     }
 
+    // Check if under attack
+    private boolean isUnderAttack() {
+        return this.entities.getShips().stream().anyMatch(ship -> ship.isAttacking(this.hero))
+                || this.entities.getNpcs().stream().anyMatch(npc -> npc.isAttacking(this.hero));
+    }
+
     private boolean canRepair() {
         if (!this.isActive()) {
             return false; // Do not repair if PET is inactive
@@ -82,9 +94,9 @@ public class RepairPet implements Behavior, Configurable<RepairPetConfig> {
             return false; // Cannot use repair gear
         }
 
-        if (this.isAttacking() || TemporalModuleDetector.using(this.bot).isTemporal()) {
+        if (this.isAttacking() || this.isUnderAttack() || TemporalModuleDetector.using(this.bot).isTemporal()) {
             this.delay.activate(DELAY_MS);
-            return false; // Do not repair while attacking or using temporal module
+            return false; // Do not repair when restricted
         }
 
         if (this.delay.isActive()) {

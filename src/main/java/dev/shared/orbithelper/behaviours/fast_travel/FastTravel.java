@@ -55,6 +55,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     private final GameScreenAPI gameScreen;
     private final AttackAPI attack;
     private static final long VALIDATION_RETRY_INTERVAL_MS = 5_000L;
+    private static final int MAX_CONSECUTIVE_GLOBAL_TIMEOUTS = 3;
 
     private FastTravelConfig config;
     private final Timer timer = Timer.get();
@@ -63,6 +64,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     private State state = State.VALIDATING;
     private long cpuStartTime = 0;
     private boolean selectedRandom = false;
+    private int consecutiveGlobalTimeouts = 0;
 
     public FastTravel(PluginAPI api) {
         super(api.requireAPI(BotAPI.class));
@@ -91,6 +93,7 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
                 || CaptchaBoxDetector.hasCaptchaBoxes(this.entities) // Captcha is active
                 || this.attack.isAttacking() // Currently Attacking
                 || this.isUnderAttack() // Is under attack
+                || this.isMovingOrJumping() // Currently moving or jumping
         ) {
             this.resetState();
             return;
@@ -246,7 +249,8 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
 
         if (this.hero.distanceTo(safeSpot) < 200) {
             if (this.hero.isMoving()) {
-                this.movement.stop(true);
+                this.movement.stop(false);
+                return;
             }
             this.state = State.OPENING_CPU;
             this.cpuStartTime = System.currentTimeMillis();
@@ -343,6 +347,8 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         String destMap = this.destinationMap();
 
         if (currentMap.equals(destMap)) {
+            // Reset the consecutive timeout counter when we've arrived
+            this.consecutiveGlobalTimeouts = 0;
             this.resetState();
             return;
         }
@@ -355,6 +361,15 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
         if (this.cpuStartTime > 0
                 && (System.currentTimeMillis() - this.cpuStartTime) > (this.config.maxJumpAttemptTime * 1_000L)) {
             this.resetState();
+            // After 3 consecutive global timeouts, suggest a game refresh
+            if (this.consecutiveGlobalTimeouts >= MAX_CONSECUTIVE_GLOBAL_TIMEOUTS) {
+                System.out.println("Fast Travel: Requested game refresh due to consecutive timeouts.");
+                this.consecutiveGlobalTimeouts = 0; // Reset counter
+                this.bot.handleRefresh();
+                return true;
+            }
+            // Increment consecutive timeout counter
+            this.consecutiveGlobalTimeouts++;
             return true;
         }
         return false;
@@ -492,6 +507,14 @@ public class FastTravel extends TemporalModule implements Behavior, Configurable
     private boolean isUnderAttack() {
         return this.entities.getShips().stream().anyMatch(ship -> ship.isAttacking(this.hero))
                 || this.entities.getNpcs().stream().anyMatch(npc -> npc.isAttacking(this.hero));
+    }
+
+    // Check if currently moving or jumping (to avoid interrupting)
+    private boolean isMovingOrJumping() {
+        if (this.state != State.VALIDATING && this.state != State.SAFE_POSITIONING) {
+            return this.hero.isMoving() || this.entities.getPortals().stream().anyMatch(Portal::isJumping);
+        }
+        return false; // Only consider moving/jumping if we are in the process of fast traveling
     }
 
     // Check if destination map is sibling to current map

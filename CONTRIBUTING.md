@@ -78,3 +78,15 @@ As I use graddle you can run the task 'copyFile' and it will generate a jar call
 
 When a pull request is made, I will build a version with the changes so that they can be tested.
 Each time a merge is performed, a new version will be deployed and the .jar file will be added.
+
+### Rules
+
+- Rules that violate Darkbot's own rules will not be accepted.
+- Features that include requests to external URLs will not be accepted.
+- Obfuscated features will not be accepted.
+- Features that become obsolete will be disabled until they are updated.
+- The creator of a feature can decide to remove their feature from the plugin at any time, but this will not delete the code or versions that have already been published.
+- Features that are not created by the developer will not be accepted. No copying features from other plugins.
+- Minimum code quality must be maintained.
+- The repository maintainer(s) may delete a feature at any time if it does not comply with the rules.
+  

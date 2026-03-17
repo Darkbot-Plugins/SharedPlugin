@@ -94,8 +94,8 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
             return true;
         }
 
-        // Skip reload if currently attacking
-        return this.attacker.hasTarget() && this.attacker.isAttacking();
+        // Skip reload if currently in combat or under attack
+        return this.isInCombat() || this.isUnderAttack();
     }
 
     private boolean hasActiveNpc() {
@@ -108,6 +108,11 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
 
     private boolean isInCombat() {
         return this.attacker.hasTarget() && this.attacker.isAttacking();
+    }
+
+    private boolean isUnderAttack() {
+        return this.entities.getNpcs().stream().anyMatch(npc -> npc.isAttacking(this.hero))
+                || this.entities.getPlayers().stream().anyMatch(player -> player.isAttacking(this.hero));
     }
 
     private boolean isCollecting() {
