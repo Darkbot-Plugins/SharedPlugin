@@ -100,7 +100,7 @@ public class TrinityTrialsGate extends GateHandler {
     @Override
     public GameMap getMapForTravel() {
         if (!Maps.isGateOnCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
-            int faction = this.module.getHeroFractionIdx();
+            int faction = this.getHeroFractionIdx();
             if (faction == -1) {
                 return null; // Unknown faction, cannot determine map
             }

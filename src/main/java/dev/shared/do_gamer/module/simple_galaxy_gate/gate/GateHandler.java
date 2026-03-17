@@ -10,6 +10,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Portal;
+import eu.darkbot.api.game.other.EntityInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
 import eu.darkbot.api.game.other.Lockable;
@@ -222,5 +223,22 @@ public class GateHandler {
                 .filter(p -> p.getTypeId() == portalTypeId)
                 .findFirst()
                 .orElse(null);
+    }
+
+    /**
+     * Gets the hero's faction index.
+     */
+    protected final int getHeroFractionIdx() {
+        EntityInfo.Faction faction = this.module.hero.getEntityInfo().getFaction();
+        switch (faction) {
+            case MMO:
+                return 1;
+            case EIC:
+                return 2;
+            case VRU:
+                return 3;
+            default:
+                return -1; // Unknown faction
+        }
     }
 }

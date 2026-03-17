@@ -29,7 +29,6 @@ import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.game.galaxy.GalaxyGate;
 import eu.darkbot.api.game.galaxy.GalaxyInfo;
 import eu.darkbot.api.game.galaxy.GateInfo;
-import eu.darkbot.api.game.other.EntityInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.ConfigAPI;
@@ -983,23 +982,6 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         }
 
         return this.switchProfileTimer.isActive(); // Still waiting to check availability
-    }
-
-    /**
-     * Gets the hero's faction index.
-     */
-    public int getHeroFractionIdx() {
-        EntityInfo.Faction faction = this.hero.getEntityInfo().getFaction();
-        switch (faction) {
-            case MMO:
-                return 1;
-            case EIC:
-                return 2;
-            case VRU:
-                return 3;
-            default:
-                return -1; // Unknown faction
-        }
     }
 
 }
