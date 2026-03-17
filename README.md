@@ -20,6 +20,7 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - GG Alert Closer: Closes alerts at Galaxy Gates (Hades, LoW and Kuiper). By @do-gamer & @orbithelper
 - Fast Travel: Fast travel between maps using Jump CPU (AJP-01). By @do-gamer & @orbithelper
 - Orbit Helper Quick Login: Adds a button to navigate to Orbit Helper from the menu. By @orbithelper
+- Simple Galaxy Gate: Automates Galaxy Gate building and farming. By @do-gamer
 
 ## Contributing
 
