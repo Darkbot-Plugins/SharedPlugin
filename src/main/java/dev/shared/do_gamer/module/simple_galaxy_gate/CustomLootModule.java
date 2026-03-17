@@ -16,6 +16,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.KamikazeNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.config.types.NpcFlag;
@@ -42,10 +43,10 @@ public class CustomLootModule extends LootModule {
     protected final ConfigSetting<Double> repairToShield;
     protected final ConfigSetting<ShipMode> repairMode;
     protected final ConfigSetting<Integer> collectRadius;
-    protected final ConfigSetting<Boolean> petEnabled;
     protected final Collection<? extends Barrier> barriers;
     private final GroupAPI group;
     private final SettingsProxy settingsProxy;
+    private final PetGearHelper petGearHelper;
 
     private SimpleGalaxyGateConfig config;
     private CustomCollectorModule collector;
@@ -82,9 +83,9 @@ public class CustomLootModule extends LootModule {
         this.repairToShield = configApi.requireConfig("general.safety.repair_to_shield");
         this.repairMode = configApi.requireConfig("general.safety.repair");
         this.collectRadius = configApi.requireConfig("collect.radius");
-        this.petEnabled = configApi.requireConfig("pet.enabled");
         this.group = api.requireAPI(GroupAPI.class);
         this.settingsProxy = Main.INSTANCE.facadeManager.settings;
+        this.petGearHelper = new PetGearHelper(api);
     }
 
     /**
@@ -428,19 +429,6 @@ public class CustomLootModule extends LootModule {
     }
 
     /**
-     * Uses the specified pet gear if the pet is active.
-     */
-    private void usePetGear(PetGear gear) {
-        if (this.pet.isActive()) {
-            try {
-                this.pet.setGear(gear);
-            } catch (Exception ignored) {
-                // ignore exception
-            }
-        }
-    }
-
-    /**
      * Checks if the pet is alive.
      */
     private boolean isPetAlive() {
@@ -560,7 +548,7 @@ public class CustomLootModule extends LootModule {
      */
     private boolean handleKamikaze() {
         // configuration may not be ready on the very first ticks
-        if (this.config == null || !this.config.kamikaze.enabled || Boolean.FALSE.equals(this.petEnabled.getValue())) {
+        if (this.config == null || !this.config.kamikaze.enabled || !this.petGearHelper.isEnabled()) {
             return false;
         }
 
@@ -580,7 +568,7 @@ public class CustomLootModule extends LootModule {
                 .filter(this::isValidKamikazeTarget)
                 .collect(Collectors.toList());
 
-        if (validTargets.size() < this.config.kamikaze.minNpcs) {
+        if (validTargets.size() <= this.config.kamikaze.minNpcs) {
             this.setKamikazeInactive();
             return false; // Not enough valid targets
         }
@@ -591,7 +579,7 @@ public class CustomLootModule extends LootModule {
         }
 
         // Move around center to group NPCs together
-        this.usePetGear(PetGear.PASSIVE);
+        this.petGearHelper.setPassive();
         this.moveAroundPoint(this.getKamikazeX(), this.getKamikazeY(), KAMIKAZE_RADIUS);
         return true;
     }
@@ -625,7 +613,7 @@ public class CustomLootModule extends LootModule {
             if (this.movement.isMoving()) {
                 this.movement.stop(false);
             }
-            this.usePetGear(PetGear.KAMIKAZE);
+            this.petGearHelper.tryUse(PetGear.KAMIKAZE);
 
             // If the PET fails to detonate quickly, abort kamikaze state
             if (!this.kamikazeDetonateTimer.isArmed()) {
