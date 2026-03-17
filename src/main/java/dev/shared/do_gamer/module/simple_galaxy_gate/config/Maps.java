@@ -16,6 +16,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DseGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EpsilonGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.InvasionGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.KuiperGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.LowGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.TrinityTrialsGate;
@@ -89,6 +90,7 @@ public final class Maps {
         list.add(new MapInfo(203, "Hades", GalaxyGate.HADES, StarSystemAPI.HOME_MAPS, HadesGate::new));
         list.add(new MapInfo(300, "Kuiper", GalaxyGate.KUIPER, StarSystemAPI.HOME_MAPS, KuiperGate::new));
         list.add(new MapInfo(200, "LoW", null, List.of("1-3", "2-3", "3-3"), LowGate::new));
+        list.add(new MapInfo(61, "Invasion", null, List.of("1-5", "2-5", "3-5"), InvasionGate::new));
         list.add(new MapInfo(499, "Trinity Trials", null, StarSystemAPI.BASE_MAPS, TrinityTrialsGate::new));
         list.add(new MapInfo(473, "DSE", null, StarSystemAPI.HOME_MAPS, DseGate::new));
 

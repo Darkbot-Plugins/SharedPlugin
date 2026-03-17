@@ -183,7 +183,9 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                 } else if (this.entities.getPortals().stream().anyMatch(Portal::isJumping)) {
                     heroAction = "Jumping";
                 }
-                status.append(String.format("%nPosition: X: %.0f, Y: %.0f | %s", heroX, heroY, heroAction));
+                int heroMapId = this.hero.getMap().getId();
+                status.append(String.format("%nPosition: X: %.0f, Y: %.0f | %s | MapID: %d",
+                        heroX, heroY, heroAction, heroMapId));
                 break;
             case PORTALS:
                 for (Portal p : this.entities.getPortals()) {
