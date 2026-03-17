@@ -22,4 +22,9 @@ public class AnyGate extends GateHandler {
     public boolean isJumpToNextMap() {
         return this.module.getConfig().anyGate.jumpToNextMap;
     }
+
+    @Override
+    public boolean isMoveToCenter() {
+        return this.module.getConfig().anyGate.moveToCenter;
+    }
 }

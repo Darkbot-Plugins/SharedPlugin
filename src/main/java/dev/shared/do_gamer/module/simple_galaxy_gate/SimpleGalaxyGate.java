@@ -371,7 +371,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         if (this.collectorModule.hasNoBox()) {
             // No boxes to collect, move to center
             StateStore.request(StateStore.State.WAITING_IN_GATE);
-            this.moveToCenter();
+            this.moveToCenter(gateHandler);
         }
     }
 
@@ -379,14 +379,14 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
      * Moves the hero to the center of the map.
      * If stuck in the gate for too long, move to radiation
      */
-    private void moveToCenter() {
+    private void moveToCenter(GateHandler gateHandler) {
         double shift = 500.0;
         double x = (Maps.getMapCenterX() - shift);
         double y = (Maps.getMapCenterY() - shift);
 
-        y = this.handleStuckInGate(y);
-
-        this.moveToPosition(x, y);
+        if (!this.handleStuckInGate(x) && gateHandler.isMoveToCenter()) {
+            this.moveToPosition(x, y);
+        }
 
         if (StateStore.current() == StateStore.State.WAITING_IN_GATE && !this.stuckInGateTimer.isArmed()) {
             this.activateStuckInGateTimer(); // Activate stuck timer
@@ -398,8 +398,8 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
      * if far enough and movement is possible.
      */
     public void moveToPosition(double x, double y) {
-        double shift = 500.0;
-        if (this.hero.distanceTo(x, y) > shift && this.movement.canMove(x, y)) {
+        double gap = 500.0;
+        if (this.hero.distanceTo(x, y) > gap && this.movement.canMove(x, y)) {
             this.movement.moveTo(x, y);
         }
     }
@@ -407,7 +407,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Handles the logic for when the hero is stuck in the gate.
      */
-    private double handleStuckInGate(double y) {
+    private boolean handleStuckInGate(double x) {
         if (this.stuckInGateTimer.isArmed() && this.stuckInGateTimer.isInactive()) {
             if (!this.triedReloadOnStuck) {
                 // First try to reload the game
@@ -415,12 +415,14 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                 System.out.println("Ship seems stuck in gate, refreshing the game...");
                 this.bot.handleRefresh();
                 this.activateStuckInGateTimer();
+                return true;
             } else {
                 // Else move to radiation to destroy the ship
-                y = 0;
+                this.moveToPosition(x, 0);
+                return true;
             }
         }
-        return y;
+        return false;
     }
 
     /**

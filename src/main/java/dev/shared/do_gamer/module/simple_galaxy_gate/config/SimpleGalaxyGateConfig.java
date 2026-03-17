@@ -87,7 +87,10 @@ public class SimpleGalaxyGateConfig {
         public boolean killAllNpcs = true;
 
         @Option("do_gamer.simple_galaxy_gate.any_gate.jump_to_next_map")
-        public boolean jumpToNextMap = true;
+        public boolean jumpToNextMap = false;
+
+        @Option("do_gamer.simple_galaxy_gate.any_gate.move_to_center")
+        public boolean moveToCenter = false;
     }
 
     /**

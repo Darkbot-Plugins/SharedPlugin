@@ -115,6 +115,13 @@ public class GateHandler {
     }
 
     /**
+     * Return true to move to center when have no boxes to collect
+     */
+    public boolean isMoveToCenter() {
+        return true;
+    }
+
+    /**
      * Return true to activate approach-to-center logic
      */
     public boolean isApproachToCenter() {
