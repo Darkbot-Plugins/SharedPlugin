@@ -16,10 +16,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DseGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EpsilonGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
-import dev.shared.do_gamer.module.simple_galaxy_gate.gate.KappaGate;
-import dev.shared.do_gamer.module.simple_galaxy_gate.gate.KronosGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.KuiperGate;
-import dev.shared.do_gamer.module.simple_galaxy_gate.gate.LambdaGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.LowGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.TrinityTrialsGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.ZetaGate;
@@ -86,9 +83,9 @@ public final class Maps {
         list.add(new MapInfo(55, "Delta", GalaxyGate.DELTA, StarSystemAPI.HOME_MAPS, DeltaGate::new));
         list.add(new MapInfo(70, "Epsilon", GalaxyGate.EPSILON, StarSystemAPI.HOME_MAPS, EpsilonGate::new));
         list.add(new MapInfo(71, "Zeta", GalaxyGate.ZETA, StarSystemAPI.HOME_MAPS, ZetaGate::new));
-        list.add(new MapInfo(74, "Kappa", GalaxyGate.KAPPA, StarSystemAPI.HOME_MAPS, KappaGate::new));
-        list.add(new MapInfo(75, "Lambda", GalaxyGate.LAMBDA, StarSystemAPI.HOME_MAPS, LambdaGate::new));
-        list.add(new MapInfo(76, "Kronos", null, StarSystemAPI.HOME_MAPS, KronosGate::new));
+        list.add(new MapInfo(74, "Kappa", GalaxyGate.KAPPA, StarSystemAPI.HOME_MAPS, null));
+        list.add(new MapInfo(75, "Lambda", GalaxyGate.LAMBDA, StarSystemAPI.HOME_MAPS, null));
+        list.add(new MapInfo(76, "Kronos", null, StarSystemAPI.HOME_MAPS, null));
         list.add(new MapInfo(203, "Hades", GalaxyGate.HADES, StarSystemAPI.HOME_MAPS, HadesGate::new));
         list.add(new MapInfo(300, "Kuiper", GalaxyGate.KUIPER, StarSystemAPI.HOME_MAPS, KuiperGate::new));
         list.add(new MapInfo(200, "LoW", null, List.of("1-3", "2-3", "3-3"), LowGate::new));
@@ -159,7 +156,11 @@ public final class Maps {
         if (gateId != null) {
             MapInfo info = findMapInfo(gateId);
             if (info != null) {
-                handler = info.gateHandlerSupplier.get();
+                if (info.gateHandlerSupplier != null) {
+                    handler = info.gateHandlerSupplier.get();
+                } else {
+                    handler = new GateHandler();
+                }
             }
         }
         if (handler == null) {
