@@ -209,16 +209,8 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                                 .getToleranceDistance());
     }
 
-    public boolean isShouldMoveToRefinery() {
-        return shouldMoveToRefinery;
-    }
-
     public void setShouldMoveToRefinery(boolean shouldMoveToRefinery) {
         this.shouldMoveToRefinery = shouldMoveToRefinery;
-    }
-
-    public boolean isGateVisited() {
-        return gateVisited;
     }
 
     public void setGateVisited(boolean gateVisited) {
@@ -227,10 +219,6 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
     public SimpleGalaxyGateConfig getConfig() {
         return config;
-    }
-
-    public String getStatusDetails() {
-        return statusDetails;
     }
 
     public void setStatusDetails(String statusDetails) {
