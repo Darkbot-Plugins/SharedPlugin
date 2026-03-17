@@ -9,7 +9,6 @@ import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Portal;
-import eu.darkbot.api.game.other.EntityInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
 import eu.darkbot.api.game.other.Lockable;
@@ -101,13 +100,15 @@ public class TrinityTrialsGate extends GateHandler {
     @Override
     public GameMap getMapForTravel() {
         if (!Maps.isGateOnCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
-            String currentMapName = this.module.starSystem.getCurrentMap().getShortName();
-            EntityInfo.Faction faction = this.module.hero.getEntityInfo().getFaction();
+            int faction = this.module.getHeroFractionIdx();
+            if (faction == -1) {
+                return null; // Unknown faction, cannot determine map
+            }
 
+            String currentMapName = this.module.starSystem.getCurrentMap().getShortName();
             // Check if current map x-4 (include PvP and Pirates)
             boolean toLowMap = currentMapName.matches("^[1-5]-[1-4]$");
-            String map = faction.ordinal() + "-" + (toLowMap ? 1 : 8);
-
+            String map = String.format("%d-%d", faction, toLowMap ? 1 : 8);
             return this.module.starSystem.getOrCreateMap(map);
         }
         return null; // Already on gate map, no need to travel

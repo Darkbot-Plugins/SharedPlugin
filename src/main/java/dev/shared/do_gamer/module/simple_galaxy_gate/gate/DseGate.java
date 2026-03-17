@@ -8,7 +8,6 @@ import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Portal;
-import eu.darkbot.api.game.other.EntityInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Locatable;
 import eu.darkbot.api.game.other.Lockable;
@@ -55,8 +54,12 @@ public class DseGate extends GateHandler {
     @Override
     public GameMap getMapForTravel() {
         if (!Maps.isGateOnCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
-            EntityInfo.Faction faction = this.module.hero.getEntityInfo().getFaction();
-            String map = faction.ordinal() + "-1";
+            int faction = this.module.getHeroFractionIdx();
+            if (faction == -1) {
+                return null; // Unknown faction, cannot determine map
+            }
+
+            String map = String.format("%d-1", faction);
             return this.module.starSystem.getOrCreateMap(map);
         }
         return null; // Already on gate map, no need to travel
