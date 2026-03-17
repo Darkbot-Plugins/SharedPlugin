@@ -164,7 +164,7 @@ public class CustomLootModule extends LootModule {
      * Determines if the bot should try to collect the box while attacking the NPC.
      */
     private boolean shouldCollectWhileAttacking(Npc npc, Box box) {
-        double radius = (double) (Integer) this.collectRadius.getValue();
+        double radius = this.collectRadius.getValue();
         return npc != null && !this.shouldIgnoreBox(npc, box)
                 && (box.distanceTo(this.hero) <= radius || this.isFarTarget(npc));
     }
@@ -687,7 +687,7 @@ public class CustomLootModule extends LootModule {
         double angle = targetLoc.angleTo(this.hero);
 
         double maxRadFix = radius / 2.0;
-        double radiusFix = (double) ((int) Math.max(Math.min(radius - distance, maxRadFix), -maxRadFix));
+        double radiusFix = ((int) Math.max(Math.min(radius - distance, maxRadFix), -maxRadFix));
         distance = radius + radiusFix;
         double angleDiff = Math.max((double) this.hero.getSpeed() * 0.625F
                 + 200.0F * 0.625F

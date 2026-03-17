@@ -626,7 +626,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
         double progress = this.getProgress(info, targetGate);
         SpinOption spinOption = this.getSpinOption(progress);
-        long waitTime = (long) (spinOption.waitMs * this.config.builder.speed.multiplier);
+        long waitTime = (spinOption.waitMs * this.config.builder.speed.multiplier);
         this.spinTimer.activate(waitTime);
         this.galaxyManager.spinGate(targetGate, this.config.builder.useMultiAt, spinOption.spins, 10);
         return true;

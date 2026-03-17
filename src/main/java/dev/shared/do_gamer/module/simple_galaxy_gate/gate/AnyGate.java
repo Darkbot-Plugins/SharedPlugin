@@ -10,7 +10,7 @@ public class AnyGate extends GateHandler {
 
     @Override
     public double getTargetRadius(Lockable target) {
-        return (double) this.module.getConfig().anyGate.npcRadius;
+        return this.module.getConfig().anyGate.npcRadius;
     }
 
     @Override
