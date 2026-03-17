@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Portal;
@@ -165,6 +166,22 @@ public class GateHandler {
     }
 
     /**
+     * Helper method to get the faction-based map for travel
+     * based on the hero's faction and specified map number.
+     */
+    protected final GameMap getFactionMapForTravel(int mapNumber) {
+        if (!Maps.isGateOnCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
+            int faction = this.getHeroFractionIdx();
+            if (faction == -1) {
+                return null; // Unknown faction, cannot determine map
+            }
+            String map = String.format("%d-%d", faction, mapNumber);
+            return this.module.starSystem.getOrCreateMap(map);
+        }
+        return null; // Already on gate map, no need to travel
+    }
+
+    /**
      * Return true to fetch server offset on background tick
      */
     public boolean fetchServerOffset() {
@@ -240,5 +257,18 @@ public class GateHandler {
             default:
                 return -1; // Unknown faction
         }
+    }
+
+    /**
+     * Handles traveling to the gate portal if it's visible
+     */
+    protected final boolean handleTravelToGate(int portalTypeId) {
+        // Check for portal and travel if found
+        Portal portal = this.getPortalByTypeId(portalTypeId);
+        if (portal != null) {
+            this.module.jumper.travelAndJump(portal);
+            return true;
+        }
+        return false; // Not traveling, allow default logic
     }
 }
