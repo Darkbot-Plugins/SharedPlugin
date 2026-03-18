@@ -13,7 +13,15 @@ public class HadesGate extends GateHandler {
     private static final double KAMIKAZE_SHIFT_Y = -500.0;
 
     public HadesGate() {
-        // Not yet radiuses implemented
+        this.mapCenterX = MAP_CENTER_X;
+        this.mapCenterY = MAP_CENTER_Y;
+        this.toleranceDistance = TOLERANCE_DISTANCE;
+        this.kamikazeShiftX = KAMIKAZE_SHIFT_X;
+        this.kamikazeShiftY = KAMIKAZE_SHIFT_Y;
+        this.jumpToNextMap = false;
+        this.moveToCenter = false;
+        this.approachToCenter = false;
+        this.skipFarTargets = false;
     }
 
     @Override
@@ -30,43 +38,4 @@ public class HadesGate extends GateHandler {
         this.module.moveToPosition(Maps.getMapCenterX(), Maps.getMapCenterY());
     }
 
-    @Override
-    public double getMapCenterX() {
-        return MAP_CENTER_X;
-    }
-
-    @Override
-    public double getMapCenterY() {
-        return MAP_CENTER_Y;
-    }
-
-    @Override
-    public double getToleranceDistance() {
-        return TOLERANCE_DISTANCE;
-    }
-
-    @Override
-    public double getKamikazeShiftX() {
-        return KAMIKAZE_SHIFT_X;
-    }
-
-    @Override
-    public double getKamikazeShiftY() {
-        return KAMIKAZE_SHIFT_Y;
-    }
-
-    @Override
-    public boolean isJumpToNextMap() {
-        return false;
-    }
-
-    @Override
-    public boolean isApproachToCenter() {
-        return false;
-    }
-
-    @Override
-    public boolean isSkipFarTargets() {
-        return false;
-    }
 }

@@ -7,18 +7,18 @@ import eu.darkbot.api.game.entities.Npc;
 public class KuiperGate extends GateHandler {
 
     public KuiperGate() {
-        this.npcRadiusMap.put("-=[ Streuner Specialist ]=-", 610.0);
-        this.npcRadiusMap.put("-=[ Streuner Rocketeer ]=-", 600.0);
-        this.npcRadiusMap.put("-=[ Streuner Soldier ]=-", 640.0);
-        this.npcRadiusMap.put("-=[ Streuner Emperor ]=-", 600.0);
-        this.npcRadiusMap.put("-=[ Streuner Turret ]=-", 590.0);
-        this.npcRadiusMap.put("-=[ Seeker Rocket ]=-", 600.0);
-        this.npcRadiusMap.put("-=[ StreuneR ]=-", 550.0);
-        this.npcRadiusMap.put("-=[ Saimon ]=-", 550.0);
-        this.npcRadiusMap.put("..::{ Boss Sibelon }::..", 580.0);
-        this.npcRadiusMap.put("..::{ Boss Saimon }::..", 590.0);
-        this.npcRadiusMap.put("( UberStreuneR )", 590.0);
-        this.npcRadiusMap.put("( UberSibelon )", 600.0);
+        this.npcMap.put("-=[ Streuner Specialist ]=-", new NpcParam(610.0));
+        this.npcMap.put("-=[ Streuner Rocketeer ]=-", new NpcParam(600.0));
+        this.npcMap.put("-=[ Streuner Soldier ]=-", new NpcParam(640.0));
+        this.npcMap.put("-=[ Streuner Emperor ]=-", new NpcParam(600.0));
+        this.npcMap.put("-=[ Streuner Turret ]=-", new NpcParam(590.0));
+        this.npcMap.put("-=[ Seeker Rocket ]=-", new NpcParam(600.0));
+        this.npcMap.put("-=[ StreuneR ]=-", new NpcParam(550.0));
+        this.npcMap.put("-=[ Saimon ]=-", new NpcParam(550.0));
+        this.npcMap.put("..::{ Boss Sibelon }::..", new NpcParam(580.0));
+        this.npcMap.put("..::{ Boss Saimon }::..", new NpcParam(590.0));
+        this.npcMap.put("( UberStreuneR )", new NpcParam(590.0));
+        this.npcMap.put("( UberSibelon )", new NpcParam(600.0));
     }
 
     private boolean isSpecialist(Npc npc) {

@@ -1,6 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -8,6 +9,7 @@ import java.util.Optional;
 import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
+import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Portal;
@@ -18,11 +20,50 @@ import eu.darkbot.api.game.other.Lockable;
 
 public class GateHandler {
     protected SimpleGalaxyGate module;
-    protected final Map<String, Double> npcRadiusMap = new HashMap<>();
+    protected final Map<String, NpcParam> npcMap = new HashMap<>();
+    protected NpcParam defaultNpcParam = null;
+    protected double mapCenterX = Defaults.MAP_CENTER_X;
+    protected double mapCenterY = Defaults.MAP_CENTER_Y;
+    protected double toleranceDistance = Defaults.TOLERANCE_DISTANCE;
+    protected double kamikazeShiftX = Defaults.KAMIKAZE_SHIFT_X;
+    protected double kamikazeShiftY = Defaults.KAMIKAZE_SHIFT_Y;
+    protected double repairRadius = Defaults.REPAIR_RADIUS;
+    protected boolean jumpToNextMap = true;
+    protected boolean moveToCenter = true;
+    protected boolean approachToCenter = true;
+    protected boolean skipFarTargets = true;
+    protected boolean fetchServerOffset = false;
 
     // Enum to represent the decision on whether to kill an NPC
     public enum KillDecision {
         YES, NO, DEFAULT
+    }
+
+    /**
+     * Class to hold default NPC parameters.
+     */
+    protected final class NpcParam {
+        public final double radius;
+        public final int priority;
+        public final List<NpcFlag> flags;
+
+        public NpcParam(double radius, int priority, NpcFlag... flags) {
+            this.radius = radius;
+            this.priority = priority;
+            this.flags = List.of(flags);
+        }
+
+        public NpcParam(double radius) {
+            this(radius, 0);
+        }
+
+        public NpcParam(double radius, NpcFlag... flags) {
+            this(radius, 0, flags);
+        }
+    }
+
+    public GateHandler() {
+        // Default constructor
     }
 
     /**
@@ -36,35 +77,35 @@ public class GateHandler {
      * Gets the X coordinate of the map center point.
      */
     public double getMapCenterX() {
-        return Defaults.MAP_CENTER_X;
+        return this.mapCenterX;
     }
 
     /**
      * Gets the Y coordinate of the map center point.
      */
     public double getMapCenterY() {
-        return Defaults.MAP_CENTER_Y;
+        return this.mapCenterY;
     }
 
     /**
      * Gets the tolerance distance from the center point to safely kill NPCs.
      */
     public double getToleranceDistance() {
-        return Defaults.TOLERANCE_DISTANCE;
+        return this.toleranceDistance;
     }
 
     /**
      * Gets shift on X coordinate for the kamikaze strategy.
      */
     public double getKamikazeShiftX() {
-        return Defaults.KAMIKAZE_SHIFT_X;
+        return this.kamikazeShiftX;
     }
 
     /**
      * Gets shift on Y coordinate for the kamikaze strategy.
      */
     public double getKamikazeShiftY() {
-        return Defaults.KAMIKAZE_SHIFT_Y;
+        return this.kamikazeShiftY;
     }
 
     /**
@@ -80,23 +121,45 @@ public class GateHandler {
 
         // Check if the NPC name contains any of the specified substrings
         String npcName = target.getEntityInfo().getUsername();
-        for (Map.Entry<String, Double> entry : this.npcRadiusMap.entrySet()) {
+        for (Map.Entry<String, NpcParam> entry : this.npcMap.entrySet()) {
             if (npcName.contains(entry.getKey())) {
-                double radius = entry.getValue();
-                npcInfo.setShouldKill(true);
-                npcInfo.setRadius(radius); // populate radius
-                return radius;
+                return this.populateNpcInfo(npcInfo, entry.getValue());
             }
+        }
+
+        // Populate default params
+        if (this.defaultNpcParam != null) {
+            return this.populateNpcInfo(npcInfo, this.defaultNpcParam);
         }
 
         return 0.0;
     }
 
     /**
+     * Populates the given NpcInfo with values from the provided params.
+     */
+    private final double populateNpcInfo(NpcInfo npcInfo, NpcParam params) {
+        npcInfo.setShouldKill(true);
+        // populate radius
+        npcInfo.setRadius(params.radius);
+        // populate priority
+        if (params.priority != 0) {
+            npcInfo.setPriority(params.priority);
+        }
+        // populate flags
+        if (!params.flags.isEmpty()) {
+            for (NpcFlag flag : params.flags) {
+                npcInfo.setExtraFlag(flag, true);
+            }
+        }
+        return params.radius;
+    }
+
+    /**
      * Specific radius to use for repair
      */
     public double getRepairRadius() {
-        return Defaults.REPAIR_RADIUS;
+        return this.repairRadius;
     }
 
     /**
@@ -113,28 +176,28 @@ public class GateHandler {
      * Return true to jump to next map
      */
     public boolean isJumpToNextMap() {
-        return true;
+        return this.jumpToNextMap;
     }
 
     /**
      * Return true to move to center when have no boxes to collect
      */
     public boolean isMoveToCenter() {
-        return true;
+        return this.moveToCenter;
     }
 
     /**
      * Return true to activate approach-to-center logic
      */
     public boolean isApproachToCenter() {
-        return true;
+        return this.approachToCenter;
     }
 
     /**
      * Return true to skip far targets when have closer ones
      */
     public boolean isSkipFarTargets() {
-        return true;
+        return this.skipFarTargets;
     }
 
     /**
@@ -184,8 +247,8 @@ public class GateHandler {
     /**
      * Return true to fetch server offset on background tick
      */
-    public boolean fetchServerOffset() {
-        return false;
+    public boolean isFetchServerOffset() {
+        return this.fetchServerOffset;
     }
 
     /**

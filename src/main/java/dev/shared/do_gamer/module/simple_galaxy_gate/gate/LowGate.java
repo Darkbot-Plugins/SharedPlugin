@@ -9,7 +9,6 @@ import java.util.stream.Collectors;
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
 
 import eu.darkbot.api.config.types.NpcFlag;
-import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Relay;
 import eu.darkbot.api.game.other.Lockable;
@@ -33,7 +32,11 @@ public class LowGate extends GateHandler {
     private BossState bossState = BossState.NONE;
 
     public LowGate() {
-        // No specific initialization needed
+        this.defaultNpcParam = new NpcParam(540.0, NpcFlag.AGGRESSIVE_FOLLOW);
+        this.jumpToNextMap = false;
+        this.moveToCenter = false;
+        this.approachToCenter = false;
+        this.skipFarTargets = false;
     }
 
     @Override
@@ -165,33 +168,12 @@ public class LowGate extends GateHandler {
     }
 
     @Override
-    public boolean isJumpToNextMap() {
-        return false;
-    }
-
-    @Override
-    public boolean isApproachToCenter() {
-        return false;
-    }
-
-    @Override
     public double getTargetRadius(Lockable target) {
         // Static radius for Relays
         if (target instanceof Relay) {
             return 400.0;
         }
-
-        NpcInfo npcInfo = ((Npc) target).getInfo();
-        // If the NPC is already marked to be killed, return the stored radius
-        if (npcInfo.getShouldKill()) {
-            return npcInfo.getRadius();
-        }
-        // Otherwise, populate the radius.
-        double radius = 540.0;
-        npcInfo.setShouldKill(true);
-        npcInfo.setRadius(radius);
-        npcInfo.setExtraFlag(NpcFlag.AGGRESSIVE_FOLLOW, true);
-        return radius;
+        return super.getTargetRadius(target);
     }
 
     @Override
@@ -210,8 +192,4 @@ public class LowGate extends GateHandler {
         return KillDecision.YES;
     }
 
-    @Override
-    public boolean isSkipFarTargets() {
-        return false;
-    }
 }

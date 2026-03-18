@@ -339,7 +339,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         Maps.setMapCenterX(handler.getMapCenterX());
         Maps.setMapCenterY(handler.getMapCenterY());
         Maps.setToleranceDistance(handler.getToleranceDistance());
-        this.fetchServerOffset = handler.fetchServerOffset();
+        this.fetchServerOffset = handler.isFetchServerOffset();
         return handler;
     }
 

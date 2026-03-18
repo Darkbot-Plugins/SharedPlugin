@@ -5,11 +5,8 @@ import java.time.LocalDateTime;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
-import eu.darkbot.api.config.types.NpcInfo;
-import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
-import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.util.Timer;
 
 public class TrinityTrialsGate extends GateHandler {
@@ -23,30 +20,11 @@ public class TrinityTrialsGate extends GateHandler {
     private boolean setFlags = false;
 
     public TrinityTrialsGate() {
-        this.npcRadiusMap.put("..::{ Pyrospire }::..", 620.0);
-        this.npcRadiusMap.put("..::{ Vinespire }::..", 620.0);
-    }
-
-    @Override
-    public boolean isJumpToNextMap() {
-        return false;
-    }
-
-    @Override
-    public double getTargetRadius(Lockable target) {
-        double radius = super.getTargetRadius(target);
-        if (radius > 0) {
-            return radius; // Return stored radius if already processed
-        }
-
-        Npc npc = (Npc) target;
-        NpcInfo npcInfo = npc.getInfo();
-
-        // Populate the radius.
-        radius = 580.0;
-        npcInfo.setShouldKill(true);
-        npcInfo.setRadius(radius);
-        return radius;
+        this.npcMap.put("..::{ Pyrospire }::..", new NpcParam(620.0));
+        this.npcMap.put("..::{ Vinespire }::..", new NpcParam(620.0));
+        this.defaultNpcParam = new NpcParam(580.0);
+        this.jumpToNextMap = false;
+        this.fetchServerOffset = true;
     }
 
     @Override
@@ -100,7 +78,7 @@ public class TrinityTrialsGate extends GateHandler {
         String currentMapName = this.module.starSystem.getCurrentMap().getShortName();
         // Check if current map x-4 (include PvP and Pirates)
         boolean toLowMap = currentMapName.matches("^[1-5]-[1-4]$");
-        return this.getFactionMapForTravel(toLowMap ? 1 : 8);
+        return this.getFactionMapForTravel(toLowMap ? 1 : 8); // travel to map x-1 or x-8
     }
 
     /**
@@ -148,11 +126,6 @@ public class TrinityTrialsGate extends GateHandler {
                 // Wait for select timer to finish before allowing next action
                 return this.selectTimer.isActive();
         }
-    }
-
-    @Override
-    public boolean fetchServerOffset() {
-        return true;
     }
 
     private boolean isSunday() {

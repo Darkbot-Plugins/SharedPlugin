@@ -3,15 +3,15 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 public class AbgGate extends GateHandler {
 
     public AbgGate() {
-        this.npcRadiusMap.put("-=[ Devolarium ]=-", 560.0);
-        this.npcRadiusMap.put("-=[ Kristallin ]=-", 605.0);
-        this.npcRadiusMap.put("-=[ Kristallon ]=-", 610.0);
-        this.npcRadiusMap.put("-=[ Lordakia ]=-", 500.0);
-        this.npcRadiusMap.put("-=[ Mordon ]=-", 550.0);
-        this.npcRadiusMap.put("-=[ Protegit ]=-", 630.0);
-        this.npcRadiusMap.put("-=[ Saimon ]=-", 580.0);
-        this.npcRadiusMap.put("-=[ Sibelon ]=-", 570.0);
-        this.npcRadiusMap.put("-=[ Sibelonit ]=-", 605.0);
-        this.npcRadiusMap.put("-=[ Streuner ]=-", 450.0);
+        this.npcMap.put("-=[ Devolarium ]=-", new NpcParam(560.0));
+        this.npcMap.put("-=[ Kristallin ]=-", new NpcParam(605.0));
+        this.npcMap.put("-=[ Kristallon ]=-", new NpcParam(610.0));
+        this.npcMap.put("-=[ Lordakia ]=-", new NpcParam(500.0));
+        this.npcMap.put("-=[ Mordon ]=-", new NpcParam(550.0));
+        this.npcMap.put("-=[ Protegit ]=-", new NpcParam(630.0));
+        this.npcMap.put("-=[ Saimon ]=-", new NpcParam(580.0));
+        this.npcMap.put("-=[ Sibelon ]=-", new NpcParam(570.0));
+        this.npcMap.put("-=[ Sibelonit ]=-", new NpcParam(605.0));
+        this.npcMap.put("-=[ Streuner ]=-", new NpcParam(450.0));
     }
 }
