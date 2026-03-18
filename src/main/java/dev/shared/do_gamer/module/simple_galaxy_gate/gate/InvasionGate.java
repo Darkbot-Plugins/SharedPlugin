@@ -3,6 +3,7 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 import java.util.List;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import eu.darkbot.api.game.enums.PortalType;
 import eu.darkbot.api.game.other.GameMap;
 
 public class InvasionGate extends GateHandler {
