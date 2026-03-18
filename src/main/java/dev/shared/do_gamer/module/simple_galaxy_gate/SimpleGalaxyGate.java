@@ -283,11 +283,6 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         // Apply previous state requests
         StateStore.apply();
 
-        if (StateStore.current() != StateStore.State.WAITING_IN_GATE && this.stuckInGateTimer.isArmed()) {
-            this.stuckInGateTimer.disarm(); // Reset stuck timer when not waiting in gate
-            this.triedReloadOnStuck = false;
-        }
-
         // Create gate handler instance
         GateHandler gateHandler = this.createGateHandler();
 
@@ -301,6 +296,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         }
 
         this.statusDetails = null; // Clear status details
+        this.deactivateStuckInGateTimer(); // Reset stuck timer when not in gate map
 
         // Handle profile switching
         if (this.switchProfile()) {
@@ -353,6 +349,11 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     private void handleGalaxyGate(GateHandler gateHandler) {
         this.lootModule.setGateHandler(gateHandler); // Link gate handler to loot module
 
+        // Reset stuck timer when not waiting in gate
+        if (StateStore.current() != StateStore.State.WAITING_IN_GATE) {
+            this.deactivateStuckInGateTimer();
+        }
+
         // Attack NPCs
         if (!this.lootModule.getNpcs().isEmpty()) {
             StateStore.request(StateStore.State.ATTACKING);
@@ -377,26 +378,20 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         if (this.collectorModule.hasNoBox()) {
             // No boxes to collect, move to center
             StateStore.request(StateStore.State.WAITING_IN_GATE);
-            this.moveToCenter(gateHandler);
+            if (!this.handleStuckInGate() && gateHandler.isMoveToCenter()) {
+                this.moveToCenter();
+            }
         }
     }
 
     /**
      * Moves the hero to the center of the map.
-     * If stuck in the gate for too long, move to radiation
      */
-    private void moveToCenter(GateHandler gateHandler) {
-        double shift = 500.0;
-        double x = (Maps.getMapCenterX() - shift);
-        double y = (Maps.getMapCenterY() - shift);
-
-        if (!this.handleStuckInGate(x) && gateHandler.isMoveToCenter()) {
-            this.moveToPosition(x, y);
-        }
-
-        if (StateStore.current() == StateStore.State.WAITING_IN_GATE && !this.stuckInGateTimer.isArmed()) {
-            this.activateStuckInGateTimer(); // Activate stuck timer
-        }
+    private void moveToCenter() {
+        double offset = 500.0;
+        double x = (Maps.getMapCenterX() - offset);
+        double y = (Maps.getMapCenterY() - offset);
+        this.moveToPosition(x, y);
     }
 
     /**
@@ -413,8 +408,15 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Handles the logic for when the hero is stuck in the gate.
      */
-    private boolean handleStuckInGate(double x) {
-        if (this.stuckInGateTimer.isArmed() && this.stuckInGateTimer.isInactive()) {
+    private boolean handleStuckInGate() {
+        if (!this.stuckInGateTimer.isArmed()) {
+            if (StateStore.current() == StateStore.State.WAITING_IN_GATE) {
+                this.activateStuckInGateTimer(); // Activate stuck timer
+            }
+            return false;
+        }
+
+        if (this.stuckInGateTimer.isInactive()) {
             if (!this.triedReloadOnStuck) {
                 // First try to reload the game
                 this.triedReloadOnStuck = true;
@@ -424,7 +426,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                 return true;
             } else {
                 // Else move to radiation to destroy the ship
-                this.moveToPosition(x, 0);
+                this.moveToPosition(Maps.getMapCenterX(), 0);
                 return true;
             }
         }
@@ -438,6 +440,14 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         if (this.config.other.stuckInGateTimerMinutes > 0) {
             this.stuckInGateTimer.activate(this.config.other.stuckInGateTimerMinutes * 60_000L);
         }
+    }
+
+    /**
+     * Deactivates the stuck in gate timer and resets related flag.
+     */
+    private void deactivateStuckInGateTimer() {
+        this.stuckInGateTimer.disarm();
+        this.triedReloadOnStuck = false;
     }
 
     /**
