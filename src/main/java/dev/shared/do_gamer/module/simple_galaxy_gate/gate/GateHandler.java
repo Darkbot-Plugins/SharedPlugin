@@ -296,16 +296,6 @@ public class GateHandler {
     }
 
     /**
-     * Finds a portal by its type ID.
-     */
-    protected final Portal getPortalByTypeId(int portalTypeId) {
-        return this.module.entities.getPortals().stream()
-                .filter(p -> p.getTypeId() == portalTypeId)
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
      * Gets the hero's faction index.
      */
     protected final int getHeroFractionIdx() {
@@ -323,15 +313,33 @@ public class GateHandler {
     }
 
     /**
+     * Gets the first portal matching any of the specified type IDs.
+     */
+    private final Portal getPortalByType(List<Integer> portalTypeIds) {
+        return this.module.entities.getPortals().stream()
+                .filter(p -> portalTypeIds.contains(p.getTypeId()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
      * Handles traveling to the gate portal if it's visible
      */
-    protected final boolean handleTravelToGate(int portalTypeId) {
+    protected final boolean handleTravelToGate(List<Integer> portalTypeIds) {
         // Check for portal and travel if found
-        Portal portal = this.getPortalByTypeId(portalTypeId);
+        Portal portal = this.getPortalByType(portalTypeIds);
         if (portal != null) {
             this.module.jumper.travelAndJump(portal);
             return true;
         }
         return false; // Not traveling, allow default logic
     }
+
+    /**
+     * Overload of handleTravelToGate for a single portal type ID.
+     */
+    protected final boolean handleTravelToGate(int portalTypeId) {
+        return this.handleTravelToGate(List.of(portalTypeId));
+    }
+
 }

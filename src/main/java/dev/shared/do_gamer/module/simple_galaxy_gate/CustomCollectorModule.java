@@ -27,7 +27,6 @@ public class CustomCollectorModule extends CollectorModule {
     @Override
     public void onTickModule() {
         if (this.isNotWaiting()) {
-            this.hero.setRoamMode();
             this.pet.setEnabled(true);
             this.findBox();
             this.tryCollectNearestBox();
