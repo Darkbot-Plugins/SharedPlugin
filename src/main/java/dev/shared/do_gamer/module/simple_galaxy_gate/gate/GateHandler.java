@@ -42,7 +42,7 @@ public class GateHandler {
     /**
      * Class to hold default NPC parameters.
      */
-    protected final class NpcParam {
+    protected static final class NpcParam {
         public final double radius;
         public final int priority;
         public final List<NpcFlag> flags;
