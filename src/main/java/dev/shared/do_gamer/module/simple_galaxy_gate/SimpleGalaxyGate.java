@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import com.github.manolo8.darkbot.backpage.BackpageManager;
 import com.github.manolo8.darkbot.backpage.entities.ShipInfo;
@@ -46,6 +47,9 @@ import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Galaxy Gate", description = "Automates Galaxy Gate building and farming.")
 public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
+    private static final Pattern GG_MAP_PATTERN = Pattern.compile("^[1-5]-[1-8]$");
+    private static final Pattern BL_MAP_PATTERN = Pattern.compile("^[1-3]BL$");
+
     public final HeroAPI hero;
     public final MovementAPI movement;
     private final PetAPI pet;
@@ -445,7 +449,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         }
         String name = currentMap.getShortName();
         // Except general maps like 1-1, 2-3, 3BL, etc.
-        return !name.matches("^[1-5]-[1-8]$") && !name.matches("^[1-3]BL$");
+        return !GG_MAP_PATTERN.matcher(name).matches() && !BL_MAP_PATTERN.matcher(name).matches();
     }
 
     /**

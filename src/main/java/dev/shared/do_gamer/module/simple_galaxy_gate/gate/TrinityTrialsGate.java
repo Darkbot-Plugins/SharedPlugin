@@ -2,6 +2,7 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.util.regex.Pattern;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
@@ -12,6 +13,7 @@ import eu.darkbot.util.Timer;
 public class TrinityTrialsGate extends GateHandler {
     private static final String DIFFICULTY_SELECT_GUI = "trinitytrials_difficultyselect";
     private static final int PORTAL_TYPE_ID = 304; // Portal type ID for Trinity Trials
+    private static final Pattern MAP_PATTERN = Pattern.compile("^[1-5]-[1-4]$");
     private Timer clickTimer = Timer.get(10_000L);
     private int clickCount = 0;
     private boolean trySelectSecondGate = false;
@@ -77,7 +79,7 @@ public class TrinityTrialsGate extends GateHandler {
     public GameMap getMapForTravel() {
         String currentMapName = this.module.starSystem.getCurrentMap().getShortName();
         // Check if current map x-4 (include PvP and Pirates)
-        boolean toLowMap = currentMapName.matches("^[1-5]-[1-4]$");
+        boolean toLowMap = MAP_PATTERN.matcher(currentMapName).matches();
         return this.getFactionMapForTravel(toLowMap ? 1 : 8); // travel to map x-1 or x-8
     }
 
