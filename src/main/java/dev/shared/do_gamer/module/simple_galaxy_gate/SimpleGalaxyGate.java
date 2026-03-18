@@ -959,8 +959,20 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return false;
         }
 
-        if (this.config.other.onlyWhenNotAvailable && this.shouldDelayProfileSwitch()) {
-            return false;
+        if (this.config.other.onlyWhenNotAvailable) {
+            if (StateStore.current() != StateStore.State.WAITING) {
+                this.switchProfileTimer.disarm(); // Reset timer
+                return false;
+            }
+            // activate timer to make sure there is no more activity before switching
+            if (!this.switchProfileTimer.isArmed()) {
+                this.switchProfileTimer.activate();
+                return false; // Wait before checking availability again
+            }
+
+            if (this.switchProfileTimer.isActive()) {
+                return false; // Still waiting to check availability
+            }
         }
 
         this.gateVisited = false; // Reset for next time
@@ -971,24 +983,6 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return true;
         }
         return false;
-    }
-
-    /**
-     * Returns true when switching should be delayed to ensure no more activity.
-     */
-    private boolean shouldDelayProfileSwitch() {
-        if (StateStore.current() != StateStore.State.WAITING) {
-            this.switchProfileTimer.disarm(); // Reset timer
-            return false;
-        }
-
-        // Activate timer to make sure there is no more activity before switching
-        if (!this.switchProfileTimer.isArmed()) {
-            this.switchProfileTimer.activate();
-            return true; // Wait before checking availability again
-        }
-
-        return this.switchProfileTimer.isActive(); // Still waiting to check availability
     }
 
 }
