@@ -24,7 +24,6 @@ public class DseGate extends GateHandler {
         this.npcMap.put("<=< Boss Kucurbium >=>", new NpcParam(630.0, -95));
         this.npcMap.put("..::{ Boss Lordakium }::...", new NpcParam(590.0, -95));
         this.npcMap.put("-=[ Emperor Sibelon ]=-", new NpcParam(630.0));
-        this.npcMap.put("\\\\ Find VII //", new NpcParam(580.0));
         this.npcMap.put("-=[ Transport Ship ]=-", new NpcParam(400.0, 100, NpcFlag.NO_CIRCLE, NpcFlag.PASSIVE));
         this.npcMap.put("-=[ Command Center ]=-", new NpcParam(400.0, 100, NpcFlag.NO_CIRCLE, NpcFlag.PASSIVE));
         this.defaultNpcParam = new NpcParam(580.0);
