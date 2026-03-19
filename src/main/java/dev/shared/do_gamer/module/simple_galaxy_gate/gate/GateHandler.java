@@ -33,6 +33,7 @@ public class GateHandler {
     protected boolean approachToCenter = true;
     protected boolean skipFarTargets = true;
     protected boolean fetchServerOffset = false;
+    protected boolean canRefresh = false;
 
     // Enum to represent the decision on whether to kill an NPC
     public enum KillDecision {
@@ -249,6 +250,14 @@ public class GateHandler {
      */
     public boolean isFetchServerOffset() {
         return this.fetchServerOffset;
+    }
+
+    /**
+     * Return true to allow refreshing the gate
+     * (e.g. after completing it or if no targets are left)
+     */
+    public boolean canRefresh() {
+        return this.canRefresh;
     }
 
     /**

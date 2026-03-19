@@ -70,6 +70,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     private boolean updateHangarData = true;
     private boolean gateVisited = false;
     private boolean fetchServerOffset = false;
+    private boolean canRefresh = false;
 
     private final GateBuilder gateBuilder;
 
@@ -187,11 +188,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
     @Override
     public boolean canRefresh() {
-        return (!this.isMapGG() && StateStore.current() == StateStore.State.WAITING)
-                || (this.lootModule.getNpcs().isEmpty()
-                        && this.canJump()
-                        && this.hero.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY()) <= Maps
-                                .getToleranceDistance());
+        return (!this.isMapGG() && StateStore.current() == StateStore.State.WAITING) || this.canRefresh;
     }
 
     public void setShouldMoveToRefinery(boolean shouldMoveToRefinery) {
@@ -319,6 +316,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         Maps.setMapCenterY(handler.getMapCenterY());
         Maps.setToleranceDistance(handler.getToleranceDistance());
         this.fetchServerOffset = handler.isFetchServerOffset();
+        this.canRefresh = handler.canRefresh();
         return handler;
     }
 
