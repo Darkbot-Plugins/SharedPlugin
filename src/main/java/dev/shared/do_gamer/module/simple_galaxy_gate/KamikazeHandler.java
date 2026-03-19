@@ -81,6 +81,7 @@ public class KamikazeHandler {
             this.setPrimed();
         }
 
+        // Handle active kamikaze state if we are currently in it
         if (this.isActive()) {
             this.handleActive();
             return true;
@@ -90,11 +91,13 @@ public class KamikazeHandler {
                 .filter(this::isValidTarget)
                 .collect(Collectors.toList());
 
+        // Check if we have enough valid targets for kamikaze strategy
         if (validTargets.size() < this.config.kamikaze.minNpcs) {
             this.setInactive();
             return false;
         }
 
+        // Try to activate kamikaze state
         if (this.tryActivate(validTargets)) {
             return true;
         }
@@ -105,22 +108,37 @@ public class KamikazeHandler {
         return true;
     }
 
+    /**
+     * Gets the X coordinate for kamikaze strateg.
+     */
     private double centerX() {
         return Maps.getMapCenterX() + this.gateHandler.getKamikazeShiftX();
     }
 
+    /**
+     * Gets the Y coordinate for kamikaze strategy.
+     */
     private double centerY() {
         return Maps.getMapCenterY() + this.gateHandler.getKamikazeShiftY();
     }
 
+    /**
+     * Checks if the pet is alive.
+     */
     private boolean isPetAlive() {
         return this.pet.getHealth().getHp() > 0;
     }
 
+    /**
+     * Checks if the PET HP is low enough for the kamikaze strategy.
+     */
     private boolean isPetHpLow() {
         return this.pet.getHealth().getHp() < PET_LOW_HP;
     }
 
+    /**
+     * Determines if the PET is ready to be used for the kamikaze.
+     */
     private boolean petReadyForKamikaze() {
         if (this.isPetAlive()) {
             this.stuckTimer.disarm();
@@ -181,6 +199,9 @@ public class KamikazeHandler {
     // Stage handling methods (end)
     // ########################### //
 
+    /**
+     * Checks if the NPC has been recently aiming at the hero last second.
+     */
     private boolean recentlyAimingAtHero(Npc npc) {
         if (npc.isAiming(this.hero)) {
             this.lastAiming.put(npc, System.currentTimeMillis());
@@ -194,12 +215,17 @@ public class KamikazeHandler {
         return false;
     }
 
+    /**
+     * Determines if the NPC is a valid target for the kamikaze strategy.
+     */
     private boolean isValidTarget(Npc npc) {
         return npc.getInfo().hasExtraFlag(KamikazeNpcFlag.KAMIKAZE) && this.recentlyAimingAtHero(npc)
-                && (this.isPrimed()
-                        || npc.distanceTo(this.centerX(), this.centerY()) <= MAX_DISTANCE);
+                && (this.isPrimed() || npc.distanceTo(this.centerX(), this.centerY()) <= MAX_DISTANCE);
     }
 
+    /**
+     * Prepares the hero and PET for the kamikaze state.
+     */
     private void enterKamikazeState() {
         // Stop attacking
         if (this.lootModule.getAttacker().isAttacking() && this.isPetHpLow()) {
@@ -211,6 +237,9 @@ public class KamikazeHandler {
         StateStore.request(StateStore.State.KAMIKAZE);
     }
 
+    /**
+     * Handles active kamikaze state actions.
+     */
     private void handleActive() {
         this.enterKamikazeState();
 
@@ -235,6 +264,9 @@ public class KamikazeHandler {
         }
     }
 
+    /**
+     * Tries to activate kamikaze state if conditions are met.
+     */
     private boolean tryActivate(List<Npc> validTargets) {
         this.enterKamikazeState();
 
@@ -256,6 +288,9 @@ public class KamikazeHandler {
         return false;
     }
 
+    /**
+     * Checks if the NPCs are close enough to each other for kamikaze.
+     */
     private boolean isNpcsCloseEnough(List<Npc> validTargets) {
         double maxPairDist = 0.0;
         int size = validTargets.size();
@@ -270,6 +305,9 @@ public class KamikazeHandler {
         return maxPairDist <= MAX_PAIR_DISTANCE;
     }
 
+    /**
+     * Moves around a point in a circle with the given radius.
+     */
     private void moveAroundPoint(double x, double y, double radius) {
         Location targetLoc = Location.of(x, y);
         double distance = this.hero.distanceTo(x, y);
