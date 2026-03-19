@@ -18,7 +18,6 @@ public class HadesGate extends GateHandler {
         this.toleranceDistance = TOLERANCE_DISTANCE;
         this.kamikazeShiftX = KAMIKAZE_SHIFT_X;
         this.kamikazeShiftY = KAMIKAZE_SHIFT_Y;
-        this.jumpToNextMap = false;
         this.moveToCenter = false;
         this.approachToCenter = false;
         this.skipFarTargets = false;
@@ -26,7 +25,7 @@ public class HadesGate extends GateHandler {
 
     @Override
     public boolean collectTickModule() {
-        if (this.module.collectorModule.hasNoBox()) {
+        if (this.module.collectorModule.hasNoBox() && this.module.entities.getPortals().size() == 1) {
             this.moveToWaitingSpot();
             StateStore.request(StateStore.State.WAITING_IN_GATE);
             return true;
@@ -35,7 +34,7 @@ public class HadesGate extends GateHandler {
     }
 
     private void moveToWaitingSpot() {
-        this.module.moveToPosition(Maps.getMapCenterX(), Maps.getMapCenterY());
+        this.module.moveToPosition(Maps.getMapCenterX(), Maps.getMapCenterY() - 100.0, 50.0);
     }
 
 }

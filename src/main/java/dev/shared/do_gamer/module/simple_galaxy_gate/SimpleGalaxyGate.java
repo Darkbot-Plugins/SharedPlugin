@@ -391,15 +391,14 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         double offset = 500.0;
         double x = (Maps.getMapCenterX() - offset);
         double y = (Maps.getMapCenterY() - offset);
-        this.moveToPosition(x, y);
+        this.moveToPosition(x, y, 250.0);
     }
 
     /**
      * Moves the hero to the specified position
      * if far enough and movement is possible.
      */
-    public void moveToPosition(double x, double y) {
-        double gap = 500.0;
+    public void moveToPosition(double x, double y, double gap) {
         if (this.hero.distanceTo(x, y) > gap && this.movement.canMove(x, y)) {
             this.movement.moveTo(x, y);
         }
@@ -426,7 +425,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                 return true;
             } else {
                 // Else move to radiation to destroy the ship
-                this.moveToPosition(Maps.getMapCenterX(), 0);
+                this.moveToPosition(Maps.getMapCenterX(), 0, 50.0);
                 return true;
             }
         }
