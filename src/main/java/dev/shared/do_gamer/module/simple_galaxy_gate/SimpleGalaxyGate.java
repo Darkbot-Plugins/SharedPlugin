@@ -409,7 +409,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
      */
     private boolean handleStuckInGate() {
         if (!this.stuckInGateTimer.isArmed()) {
-            if (StateStore.current() == StateStore.State.WAITING_IN_GATE) {
+            if (StateStore.current() == StateStore.State.WAITING_IN_GATE && !this.hero.isMoving()) {
                 this.activateStuckInGateTimer(); // Activate stuck timer
             }
             return false;
@@ -429,6 +429,12 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                 return true;
             }
         }
+
+        // If hero is moving, reset the stuck timer
+        if (this.hero.isMoving()) {
+            this.deactivateStuckInGateTimer();
+        }
+
         return false;
     }
 
