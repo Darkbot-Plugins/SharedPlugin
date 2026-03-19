@@ -11,6 +11,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.config.types.NpcInfo;
+import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.other.EntityInfo;
@@ -223,6 +224,13 @@ public class GateHandler {
     }
 
     /**
+     * Implement the stopped tick logic, called when the module is stopped
+     */
+    public void stoppedTickModule() {
+        // Default implementation does nothing, override if needed
+    }
+
+    /**
      * Return the gate ID to travel to, or null to use default logic
      */
     public GameMap getMapForTravel() {
@@ -234,7 +242,7 @@ public class GateHandler {
      * based on the hero's faction and specified map number.
      */
     protected final GameMap getFactionMapForTravel(int mapNumber) {
-        if (!Maps.isGateOnCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
+        if (!Maps.isGateAccessibleFromCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
             int faction = this.getHeroFractionIdx();
             if (faction == -1) {
                 return null; // Unknown faction, cannot determine map
@@ -264,6 +272,13 @@ public class GateHandler {
                             .anyMatch(p -> p.distanceTo(this.module.hero) < 1_000.0);
         }
         return false;
+    }
+
+    /**
+     * Determines if the specified box should be ignored for collection.
+     */
+    public boolean shouldIgnoreBox(Box box) {
+        return box == null; // Default implementation does not ignore any box, override if needed
     }
 
     /**
@@ -355,6 +370,16 @@ public class GateHandler {
      */
     protected final boolean handleTravelToGate(int portalTypeId) {
         return this.handleTravelToGate(List.of(portalTypeId));
+    }
+
+    /**
+     * Checks if the configured gate is accessible from the current map.
+     */
+    protected final boolean isGateAccessibleFromCurrentMap() {
+        if (this.module.getConfig() == null) {
+            return false;
+        }
+        return Maps.isGateAccessibleFromCurrentMap(this.module.getConfig().gateId, this.module.starSystem);
     }
 
 }

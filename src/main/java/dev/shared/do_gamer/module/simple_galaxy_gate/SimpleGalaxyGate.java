@@ -112,38 +112,24 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
     @Override
     public String getStatus() {
-        StringBuilder status = new StringBuilder(
-                String.format("Simple Galaxy Gate | %s", StateStore.current().message));
+        String state = StateStore.current().message;
+        StringBuilder status = new StringBuilder(String.format("Simple GG | %s", state));
 
         switch (StateStore.current()) {
             case TRAVELING_TO_GATE:
-                if (this.gateBuilder.isSwitchingShip()) {
-                    status.append(": Switching Ship");
-                } else {
-                    status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
-                }
+                this.appendTravelingStatus(status);
                 break;
             case BUILDING:
-                if (this.gateBuilder.isSwitchingShip()) {
-                    status.append(": Switching Ship");
-                } else if (this.gateBuilder.isBuildState()) {
-                    status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
-                } else {
-                    status.append(": Waiting...");
-                }
+                this.appendBuildingStatus(status);
                 break;
             case ATTACKING:
             case COLLECTING:
             case KAMIKAZE:
             case GUARDING:
-                status.append(String.format(" | NPC: %d", this.lootModule.getNpcs().size()));
-                if (this.statusDetails != null) {
-                    if (!this.statusDetails.isEmpty()) {
-                        status.append(String.format(" | %s", this.statusDetails));
-                    }
-                } else {
-                    status.append(String.format(" | Box: %d", this.collectorModule.count()));
-                }
+                this.appendNpcStatus(status);
+                break;
+            case WAITING:
+                this.appendWaitingStatus(status);
                 break;
             default:
                 break;
@@ -153,10 +139,45 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         return status.toString();
     }
 
+    private final void appendTravelingStatus(StringBuilder status) {
+        if (this.gateBuilder.isSwitchingShip()) {
+            status.append(": Switching Ship");
+        } else {
+            status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
+        }
+    }
+
+    private final void appendBuildingStatus(StringBuilder status) {
+        if (this.gateBuilder.isSwitchingShip()) {
+            status.append(": Switching Ship");
+        } else if (this.gateBuilder.isBuildState()) {
+            status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
+        } else {
+            status.append(": Waiting...");
+        }
+    }
+
+    private final void appendNpcStatus(StringBuilder status) {
+        status.append(String.format(" | NPC: %d", this.lootModule.getNpcs().size()));
+        if (this.statusDetails != null) {
+            if (!this.statusDetails.isEmpty()) {
+                status.append(String.format(" | %s", this.statusDetails));
+            }
+        } else {
+            status.append(String.format(" | Box: %d", this.collectorModule.count()));
+        }
+    }
+
+    private final void appendWaitingStatus(StringBuilder status) {
+        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
+            status.append(String.format(": %s", this.statusDetails));
+        }
+    }
+
     /**
      * Debug information only for dev needs
      */
-    private void appendDebugInfo(StringBuilder status) {
+    private final void appendDebugInfo(StringBuilder status) {
         switch (this.config.other.debugInfo) {
             case POSITION:
                 double heroX = this.hero.getX();
@@ -207,8 +228,8 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         this.statusDetails = statusDetails;
     }
 
-    public SimpleGalaxyGateConfig getConfig() {
-        return config;
+    public final SimpleGalaxyGateConfig getConfig() {
+        return this.config;
     }
 
     @Override
@@ -243,10 +264,28 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     }
 
     @Override
+    public String getStoppedStatus() {
+        StringBuilder status = new StringBuilder("Simple GG (paused)");
+        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
+            String state = StateStore.State.WAITING.message;
+            status.append(String.format(" | %s: %s", state, this.statusDetails));
+        }
+        return status.toString();
+    }
+
+    @Override
     public void onTickStopped() {
-        // Reset state when module is stopped
+        if (this.config == null) {
+            return;
+        }
+
+        this.stuckInGateTimer.disarm();
+        this.switchProfileTimer.disarm();
         this.gateBuilder.reset();
-        this.createGateHandler().reset();
+        // Call stopped tick logic for the current gate
+        GateHandler gateHandler = this.createGateHandler();
+        gateHandler.stoppedTickModule();
+        gateHandler.reset();
     }
 
     @Override
@@ -272,8 +311,8 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return;
         }
 
-        this.setStatusDetails(null); // Clear status details
-        this.deactivateStuckInGateTimer(); // Reset stuck timer when not in gate map
+        // Reset stuck timer when not in gate map
+        this.deactivateStuckInGateTimer();
 
         // Handle profile switching
         if (this.switchProfile()) {
@@ -283,6 +322,9 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         if (gateHandler.prepareTickModule()) {
             return;
         }
+
+        // Clear status details
+        this.setStatusDetails(null);
 
         // Handle traveling to the Galaxy Gate
         if (this.handleTravelToGalaxyGate(gateHandler)) {
@@ -480,7 +522,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return null;
         }
 
-        if (!Maps.isGateOnCurrentMap(gateId, this.starSystem)) {
+        if (!Maps.isGateAccessibleFromCurrentMap(gateId, this.starSystem)) {
             // Not on current map, return configured gate ID or Alpha gate ID for ABG
             int map = gateId == 0 ? Maps.ABG_IDS.get(0) : gateId;
             return this.starSystem.getOrCreateMap(map);
@@ -524,7 +566,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Move to the refinery station if not already nearby.
      */
-    private boolean moveToRefinery() {
+    public boolean moveToRefinery() {
         Station refinery = this.entities.getStations().stream()
                 .filter(Station.Refinery.class::isInstance)
                 .findFirst()

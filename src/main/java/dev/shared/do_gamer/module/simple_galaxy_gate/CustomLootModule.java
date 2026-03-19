@@ -147,6 +147,7 @@ public class CustomLootModule extends LootModule {
      */
     private boolean shouldIgnoreBox(Npc npc, Box box) {
         return npc.getInfo().hasExtraFlag(NpcFlag.IGNORE_BOXES)
+                || this.gateHandler.shouldIgnoreBox(box)
                 || npc.distanceTo(box) < this.getRadius(npc);
     }
 
