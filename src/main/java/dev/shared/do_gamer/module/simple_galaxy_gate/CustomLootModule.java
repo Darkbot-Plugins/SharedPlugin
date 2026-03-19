@@ -4,19 +4,12 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 
-import com.github.manolo8.darkbot.Main;
-import com.github.manolo8.darkbot.core.objects.facades.SettingsProxy;
-
-import dev.shared.do_gamer.module.simple_galaxy_gate.config.KamikazeNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
-import dev.shared.do_gamer.utils.PetGearHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.config.types.NpcFlag;
@@ -26,15 +19,12 @@ import eu.darkbot.api.game.entities.Barrier;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.enums.EntityEffect;
-import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.game.other.Locatable;
 import eu.darkbot.api.game.other.Location;
 import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
-import eu.darkbot.api.managers.GroupAPI;
 import eu.darkbot.shared.modules.LootModule;
-import eu.darkbot.util.Timer;
 
 public class CustomLootModule extends LootModule {
 
@@ -44,32 +34,14 @@ public class CustomLootModule extends LootModule {
     protected final ConfigSetting<ShipMode> repairMode;
     protected final ConfigSetting<Integer> collectRadius;
     protected final Collection<? extends Barrier> barriers;
-    private final GroupAPI group;
-    private final SettingsProxy settingsProxy;
-    private final PetGearHelper petGearHelper;
 
-    private SimpleGalaxyGateConfig config;
     private CustomCollectorModule collector;
     private GateHandler gateHandler;
     private boolean repair = false;
     private boolean approachingCenter = false;
 
-    // Kamikaze handling state
-    private enum KamikazeStage {
-        INACTIVE, PRIMED, ACTIVE
-    }
-
-    private KamikazeStage kamikazeStage = KamikazeStage.PRIMED;
-    private final Timer kamikazeTimer = Timer.get();
-    private final Map<Npc, Long> kamikazeLastAiming = new WeakHashMap<>();
-    private static final double KAMIKAZE_MAX_DISTANCE = 3_000.0;
-    private static final double KAMIKAZE_RADIUS = 1_500.0;
-    private static final double KAMIKAZE_MAX_PAIR_DISTANCE = 300.0;
-    private static final int KAMIKAZE_PET_LOW_HP = 10_000;
+    private final KamikazeHandler kamikazeHandler;
     private static final double FAR_TARGET_DISTANCE = 2_000.0;
-    private final Timer kamikazeDelay = Timer.get(5_000L);
-    private final Timer kamikazeStuck = Timer.get(10_000L);
-    private final Timer kamikazeDetonateTimer = Timer.get(10_000L);
 
     CustomLootModule(PluginAPI api) {
         super(api);
@@ -83,9 +55,8 @@ public class CustomLootModule extends LootModule {
         this.repairToShield = configApi.requireConfig("general.safety.repair_to_shield");
         this.repairMode = configApi.requireConfig("general.safety.repair");
         this.collectRadius = configApi.requireConfig("collect.radius");
-        this.group = api.requireAPI(GroupAPI.class);
-        this.settingsProxy = Main.INSTANCE.facadeManager.settings;
-        this.petGearHelper = new PetGearHelper(api);
+
+        this.kamikazeHandler = new KamikazeHandler(this, api);
     }
 
     /**
@@ -100,13 +71,14 @@ public class CustomLootModule extends LootModule {
      */
     public void setGateHandler(GateHandler gateHandler) {
         this.gateHandler = gateHandler;
+        this.kamikazeHandler.setGateHandler(gateHandler);
     }
 
     /**
      * Sets the module config reference.
      */
     public void setModuleConfig(SimpleGalaxyGateConfig config) {
-        this.config = config;
+        this.kamikazeHandler.setConfig(config);
     }
 
     @Override
@@ -131,7 +103,7 @@ public class CustomLootModule extends LootModule {
     @Override
     public void onTickModule() {
         this.pet.setEnabled(true);
-        if (this.handleKamikaze()) {
+        if (this.kamikazeHandler.tick()) {
             return; // Skip rest of logic if handling kamikaze
         }
         this.repairHandler();
@@ -231,8 +203,7 @@ public class CustomLootModule extends LootModule {
     }
 
     /**
-     * Gets a comparator for NPCs based on priority, distance to location, and HP
-     * percentage.
+     * Gets a comparator for NPCs based on priority, distance and HP percentage.
      */
     public final Comparator<Npc> getNpcComparator(Locatable location) {
         return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority())
@@ -428,261 +399,9 @@ public class CustomLootModule extends LootModule {
         }
     }
 
-    /**
-     * Checks if the pet is alive.
-     */
-    private boolean isPetAlive() {
-        return this.pet.getHealth().getHp() > 0;
-    }
-
-    /**
-     * Checks if the PET HP is low enough for the kamikaze strategy.
-     */
-    private boolean isPetHpLow() {
-        return this.pet.getHealth().getHp() < KAMIKAZE_PET_LOW_HP;
-    }
-
-    /**
-     * Determines if the PET is ready to be used for the kamikaze.
-     */
-    private boolean petReadyForKamikaze() {
-        if (this.isPetAlive()) {
-            this.kamikazeStuck.disarm();
-            // Note: attack to PET doesn't work in groups, so skip lower HP functionality
-            if (this.isPetHpLow() || this.group.hasGroup()) {
-                return true; // PET is already low on HP
-            }
-            // Lower the PET HP
-            this.attack.setTarget((Lockable) this.pet);
-            this.attack.tryLockTarget();
-            this.hero.launchRocket();
-        } else {
-            // Try to fix PET HP stuck at 0 by reactivating it
-            if (!this.kamikazeStuck.isArmed()) {
-                // Arm the timer to detect if PET HP is stuck at 0 after respawn
-                this.kamikazeStuck.activate();
-            } else if (this.kamikazeStuck.isInactive()) {
-                // Timer expired, try to reactivate PET
-                this.settingsProxy.pressKeybind(SettingsProxy.KeyBind.ACTIVE_PET);
-                this.kamikazeStuck.disarm();
-            }
-        }
-        return false;
-    }
-
-    /**
-     * Gets the X coordinate for kamikaze strateg.
-     */
-    private double getKamikazeX() {
-        return Maps.getMapCenterX() + this.gateHandler.getKamikazeShiftX();
-    }
-
-    /**
-     * Gets the Y coordinate for kamikaze strategy.
-     */
-    private double getKamikazeY() {
-        return Maps.getMapCenterY() + this.gateHandler.getKamikazeShiftY();
-    }
-
-    // ########################################//
-    // Kamikaze state handling methods (start)
-    private boolean isKamikazeActive() {
-        return this.kamikazeStage == KamikazeStage.ACTIVE;
-    }
-
-    private boolean isKamikazePrimed() {
-        return this.kamikazeStage == KamikazeStage.PRIMED;
-    }
-
-    private void setKamikazeActive() {
-        this.kamikazeStage = KamikazeStage.ACTIVE;
-    }
-
-    private void setKamikazeInactive() {
-        this.kamikazeStage = KamikazeStage.INACTIVE;
-        this.kamikazeDetonateTimer.disarm();
-    }
-
-    private void setKamikazePrimed() {
-        this.kamikazeStage = KamikazeStage.PRIMED;
-    }
-
-    private void setKamikazeCooldown() {
-        this.setKamikazeInactive();
-        this.kamikazeTimer.activate(this.config.kamikaze.cooldown.seconds * 1_000L);
-    }
-
-    private boolean hasKamikazeCooldown() {
-        return this.kamikazeTimer.isActive();
-    }
-    // Kamikaze state handling methods (end)
-    // ########################################//
-
-    /**
-     * Checks if the NPC has been recently aiming at the hero last second.
-     */
-    private boolean recentlyAimingAtHero(Npc npc) {
-        if (npc.isAiming(this.hero)) {
-            this.kamikazeLastAiming.put(npc, System.currentTimeMillis());
-            return true;
-        }
-        Long last = this.kamikazeLastAiming.get(npc);
-        if (last != null && System.currentTimeMillis() - last <= 1_000L) {
-            return true;
-        }
-        this.kamikazeLastAiming.remove(npc);
-        return false;
-    }
-
-    /**
-     * Determines if the NPC is a valid target for the kamikaze strategy.
-     */
-    private boolean isValidKamikazeTarget(Npc npc) {
-        return npc.getInfo().hasExtraFlag(KamikazeNpcFlag.KAMIKAZE) && this.recentlyAimingAtHero(npc)
-                && (this.isKamikazePrimed()
-                        || npc.distanceTo(this.getKamikazeX(), this.getKamikazeY()) <= KAMIKAZE_MAX_DISTANCE);
-    }
-
-    /**
-     * Handles the kamikaze strategy.
-     */
-    private boolean handleKamikaze() {
-        // configuration may not be ready on the very first ticks
-        if (this.config == null || !this.config.kamikaze.enabled || !this.petGearHelper.isEnabled()) {
-            return false;
-        }
-
-        // Reset to primed state when waiting in gate
-        if (StateStore.current() == StateStore.State.WAITING_IN_GATE) {
-            this.setKamikazePrimed();
-        }
-
-        // Handle active kamikaze state if we are currently in it
-        if (this.isKamikazeActive()) {
-            this.handleActiveKamikaze();
-            return true;
-        }
-
-        // Check if we have enough valid targets for kamikaze strategy
-        List<Npc> validTargets = this.getNpcs().stream()
-                .filter(this::isValidKamikazeTarget)
-                .collect(Collectors.toList());
-
-        if (validTargets.size() < this.config.kamikaze.minNpcs) {
-            this.setKamikazeInactive();
-            return false; // Not enough valid targets
-        }
-
-        // Try to activate kamikaze state
-        if (this.tryActivateKamikaze(validTargets)) {
-            return true;
-        }
-
-        // Move around center to group NPCs together
-        this.petGearHelper.setPassive();
-        this.moveAroundPoint(this.getKamikazeX(), this.getKamikazeY(), KAMIKAZE_RADIUS);
-        return true;
-    }
-
-    /**
-     * Prepares the hero and PET for the kamikaze state.
-     */
-    private void enterKamikazeState() {
-        // Stop attacking
-        if (this.attack.isAttacking() && this.isPetHpLow()) {
-            this.attack.stopAttack();
-        }
-
-        // Use kamikaze config
-        this.hero.setMode(this.config.kamikaze.shipMode);
-        StateStore.request(StateStore.State.KAMIKAZE);
-    }
-
-    /**
-     * Handles active kamikaze state actions.
-     */
-    private void handleActiveKamikaze() {
-        this.enterKamikazeState();
-
-        if (!this.isPetAlive()
-                || this.hero.getHealth().hpPercent() <= this.config.kamikaze.hpRange.getMin()
-                || this.hero.getHealth().shieldPercent() <= this.config.kamikaze.shieldRange.getMin()) {
-            this.setKamikazeCooldown();
-        } else {
-            // stop movement, set pet to kamikaze gear and wait
-            if (this.movement.isMoving()) {
-                this.movement.stop(false);
-            }
-            this.petGearHelper.tryUse(PetGear.KAMIKAZE);
-
-            // If the PET fails to detonate quickly, abort kamikaze state
-            if (!this.kamikazeDetonateTimer.isArmed()) {
-                this.kamikazeDetonateTimer.activate();
-            }
-            if (this.kamikazeDetonateTimer.isInactive()) {
-                this.setKamikazeInactive();
-            }
-        }
-    }
-
-    /**
-     * Tries to activate kamikaze state if conditions are met.
-     */
-    private boolean tryActivateKamikaze(List<Npc> validTargets) {
-        this.enterKamikazeState();
-
-        if (!this.hasKamikazeCooldown() && this.petReadyForKamikaze()
-                && this.hero.getHealth().hpPercent() >= this.config.kamikaze.hpRange.getMax()
-                && this.hero.getHealth().shieldPercent() >= this.config.kamikaze.shieldRange.getMax()) {
-            if (this.isNpcsCloseEnough(validTargets)) {
-                if (this.kamikazeDelay.isInactive()) {
-                    this.setKamikazeActive();
-                }
-                return true;
-            }
-            // Additional delay for primed attempt to wait next wave of NPCs
-            if (this.isKamikazePrimed()) {
-                this.kamikazeDelay.activate();
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Checks if the NPCs are close enough to each other for kamikaze.
-     */
-    private boolean isNpcsCloseEnough(List<Npc> validTargets) {
-        double maxPairDist = 0.0;
-        int size = validTargets.size();
-        for (int i = 0; i < size; i++) {
-            for (int j = i + 1; j < size; j++) {
-                double dist = validTargets.get(i).distanceTo(validTargets.get(j));
-                if (dist > maxPairDist) {
-                    maxPairDist = dist;
-                }
-            }
-        }
-        return maxPairDist <= KAMIKAZE_MAX_PAIR_DISTANCE;
-    }
-
-    /**
-     * Moves around a point in a circle with the given radius.
-     */
-    private void moveAroundPoint(double x, double y, double radius) {
-        Location targetLoc = Location.of(x, y);
-        double distance = this.hero.distanceTo(x, y);
-        double angle = targetLoc.angleTo(this.hero);
-
-        double maxRadFix = radius / 2.0;
-        double radiusFix = ((int) Math.max(Math.min(radius - distance, maxRadFix), -maxRadFix));
-        distance = radius + radiusFix;
-        double angleDiff = Math.max((double) this.hero.getSpeed() * 0.625F
-                + 200.0F * 0.625F
-                - this.hero.distanceTo(Location.of(targetLoc, angle, distance)), 0.0F) / distance;
-
-        Location direction = Location.of(targetLoc, angle + angleDiff, distance);
-        this.searchValidLocation(direction, targetLoc, angle, distance);
-        this.movement.moveTo(direction);
+    // Make searchValidLocation accessible publicly
+    @Override
+    public void searchValidLocation(Location direction, Location targetLoc, double angle, double distance) {
+        super.searchValidLocation(direction, targetLoc, angle, distance);
     }
 }
