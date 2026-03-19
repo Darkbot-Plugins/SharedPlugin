@@ -70,7 +70,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     private boolean updateHangarData = true;
     private boolean gateVisited = false;
     private boolean fetchServerOffset = false;
-    private boolean canRefresh = false;
+    private boolean safeRefreshInGate = false;
 
     private final GateBuilder gateBuilder;
 
@@ -188,7 +188,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
     @Override
     public boolean canRefresh() {
-        return (!this.isMapGG() && StateStore.current() == StateStore.State.WAITING) || this.canRefresh;
+        return (!this.isMapGG() && StateStore.current() == StateStore.State.WAITING) || this.safeRefreshInGate;
     }
 
     public void setShouldMoveToRefinery(boolean shouldMoveToRefinery) {
@@ -316,7 +316,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         Maps.setMapCenterY(handler.getMapCenterY());
         Maps.setToleranceDistance(handler.getToleranceDistance());
         this.fetchServerOffset = handler.isFetchServerOffset();
-        this.canRefresh = handler.canRefresh();
+        this.safeRefreshInGate = handler.canSafeRefreshInGate();
         return handler;
     }
 
@@ -435,7 +435,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Determines if the current map is a Galaxy Gate map (not a general map).
      */
-    private boolean isMapGG() {
+    public boolean isMapGG() {
         GameMap currentMap = this.starSystem.getCurrentMap();
         if (currentMap == null) {
             return false;

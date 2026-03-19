@@ -45,7 +45,6 @@ public class DseGate extends GateHandler {
     @Override
     public void reset() {
         this.jumpTimer.disarm();
-        this.canRefresh = false;
     }
 
     @Override
@@ -130,8 +129,6 @@ public class DseGate extends GateHandler {
         if (this.module.starSystem.getCurrentMap().getId() == COMMAND_HALL_MAP_ID) {
             // Ensure boxes are marked for collection
             this.populateBoxes();
-            // Allow refreshing the gate
-            this.canRefresh = true;
 
             // Wait manual selection of ship or reset gate
             if (this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()

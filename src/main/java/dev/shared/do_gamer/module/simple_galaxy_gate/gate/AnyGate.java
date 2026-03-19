@@ -7,6 +7,7 @@ public class AnyGate extends GateHandler {
     public AnyGate() {
         this.approachToCenter = false;
         this.skipFarTargets = false;
+        this.safeRefreshInGate = false;
     }
 
     @Override
