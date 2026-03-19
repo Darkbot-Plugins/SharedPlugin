@@ -50,6 +50,10 @@ public class GateBuilder {
         this.state = BuildState.NONE;
         this.switchingShip = false;
         this.shipSwitchAttempts = 0;
+        this.galaxyInfoFailCount = 0;
+        this.spinTimer.disarm();
+        this.placeTimer.disarm();
+        this.moveShipTimer.disarm();
     }
 
     public boolean tick() {
@@ -137,7 +141,8 @@ public class GateBuilder {
      * Handles switching to the gate ship if needed.
      */
     public boolean switchToGateShip() {
-        if (this.module.getConfig().builder.enabled
+        if (this.module.getConfig() != null
+                && this.module.getConfig().builder.enabled
                 && this.module.getConfig().builder.switchShip.enabled
                 && this.state != BuildState.EXIT) {
             if (this.spinTimer.isInactive()) {

@@ -112,6 +112,9 @@ public class KamikazeHandler {
      * Gets the X coordinate for kamikaze strateg.
      */
     private double centerX() {
+        if (this.gateHandler == null) {
+            return Maps.getMapCenterX();
+        }
         return Maps.getMapCenterX() + this.gateHandler.getKamikazeShiftX();
     }
 
@@ -119,6 +122,9 @@ public class KamikazeHandler {
      * Gets the Y coordinate for kamikaze strategy.
      */
     private double centerY() {
+        if (this.gateHandler == null) {
+            return Maps.getMapCenterY();
+        }
         return Maps.getMapCenterY() + this.gateHandler.getKamikazeShiftY();
     }
 
