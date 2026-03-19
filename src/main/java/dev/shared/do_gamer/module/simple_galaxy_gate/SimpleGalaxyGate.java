@@ -642,8 +642,8 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return true; // Switch to build ship before starting to build
         }
 
-        double progress = this.getProgress(info, targetGate);
-        SpinOption spinOption = this.getSpinOption(progress);
+        double progress = this.getBuildProgress(info, targetGate);
+        BuildSpinOption spinOption = this.getBuildSpinOption(progress);
         long waitTime = (spinOption.waitMs * this.config.builder.speed.multiplier);
         this.spinTimer.activate(waitTime);
         this.galaxyManager.spinGate(targetGate, this.config.builder.useMultiAt, spinOption.spins, 10);
@@ -858,23 +858,23 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Gets the overall progress ratio for the target gate(s).
      */
-    private double getProgress(GalaxyInfo info, GalaxyGate targetGate) {
+    private double getBuildProgress(GalaxyInfo info, GalaxyGate targetGate) {
         if (targetGate == GalaxyGate.ALPHA) {
             // For ABG, take the minimum progress among Alpha, Beta, Gamma
-            double alphaProgress = this.getGateProgress(info, GalaxyGate.ALPHA);
-            double betaProgress = this.getGateProgress(info, GalaxyGate.BETA);
-            double gammaProgress = this.getGateProgress(info, GalaxyGate.GAMMA);
+            double alphaProgress = this.calculateBuildProgress(info, GalaxyGate.ALPHA);
+            double betaProgress = this.calculateBuildProgress(info, GalaxyGate.BETA);
+            double gammaProgress = this.calculateBuildProgress(info, GalaxyGate.GAMMA);
             return Math.min(alphaProgress, Math.min(betaProgress, gammaProgress));
         } else {
             // For other gates, just the target gate's progress
-            return this.getGateProgress(info, targetGate);
+            return this.calculateBuildProgress(info, targetGate);
         }
     }
 
     /**
-     * Gets the progress ratio for a specific gate.
+     * Calculate the progress ratio for a specific gate.
      */
-    private double getGateProgress(GalaxyInfo info, GalaxyGate gate) {
+    private double calculateBuildProgress(GalaxyInfo info, GalaxyGate gate) {
         return (double) info.getGateInfo(gate).getCurrentParts()
                 / (double) info.getGateInfo(gate).getTotalParts();
     }
@@ -883,31 +883,31 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
      * Determines the spin option (number of spins and wait time)
      * based on the current progress of the gate building.
      */
-    private SpinOption getSpinOption(double progress) {
+    private BuildSpinOption getBuildSpinOption(double progress) {
         // Define spin options in descending order of threshold
-        List<SpinOption> options = List.of(
-                new SpinOption(this.config.builder.spins100, 100,
+        List<BuildSpinOption> options = List.of(
+                new BuildSpinOption(this.config.builder.spins100, 100,
                         SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_100),
-                new SpinOption(this.config.builder.spins10, 10,
+                new BuildSpinOption(this.config.builder.spins10, 10,
                         SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_10),
-                new SpinOption(this.config.builder.spins5, 5,
+                new BuildSpinOption(this.config.builder.spins5, 5,
                         SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_5));
 
         return options.stream()
                 .filter(option -> option.threshold > progress)
                 .findFirst()
-                .orElse(new SpinOption(0.0, 1, SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_1));
+                .orElse(new BuildSpinOption(0.0, 1, SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_1));
     }
 
     /**
      * Helper class to hold spin options based on progress thresholds.
      */
-    private static final class SpinOption {
+    private static final class BuildSpinOption {
         private final double threshold;
         private final int spins;
         private final int waitMs;
 
-        private SpinOption(double threshold, int spins, int waitMs) {
+        private BuildSpinOption(double threshold, int spins, int waitMs) {
             this.threshold = threshold;
             this.spins = spins;
             this.waitMs = waitMs;
