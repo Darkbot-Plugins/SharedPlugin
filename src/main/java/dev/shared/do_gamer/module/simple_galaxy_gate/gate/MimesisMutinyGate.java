@@ -237,9 +237,9 @@ public final class MimesisMutinyGate extends GateHandler {
         }
         if (this.stopTimer.isInactive()) {
             // Pause the bot until it's time to start preparing for the gate
+            this.module.setStatusDetails("pausing until gate opens...");
             this.module.bot.setRunning(false);
             this.autoStart = true;
-            this.stopTimer.disarm();
         }
     }
 
@@ -256,6 +256,7 @@ public final class MimesisMutinyGate extends GateHandler {
             this.module.bot.handleRefresh();
             this.module.bot.setRunning(true);
             this.autoStart = false;
+            this.stopTimer.disarm();
             return;
         }
         this.setWaitingStatus(seconds);
