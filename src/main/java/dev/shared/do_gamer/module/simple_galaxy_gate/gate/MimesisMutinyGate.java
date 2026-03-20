@@ -143,7 +143,8 @@ public final class MimesisMutinyGate extends GateHandler {
         if (this.module.collectorModule.hasNoBox() || this.shouldIgnoreBox(this.module.collectorModule.currentBox)) {
             return false;
         }
-        return this.module.collectorModule.collectIfAvailable();
+        this.module.collectorModule.tryCollectNearestBox();
+        return true;
     }
 
     /**
