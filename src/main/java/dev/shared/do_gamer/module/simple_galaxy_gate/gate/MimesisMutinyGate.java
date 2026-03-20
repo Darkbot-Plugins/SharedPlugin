@@ -255,10 +255,10 @@ public final class MimesisMutinyGate extends GateHandler {
             this.module.bot.handleRefresh();
             this.module.bot.setRunning(true);
             this.autoStart = false;
-            this.stopTimer.disarm();
             return;
         }
         this.setWaitingStatus(seconds);
+        this.stopTimer.disarm();
     }
 
     @Override
