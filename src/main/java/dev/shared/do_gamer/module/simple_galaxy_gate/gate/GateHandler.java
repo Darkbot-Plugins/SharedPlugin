@@ -278,7 +278,7 @@ public class GateHandler {
      * Determines if the specified box should be ignored for collection.
      */
     public boolean shouldIgnoreBox(Box box) {
-        return box == null; // Default implementation does not ignore any box, override if needed
+        return box == null; // Default implementation ingnores null boxes, override if needed
     }
 
     /**

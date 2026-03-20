@@ -162,7 +162,7 @@ public final class MimesisMutinyGate extends GateHandler {
 
     @Override
     public boolean shouldIgnoreBox(Box box) {
-        return box.distanceTo(this.getMapCenterX(), this.getMapCenterY()) > MAX_COLLECT_RADIUS;
+        return box == null || box.distanceTo(this.getMapCenterX(), this.getMapCenterY()) > MAX_COLLECT_RADIUS;
     }
 
     /**
