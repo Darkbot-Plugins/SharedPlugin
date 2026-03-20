@@ -42,7 +42,7 @@ import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Galaxy Gate", description = "Automates Galaxy Gate building and farming.")
-public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
+public final class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
     private static final Pattern GG_MAP_PATTERN = Pattern.compile("^[1-5]-[1-8]$");
     private static final Pattern BL_MAP_PATTERN = Pattern.compile("^[1-3]BL$");
 
@@ -139,7 +139,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         return status.toString();
     }
 
-    private final void appendTravelingStatus(StringBuilder status) {
+    private void appendTravelingStatus(StringBuilder status) {
         if (this.gateBuilder.isSwitchingShip()) {
             status.append(": Switching Ship");
         } else {
@@ -147,7 +147,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         }
     }
 
-    private final void appendBuildingStatus(StringBuilder status) {
+    private void appendBuildingStatus(StringBuilder status) {
         if (this.gateBuilder.isSwitchingShip()) {
             status.append(": Switching Ship");
         } else if (this.gateBuilder.isBuildState()) {
@@ -157,7 +157,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         }
     }
 
-    private final void appendNpcStatus(StringBuilder status) {
+    private void appendNpcStatus(StringBuilder status) {
         status.append(String.format(" | NPC: %d", this.lootModule.getNpcs().size()));
         if (this.statusDetails != null) {
             if (!this.statusDetails.isEmpty()) {
@@ -168,7 +168,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         }
     }
 
-    private final void appendWaitingStatus(StringBuilder status) {
+    private void appendWaitingStatus(StringBuilder status) {
         if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
             status.append(String.format(": %s", this.statusDetails));
         }
@@ -177,7 +177,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Debug information only for dev needs
      */
-    private final void appendDebugInfo(StringBuilder status) {
+    private void appendDebugInfo(StringBuilder status) {
         switch (this.config.other.debugInfo) {
             case POSITION:
                 double heroX = this.hero.getX();
@@ -228,7 +228,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         this.statusDetails = statusDetails;
     }
 
-    public final SimpleGalaxyGateConfig getConfig() {
+    public SimpleGalaxyGateConfig getConfig() {
         return this.config;
     }
 

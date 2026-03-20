@@ -10,7 +10,7 @@ import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.util.Timer;
 
-public class MimesisMutinyGate extends GateHandler {
+public final class MimesisMutinyGate extends GateHandler {
     private static final double RADIUS = 1_200.0;
     private static final double MAX_RADIUS = 1_800.0;
     private static final double REPAIR_RADIUS = 900.0;
@@ -44,7 +44,7 @@ public class MimesisMutinyGate extends GateHandler {
         this.repairRadius = REPAIR_RADIUS;
     }
 
-    private final boolean isFreighter(Npc npc) {
+    private boolean isFreighter(Npc npc) {
         return this.nameEquals(npc, "-={EM Freighter}=-");
     }
 
@@ -52,7 +52,7 @@ public class MimesisMutinyGate extends GateHandler {
      * Updates the map center coordinates and tolerance distance
      * based on the freighter's position.
      */
-    private final void updateMapCenter(Npc freighter) {
+    private void updateMapCenter(Npc freighter) {
         if (freighter != null) {
             // Set map center to freighter's position and adjust tolerance distance
             this.mapCenterX = freighter.getX();
@@ -69,7 +69,7 @@ public class MimesisMutinyGate extends GateHandler {
     /**
      * Finds the freighter NPC and updates map center/tolerance for guarding logic
      */
-    private final Npc getFreighter() {
+    private Npc getFreighter() {
         // Check if cached freighter is still valid
         if (this.cachedFreighter != null && this.module.lootModule.getNpcs().contains(this.cachedFreighter)) {
             // Update map center to cached freighter's position
@@ -112,12 +112,20 @@ public class MimesisMutinyGate extends GateHandler {
     /**
      * Handles guarding the freighter if it's the only NPC present.
      */
-    private final boolean isGuardingFreighter() {
+    private boolean isGuardingFreighter() {
+        // If there's a portal, we stop guard the freighter
         if (!this.module.entities.getPortals().isEmpty()) {
-            return false; // If there's a portal, we don't guard the freighter
+            return false;
         }
+
         Npc freighter = this.getFreighter();
         if (freighter != null && this.npcsCount() == 1) {
+            // Try to collect boxes while guarding, if any are available and within radius
+            if (!this.handleCollectWhenGuarding()) {
+                StateStore.request(StateStore.State.COLLECTING);
+                return true;
+            }
+            // If no boxes to collect, just guard the freighter
             StateStore.request(StateStore.State.GUARDING);
             this.module.lootModule.getAttacker().setTarget(freighter);
             this.module.lootModule.moveToNpc();
@@ -128,9 +136,20 @@ public class MimesisMutinyGate extends GateHandler {
     }
 
     /**
+     * Handles collecting boxes while guarding the freighter,
+     * if the box is within the allowed radius.
+     */
+    private boolean handleCollectWhenGuarding() {
+        if (this.module.collectorModule.hasNoBox() || this.shouldIgnoreBox(this.module.collectorModule.currentBox)) {
+            return false;
+        }
+        return this.module.collectorModule.collectIfAvailable();
+    }
+
+    /**
      * Counts the number of NPCs within the maximum radius from the map center
      */
-    private final int npcsCount() {
+    private int npcsCount() {
         int count = 0;
         for (Npc npc : this.module.lootModule.getNpcs()) {
             if (npc.distanceTo(this.getMapCenterX(), this.getMapCenterY()) <= MAX_RADIUS) {
@@ -148,7 +167,7 @@ public class MimesisMutinyGate extends GateHandler {
     /**
      * Calculates the waiting duration in seconds until next gate opening
      */
-    private final long getWaitingDurationInSeconds() {
+    private long getWaitingDurationInSeconds() {
         LocalDateTime now = ServerTimeHelper.currentDateTime();
         int hour = now.getHour();
         int minute = now.getMinute();
@@ -170,7 +189,7 @@ public class MimesisMutinyGate extends GateHandler {
     /**
      * Sets the module status to show the remaining time until the next gate opening
      */
-    private final void setWaitingStatus(long seconds) {
+    private void setWaitingStatus(long seconds) {
         String time = ServerTimeHelper.remainingTimeFormat(seconds);
         String status = String.format("start in %s", time);
         this.module.setStatusDetails(status);
@@ -210,7 +229,7 @@ public class MimesisMutinyGate extends GateHandler {
     /**
      * Handles stopping the bot when waiting for the gate to open.
      */
-    private final void handleStopping() {
+    private void handleStopping() {
         // Activate the delay to allow bot refresh is needed
         if (!this.stopTimer.isArmed()) {
             this.stopTimer.activate();

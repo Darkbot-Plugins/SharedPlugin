@@ -24,7 +24,7 @@ import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.util.Timer;
 
-public class KamikazeHandler {
+public final class KamikazeHandler {
 
     private final CustomLootModule lootModule;
     private final HeroAPI hero;

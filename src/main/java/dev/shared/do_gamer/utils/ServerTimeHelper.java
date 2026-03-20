@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 import eu.darkbot.api.managers.BackpageAPI;
 
-public class ServerTimeHelper {
+public final class ServerTimeHelper {
 
     private static long serverOffsetMinutes = -1; // Offset in minutes between local time and server time
     private static long lastOffsetCheckTime = 0; // Timestamp for the last offset check

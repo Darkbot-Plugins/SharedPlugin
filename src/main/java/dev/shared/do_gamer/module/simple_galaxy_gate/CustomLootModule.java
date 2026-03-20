@@ -26,7 +26,7 @@ import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.shared.modules.LootModule;
 
-public class CustomLootModule extends LootModule {
+public final class CustomLootModule extends LootModule {
 
     protected final ConfigSetting<PercentRange> repairHpRange;
     protected final ConfigSetting<Double> repairRoamingHp;
@@ -206,7 +206,7 @@ public class CustomLootModule extends LootModule {
     /**
      * Gets a comparator for NPCs based on priority, distance and HP percentage.
      */
-    public final Comparator<Npc> getNpcComparator(Locatable location) {
+    public Comparator<Npc> getNpcComparator(Locatable location) {
         return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority())
                 .thenComparingDouble(n -> n.distanceTo(location))
                 .thenComparingDouble(n -> n.getHealth().hpPercent());
