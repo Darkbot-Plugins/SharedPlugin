@@ -240,6 +240,7 @@ public final class MimesisMutinyGate extends GateHandler {
             // Pause the bot until it's time to start preparing for the gate
             this.module.bot.setRunning(false);
             this.autoStart = true;
+            this.stopTimer.disarm();
         }
     }
 
@@ -250,18 +251,14 @@ public final class MimesisMutinyGate extends GateHandler {
         }
         StateStore.request(StateStore.State.WAITING);
         long seconds = this.getWaitingDurationInSeconds();
-        this.setWaitingStatus(seconds);
         if (seconds <= PRE_START_WAIT_TIMEOUT) {
             // Time to start preparing for the gate, resume the bot
+            this.module.setStatusDetails("preparing for gate...");
             this.module.bot.handleRefresh();
             this.module.bot.setRunning(true);
             this.autoStart = false;
+            return;
         }
-    }
-
-    @Override
-    public void reset() {
-        this.cachedFreighter = null;
-        this.stopTimer.disarm();
+        this.setWaitingStatus(seconds);
     }
 }
