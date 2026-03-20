@@ -78,35 +78,35 @@ public class GateHandler {
     /**
      * Gets the X coordinate of the map center point.
      */
-    public double getMapCenterX() {
+    public final double getMapCenterX() {
         return this.mapCenterX;
     }
 
     /**
      * Gets the Y coordinate of the map center point.
      */
-    public double getMapCenterY() {
+    public final double getMapCenterY() {
         return this.mapCenterY;
     }
 
     /**
      * Gets the tolerance distance from the center point to safely kill NPCs.
      */
-    public double getToleranceDistance() {
+    public final double getToleranceDistance() {
         return this.toleranceDistance;
     }
 
     /**
      * Gets shift on X coordinate for the kamikaze strategy.
      */
-    public double getKamikazeShiftX() {
+    public final double getKamikazeShiftX() {
         return this.kamikazeShiftX;
     }
 
     /**
      * Gets shift on Y coordinate for the kamikaze strategy.
      */
-    public double getKamikazeShiftY() {
+    public final double getKamikazeShiftY() {
         return this.kamikazeShiftY;
     }
 
@@ -160,7 +160,7 @@ public class GateHandler {
     /**
      * Specific radius to use for repair
      */
-    public double getRepairRadius() {
+    public final double getRepairRadius() {
         return this.repairRadius;
     }
 
@@ -191,14 +191,14 @@ public class GateHandler {
     /**
      * Return true to activate approach-to-center logic
      */
-    public boolean isApproachToCenter() {
+    public final boolean isApproachToCenter() {
         return this.approachToCenter;
     }
 
     /**
      * Return true to skip far targets when have closer ones
      */
-    public boolean isSkipFarTargets() {
+    public final boolean isSkipFarTargets() {
         return this.skipFarTargets;
     }
 
