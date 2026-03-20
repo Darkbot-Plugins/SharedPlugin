@@ -13,6 +13,7 @@ import eu.darkbot.util.Timer;
 public final class MimesisMutinyGate extends GateHandler {
     private static final double RADIUS = 1_200.0;
     private static final double MAX_RADIUS = 1_800.0;
+    private static final double MAX_COLLECT_RADIUS = 2_400.0;
     private static final double REPAIR_RADIUS = 900.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
@@ -121,7 +122,7 @@ public final class MimesisMutinyGate extends GateHandler {
         Npc freighter = this.getFreighter();
         if (freighter != null && this.npcsCount() == 1) {
             // Try to collect boxes while guarding, if any are available and within radius
-            if (!this.handleCollectWhenGuarding()) {
+            if (this.handleCollectWhenGuarding()) {
                 StateStore.request(StateStore.State.COLLECTING);
                 return true;
             }
@@ -161,7 +162,7 @@ public final class MimesisMutinyGate extends GateHandler {
 
     @Override
     public boolean shouldIgnoreBox(Box box) {
-        return box.distanceTo(this.getMapCenterX(), this.getMapCenterY()) > MAX_RADIUS;
+        return box.distanceTo(this.getMapCenterX(), this.getMapCenterY()) > MAX_COLLECT_RADIUS;
     }
 
     /**
