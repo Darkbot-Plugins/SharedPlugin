@@ -16,7 +16,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final double REPAIR_RADIUS = 900.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
-    private final Timer stopTimer = Timer.get(10_000L);
+    private final Timer stopTimer = Timer.get(60_000L);
     private boolean autoStart = false;
     private Npc cachedFreighter = null;
 
