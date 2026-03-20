@@ -115,13 +115,13 @@ public final class MimesisMutinyGate extends GateHandler {
     private boolean isGuardingFreighter() {
         // If there are portal present, prioritize collecting boxes
         if (!this.module.entities.getPortals().isEmpty()) {
-            return this.handleCollectWhenGuarding();
+            return this.handleCollectBoxes();
         }
 
         Npc freighter = this.getFreighter();
         if (freighter != null && this.npcsCount() == 1) {
             // Try to collect boxes while guarding
-            if (this.handleCollectWhenGuarding()) {
+            if (this.handleCollectBoxes()) {
                 return true;
             }
             // If no boxes to collect, just guard the freighter
@@ -135,10 +135,9 @@ public final class MimesisMutinyGate extends GateHandler {
     }
 
     /**
-     * Handles collecting boxes while guarding the freighter,
-     * if the box is within the allowed radius.
+     * Handles collecting boxes if available
      */
-    private boolean handleCollectWhenGuarding() {
+    private boolean handleCollectBoxes() {
         if (this.module.collectorModule.hasNoBox() || this.shouldIgnoreBox(this.module.collectorModule.currentBox)) {
             return false;
         }
