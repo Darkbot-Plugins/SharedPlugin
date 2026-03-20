@@ -12,7 +12,7 @@ import eu.darkbot.util.Timer;
 
 public final class MimesisMutinyGate extends GateHandler {
     private static final double RADIUS = 1_200.0;
-    private static final double MAX_RADIUS = 2_000.0;
+    private static final double MAX_RADIUS = 1_900.0;
     private static final double REPAIR_RADIUS = 900.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
@@ -113,16 +113,15 @@ public final class MimesisMutinyGate extends GateHandler {
      * Handles guarding the freighter if it's the only NPC present.
      */
     private boolean isGuardingFreighter() {
-        // If there's a portal, we stop guard the freighter
+        // If there are portal present, prioritize collecting boxes
         if (!this.module.entities.getPortals().isEmpty()) {
-            return false;
+            return this.handleCollectWhenGuarding();
         }
 
         Npc freighter = this.getFreighter();
         if (freighter != null && this.npcsCount() == 1) {
-            // Try to collect boxes while guarding, if any are available and within radius
+            // Try to collect boxes while guarding
             if (this.handleCollectWhenGuarding()) {
-                StateStore.request(StateStore.State.COLLECTING);
                 return true;
             }
             // If no boxes to collect, just guard the freighter
@@ -143,6 +142,7 @@ public final class MimesisMutinyGate extends GateHandler {
         if (this.module.collectorModule.hasNoBox() || this.shouldIgnoreBox(this.module.collectorModule.currentBox)) {
             return false;
         }
+        StateStore.request(StateStore.State.COLLECTING);
         this.module.collectorModule.collectIfAvailable();
         return true;
     }
