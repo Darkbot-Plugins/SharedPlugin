@@ -50,6 +50,12 @@ public class LowGate extends GateHandler {
         return this.processAttackTick();
     }
 
+    @Override
+    public boolean prepareTickModule() {
+        this.statusDetails = null;
+        return false;
+    }
+
     /**
      * Processes the attack tick logic.
      */

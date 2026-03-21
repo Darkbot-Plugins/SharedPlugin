@@ -100,6 +100,12 @@ public final class CustomLootModule extends LootModule {
     }
 
     @Override
+    protected boolean findTarget() {
+        this.attack.setTarget(this.closestNpc(this.gateHandler.getNpcSearchSource()));
+        return this.attack.hasTarget();
+    }
+
+    @Override
     public void onTickModule() {
         this.pet.setEnabled(true);
         if (this.kamikazeHandler.tick()) {
@@ -205,22 +211,10 @@ public final class CustomLootModule extends LootModule {
     /**
      * Gets a comparator for NPCs based on priority, distance and HP percentage.
      */
-    public Comparator<Npc> getNpcComparator(Locatable location, Npc target) {
-        return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority() + this.getExtraPriority(n, target))
+    public Comparator<Npc> getNpcComparator(Locatable location) {
+        return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority())
                 .thenComparingDouble(n -> n.distanceTo(location))
                 .thenComparingDouble(n -> n.getHealth().hpPercent());
-    }
-
-    /**
-     * Calculates extra priority for an NPC based HP percentage
-     */
-    private int getExtraPriority(Npc npc, Npc target) {
-        if (target != null && Objects.equals(npc, target)
-                && this.gateHandler.useExtraPriority()
-                && this.hero.distanceTo(target) <= 800.0) {
-            return 20 - (int) (target.getHealth().hpPercent() * 10.0);
-        }
-        return 0;
     }
 
     @Override
@@ -228,7 +222,7 @@ public final class CustomLootModule extends LootModule {
         Npc target = this.attack.getTargetAs(Npc.class);
         Npc best = this.getNpcs().stream()
                 .filter(this::shouldKill)
-                .min(this.getNpcComparator(location, target))
+                .min(this.getNpcComparator(location))
                 .orElse(null);
 
         // Return current target if it's the best one
@@ -243,7 +237,7 @@ public final class CustomLootModule extends LootModule {
             }
 
             // Prefer current target if close enough to avoid unnecessary switching
-            double offset = 100.0 - (target.getHealth().hpPercent() * 50.0);
+            double offset = this.gateHandler.getPreferTargetDistanceOffset();
             boolean isAttackingTarget = this.hero.isAttacking(target) && this.shouldKill(target);
             if (isAttackingTarget && target.distanceTo(location) < (best.distanceTo(location) + offset)) {
                 return target;

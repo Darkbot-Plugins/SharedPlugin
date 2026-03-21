@@ -17,6 +17,7 @@ import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.other.EntityInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
+import eu.darkbot.api.game.other.Locatable;
 import eu.darkbot.api.game.other.Lockable;
 
 public class GateHandler {
@@ -30,11 +31,11 @@ public class GateHandler {
     protected double kamikazeShiftY = Defaults.KAMIKAZE_SHIFT_Y;
     protected double repairRadius = Defaults.REPAIR_RADIUS;
     protected double farTargetDistance = Defaults.FAR_TARGET_DISTANCE;
+    protected double preferTargetDistanceOffset = Defaults.PREFER_TARGET_DISTANCE_OFFSET;
     protected boolean jumpToNextMap = true;
     protected boolean moveToCenter = true;
     protected boolean approachToCenter = true;
     protected boolean skipFarTargets = true;
-    protected boolean extraPriority = false;
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
     protected String statusDetails = null;
@@ -114,6 +115,14 @@ public class GateHandler {
     }
 
     /**
+     * Gets the source location for NPC searching.
+     * By default, it returns the hero's position.
+     */
+    public Locatable getNpcSearchSource() {
+        return this.module.hero;
+    }
+
+    /**
      * Specific radius to use for the target
      * Return 0.0 to use default radius from NPC table
      */
@@ -175,6 +184,13 @@ public class GateHandler {
     }
 
     /**
+     * Specific distance offset to prefer current target over new ones
+     */
+    public final double getPreferTargetDistanceOffset() {
+        return this.preferTargetDistanceOffset;
+    }
+
+    /**
      * Return:
      * YES - to kill the NPC,
      * NO - to skip it,
@@ -210,13 +226,6 @@ public class GateHandler {
      */
     public final boolean isSkipFarTargets() {
         return this.skipFarTargets;
-    }
-
-    /**
-     * Return true to use extra priority based on HP percentage
-     */
-    public final boolean useExtraPriority() {
-        return this.extraPriority;
     }
 
     /**

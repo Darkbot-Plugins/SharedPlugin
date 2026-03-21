@@ -383,7 +383,6 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
 
         if (gateHandler.isJumpToNextMap() && this.canJump()) {
             // Jump to next map
-            StateStore.request(StateStore.State.JUMPING);
             this.jumpToNextMap();
             return;
         }
@@ -590,6 +589,7 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
     public void jumpToNextMap() {
         Portal portal = this.findNextPortal();
         if (portal != null) {
+            StateStore.request(StateStore.State.JUMPING);
             this.jumper.travelAndJump(portal);
         }
     }

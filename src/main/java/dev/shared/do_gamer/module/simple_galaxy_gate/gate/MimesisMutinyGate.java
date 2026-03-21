@@ -9,6 +9,7 @@ import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
+import eu.darkbot.api.game.other.Locatable;
 import eu.darkbot.util.Timer;
 
 public final class MimesisMutinyGate extends GateHandler {
@@ -16,6 +17,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final double MAX_RADIUS = 1_900.0;
     private static final double REPAIR_RADIUS = 900.0;
     private static final double FAR_TARGET_DISTANCE = 1_200.0;
+    private static final double PREFER_TARGET_DISTANCE_OFFSET = 300.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
     private final Timer stopTimer = Timer.get(60_000L);
@@ -43,10 +45,10 @@ public final class MimesisMutinyGate extends GateHandler {
         this.jumpToNextMap = false;
         this.safeRefreshInGate = false;
         this.skipFarTargets = false;
-        this.extraPriority = true;
         this.fetchServerOffset = true;
         this.repairRadius = REPAIR_RADIUS;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
+        this.preferTargetDistanceOffset = PREFER_TARGET_DISTANCE_OFFSET;
     }
 
     /**
@@ -106,6 +108,14 @@ public final class MimesisMutinyGate extends GateHandler {
     }
 
     @Override
+    public Locatable getNpcSearchSource() {
+        if (this.cachedFreighter != null) {
+            return this.cachedFreighter;
+        }
+        return this.module.hero;
+    }
+
+    @Override
     public KillDecision shouldKillNpc(Npc npc) {
         // Only attack NPCs that are within a certain distance
         if (npc.distanceTo(this.getMapCenterX(), this.getMapCenterY()) > MAX_RADIUS) {
@@ -134,35 +144,42 @@ public final class MimesisMutinyGate extends GateHandler {
     private boolean isGuardingFreighter() {
         // If there are portal present, prioritize collecting boxes
         if (!this.module.entities.getPortals().isEmpty()) {
-            if (!this.handleCollectBoxes()) {
+            if (!this.handleCollectBoxes(false)) {
                 this.module.jumpToNextMap();
             }
             return true;
         }
 
         Npc freighter = this.getFreighter();
-        if (freighter != null && this.npcsCount() == 1) {
-            // Try to collect boxes while guarding
-            if (this.handleCollectBoxes()) {
+        if (freighter != null) {
+            if (this.npcsCount() == 1) {
+                // Try to collect boxes while guarding
+                if (this.handleCollectBoxes(true)) {
+                    return true;
+                }
+                // If no boxes to collect, just guard the freighter
+                StateStore.request(StateStore.State.GUARDING);
+                this.module.lootModule.getAttacker().setTarget(freighter);
+                this.module.lootModule.moveToNpc();
                 return true;
             }
-            // If no boxes to collect, just guard the freighter
-            StateStore.request(StateStore.State.GUARDING);
-            this.module.lootModule.getAttacker().setTarget(freighter);
-            this.module.lootModule.moveToNpc();
-            return true;
+        } else {
+            // If no freighter found, try to collect boxes if any
+            return this.handleCollectBoxes(false);
         }
 
-        return false; // Allow default logic to take over
+        return false;
     }
 
     /**
      * Handles collecting boxes if available
      */
-    private boolean handleCollectBoxes() {
-        if (this.module.collectorModule.hasNoBox() || this.shouldIgnoreBox(this.module.collectorModule.currentBox)) {
+    private boolean handleCollectBoxes(boolean hasFreighter) {
+        if (this.module.collectorModule.hasNoBox()
+                || (hasFreighter && this.shouldIgnoreBox(this.module.collectorModule.currentBox))) {
             return false;
         }
+
         StateStore.request(StateStore.State.COLLECTING);
         this.module.collectorModule.collectIfAvailable();
         return true;
@@ -244,6 +261,7 @@ public final class MimesisMutinyGate extends GateHandler {
             return true;
         }
 
+        this.statusDetails = null; // reset status details
         return false; // Allow default preparation logic to take over
     }
 
@@ -266,7 +284,6 @@ public final class MimesisMutinyGate extends GateHandler {
     @Override
     public void stoppedTickModule() {
         if (!this.autoStart) {
-            this.statusDetails = null;
             return; // Only handle auto-start scenario
         }
         StateStore.request(StateStore.State.WAITING);
