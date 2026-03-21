@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
-import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Box;
@@ -17,7 +16,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final double MAX_RADIUS = 1_900.0;
     private static final double REPAIR_RADIUS = 900.0;
     private static final double FAR_TARGET_DISTANCE = 1_200.0;
-    private static final double PREFER_TARGET_DISTANCE_OFFSET = 300.0;
+    private static final double PREFER_TARGET_DISTANCE_OFFSET = 200.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
     private final Timer stopTimer = Timer.get(60_000L);
@@ -46,6 +45,7 @@ public final class MimesisMutinyGate extends GateHandler {
         this.safeRefreshInGate = false;
         this.skipFarTargets = false;
         this.fetchServerOffset = true;
+        this.toleranceDistance = RADIUS;
         this.repairRadius = REPAIR_RADIUS;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
         this.preferTargetDistanceOffset = PREFER_TARGET_DISTANCE_OFFSET;
@@ -55,7 +55,8 @@ public final class MimesisMutinyGate extends GateHandler {
      * Checks if the given NPC is the cached freighter.
      */
     private boolean isFreighter(Npc npc) {
-        return this.cachedFreighter != null && Objects.equals(npc, this.cachedFreighter);
+        Npc freighter = this.getFreighter();
+        return freighter != null && Objects.equals(npc, freighter);
     }
 
     /**
@@ -66,20 +67,12 @@ public final class MimesisMutinyGate extends GateHandler {
     }
 
     /**
-     * Updates the map center coordinates and tolerance distance
-     * based on the freighter's position.
+     * Updates the map center coordinates based on the freighter's position.
      */
     private void updateMapCenter(Npc freighter) {
         if (freighter != null) {
-            // Set map center to freighter's position and adjust tolerance distance
             this.mapCenterX = freighter.getX();
             this.mapCenterY = freighter.getY();
-            this.toleranceDistance = RADIUS;
-        } else {
-            // If freighter is not found, reset to default map center and tolerance
-            this.mapCenterX = Defaults.MAP_CENTER_X;
-            this.mapCenterY = Defaults.MAP_CENTER_Y;
-            this.toleranceDistance = Defaults.TOLERANCE_DISTANCE;
         }
     }
 
@@ -109,8 +102,9 @@ public final class MimesisMutinyGate extends GateHandler {
 
     @Override
     public Locatable getNpcSearchSource() {
-        if (this.cachedFreighter != null) {
-            return this.cachedFreighter;
+        Npc freighter = this.getFreighter();
+        if (freighter != null) {
+            return freighter;
         }
         return this.module.hero;
     }
@@ -130,22 +124,22 @@ public final class MimesisMutinyGate extends GateHandler {
 
     @Override
     public boolean attackTickModule() {
-        return this.isGuardingFreighter();
+        return this.handleGateTick();
     }
 
     @Override
     public boolean collectTickModule() {
-        return this.isGuardingFreighter();
+        return this.handleGateTick();
     }
 
     /**
-     * Handles guarding the freighter if it's the only NPC present.
+     * Handles the gate logic for both attacking and collecting ticks
      */
-    private boolean isGuardingFreighter() {
+    private boolean handleGateTick() {
         // If there are portal present, prioritize collecting boxes
         if (!this.module.entities.getPortals().isEmpty()) {
             if (!this.handleCollectBoxes(false)) {
-                this.module.jumpToNextMap();
+                this.module.jumpToNextMap(); // Exit the gate
             }
             return true;
         }
@@ -296,10 +290,5 @@ public final class MimesisMutinyGate extends GateHandler {
             this.autoStart = false;
         }
         this.stopTimer.disarm();
-    }
-
-    @Override
-    public void reset() {
-        this.cachedFreighter = null;
     }
 }
