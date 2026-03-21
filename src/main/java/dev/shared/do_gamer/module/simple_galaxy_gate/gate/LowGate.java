@@ -67,13 +67,13 @@ public class LowGate extends GateHandler {
 
         switch (this.bossState) {
             case ARRIVED:
-                this.module.setStatusDetails("Boss has arrived!");
+                this.statusDetails = "Boss has arrived!";
                 break;
             case DESTROYED:
-                this.module.setStatusDetails("Boss destroyed!");
+                this.statusDetails = "Boss destroyed!";
                 break;
             default:
-                this.module.setStatusDetails("");
+                this.statusDetails = "";
                 break;
         }
         return false;
@@ -130,7 +130,7 @@ public class LowGate extends GateHandler {
     private void handleRelayAttack(Collection<? extends Relay> relays) {
         // Get the first available Relay
         Relay targetRelay = relays.iterator().next();
-        this.module.setStatusDetails(String.format("Attacking Relay %d", this.getNumber(targetRelay)));
+        this.statusDetails = String.format("Attacking Relay %d", this.getNumber(targetRelay));
 
         // Set target to Relay
         this.module.lootModule.getAttacker().setTarget(targetRelay);

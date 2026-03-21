@@ -19,6 +19,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.InvasionGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.KuiperGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.LowGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.MimesisMutinyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.TrinityTrialsGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.ZetaGate;
 import eu.darkbot.api.game.galaxy.GalaxyGate;
@@ -93,6 +94,7 @@ public final class Maps {
         list.add(new MapInfo(61, "Invasion", null, List.of("1-5", "2-5", "3-5"), InvasionGate::new));
         list.add(new MapInfo(499, "Trinity Trials", null, StarSystemAPI.BASE_MAPS, TrinityTrialsGate::new));
         list.add(new MapInfo(473, "DSE", null, StarSystemAPI.HOME_MAPS, DseGate::new));
+        list.add(new MapInfo(-3, "Mimesis Mutiny", null, StarSystemAPI.BASE_MAPS, MimesisMutinyGate::new));
 
         ggMaps = Collections.unmodifiableList(list);
     }
@@ -120,7 +122,7 @@ public final class Maps {
     /**
      * Checks if the specified gate ID is accessible from the current map.
      */
-    public static boolean isGateOnCurrentMap(Integer gateId, StarSystemAPI startSystem) {
+    public static boolean isGateAccessibleFromCurrentMap(Integer gateId, StarSystemAPI startSystem) {
         String currentMapName = startSystem.getCurrentMap().getShortName();
         if (gateId == null || currentMapName == null) {
             return false;

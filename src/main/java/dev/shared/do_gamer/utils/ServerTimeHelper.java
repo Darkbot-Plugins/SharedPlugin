@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
 
 import eu.darkbot.api.managers.BackpageAPI;
 
-public class ServerTimeHelper {
+public final class ServerTimeHelper {
 
     private static long serverOffsetMinutes = -1; // Offset in minutes between local time and server time
     private static long lastOffsetCheckTime = 0; // Timestamp for the last offset check
@@ -150,5 +150,47 @@ public class ServerTimeHelper {
     public static String timeFormat(LocalDateTime dateTime) {
         DateTimeFormatter format = DateTimeFormatter.ofPattern("HH:mm", Locale.ENGLISH);
         return dateTime.format(format);
+    }
+
+    /**
+     * Calculates the duration in seconds until the next occurrence
+     * of the specified hour and minute.
+     * 
+     * @param hour   the target hour (0-23)
+     * @param minute the target minute (0-59)
+     * @return the duration in seconds
+     */
+    public static long durationUntilTime(int hour, int minute) {
+        LocalDateTime now = currentDateTime();
+        LocalDateTime target = now.withHour(hour).withMinute(minute).withSecond(0).withNano(0);
+        // If the target time has already passed today, move it to the next day
+        if (target.isBefore(now)) {
+            target = target.plusDays(1);
+        }
+        return Duration.between(now, target).getSeconds();
+    }
+
+    /**
+     * Formats a duration in seconds to a human-readable string format
+     * (e.g., "1h 30m 45s").
+     * 
+     * @param seconds the duration in seconds to format
+     * @return the formatted duration string
+     */
+    public static String remainingTimeFormat(long seconds) {
+        long hours = seconds / 3600;
+        long min = (seconds % 3600) / 60;
+        long sec = seconds % 60;
+
+        StringBuilder sb = new StringBuilder();
+        if (hours > 0) {
+            sb.append(String.format("%dh ", hours));
+        }
+        if (min > 0 || hours > 0) {
+            sb.append(String.format("%dm ", min));
+        }
+        sb.append(String.format("%ds", sec));
+
+        return sb.toString();
     }
 }

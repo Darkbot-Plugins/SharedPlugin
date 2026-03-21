@@ -42,7 +42,7 @@ import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Galaxy Gate", description = "Automates Galaxy Gate building and farming.")
-public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
+public final class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
     private static final Pattern GG_MAP_PATTERN = Pattern.compile("^[1-5]-[1-8]$");
     private static final Pattern BL_MAP_PATTERN = Pattern.compile("^[1-3]BL$");
 
@@ -112,38 +112,24 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
     @Override
     public String getStatus() {
-        StringBuilder status = new StringBuilder(
-                String.format("Simple Galaxy Gate | %s", StateStore.current().message));
+        String state = StateStore.current().message;
+        StringBuilder status = new StringBuilder(String.format("Simple GG | %s", state));
 
         switch (StateStore.current()) {
             case TRAVELING_TO_GATE:
-                if (this.gateBuilder.isSwitchingShip()) {
-                    status.append(": Switching Ship");
-                } else {
-                    status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
-                }
+                this.appendTravelingStatus(status);
                 break;
             case BUILDING:
-                if (this.gateBuilder.isSwitchingShip()) {
-                    status.append(": Switching Ship");
-                } else if (this.gateBuilder.isBuildState()) {
-                    status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
-                } else {
-                    status.append(": Waiting...");
-                }
+                this.appendBuildingStatus(status);
                 break;
             case ATTACKING:
             case COLLECTING:
             case KAMIKAZE:
             case GUARDING:
-                status.append(String.format(" | NPC: %d", this.lootModule.getNpcs().size()));
-                if (this.statusDetails != null) {
-                    if (!this.statusDetails.isEmpty()) {
-                        status.append(String.format(" | %s", this.statusDetails));
-                    }
-                } else {
-                    status.append(String.format(" | Box: %d", this.collectorModule.count()));
-                }
+                this.appendNpcStatus(status);
+                break;
+            case WAITING:
+                this.appendWaitingStatus(status);
                 break;
             default:
                 break;
@@ -151,6 +137,41 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
         this.appendDebugInfo(status);
         return status.toString();
+    }
+
+    private void appendTravelingStatus(StringBuilder status) {
+        if (this.gateBuilder.isSwitchingShip()) {
+            status.append(": Switching Ship");
+        } else {
+            status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
+        }
+    }
+
+    private void appendBuildingStatus(StringBuilder status) {
+        if (this.gateBuilder.isSwitchingShip()) {
+            status.append(": Switching Ship");
+        } else if (this.gateBuilder.isBuildState()) {
+            status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
+        } else {
+            status.append(": Waiting...");
+        }
+    }
+
+    private void appendNpcStatus(StringBuilder status) {
+        status.append(String.format(" | NPC: %d", this.lootModule.getNpcs().size()));
+        if (this.statusDetails != null) {
+            if (!this.statusDetails.isEmpty()) {
+                status.append(String.format(" | %s", this.statusDetails));
+            }
+        } else {
+            status.append(String.format(" | Box: %d", this.collectorModule.count()));
+        }
+    }
+
+    private void appendWaitingStatus(StringBuilder status) {
+        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
+            status.append(String.format(": %s", this.statusDetails));
+        }
     }
 
     /**
@@ -203,12 +224,8 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         this.gateVisited = gateVisited;
     }
 
-    public void setStatusDetails(String statusDetails) {
-        this.statusDetails = statusDetails;
-    }
-
     public SimpleGalaxyGateConfig getConfig() {
-        return config;
+        return this.config;
     }
 
     @Override
@@ -243,10 +260,26 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     }
 
     @Override
+    public String getStoppedStatus() {
+        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
+            String state = StateStore.State.WAITING.message;
+            return String.format("Simple GG (paused) | %s: %s", state, this.statusDetails);
+        }
+        return null;
+    }
+
+    @Override
     public void onTickStopped() {
-        // Reset state when module is stopped
+        if (this.config == null) {
+            return;
+        }
+        this.stuckInGateTimer.disarm();
+        this.switchProfileTimer.disarm();
         this.gateBuilder.reset();
-        this.createGateHandler().reset();
+        // Call stopped tick logic for the current gate
+        GateHandler gateHandler = this.createGateHandler();
+        gateHandler.stoppedTickModule();
+        gateHandler.reset();
     }
 
     @Override
@@ -272,8 +305,8 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return;
         }
 
-        this.setStatusDetails(null); // Clear status details
-        this.deactivateStuckInGateTimer(); // Reset stuck timer when not in gate map
+        // Reset stuck timer when not in gate map
+        this.deactivateStuckInGateTimer();
 
         // Handle profile switching
         if (this.switchProfile()) {
@@ -311,12 +344,14 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
      * Create a GateHandler instance.
      */
     private GateHandler createGateHandler() {
-        GateHandler handler = Maps.getGateHandler(this.config.gateId, this);
+        Integer gateId = this.config != null ? this.config.gateId : null;
+        GateHandler handler = Maps.getGateHandler(gateId, this);
         Maps.setMapCenterX(handler.getMapCenterX());
         Maps.setMapCenterY(handler.getMapCenterY());
         Maps.setToleranceDistance(handler.getToleranceDistance());
         this.fetchServerOffset = handler.isFetchServerOffset();
         this.safeRefreshInGate = handler.canSafeRefreshInGate();
+        this.statusDetails = handler.getStatusDetails();
         return handler;
     }
 
@@ -480,7 +515,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return null;
         }
 
-        if (!Maps.isGateOnCurrentMap(gateId, this.starSystem)) {
+        if (!Maps.isGateAccessibleFromCurrentMap(gateId, this.starSystem)) {
             // Not on current map, return configured gate ID or Alpha gate ID for ABG
             int map = gateId == 0 ? Maps.ABG_IDS.get(0) : gateId;
             return this.starSystem.getOrCreateMap(map);
@@ -524,7 +559,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Move to the refinery station if not already nearby.
      */
-    private boolean moveToRefinery() {
+    public boolean moveToRefinery() {
         Station refinery = this.entities.getStations().stream()
                 .filter(Station.Refinery.class::isInstance)
                 .findFirst()
@@ -552,7 +587,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Handles the logic to jump to the next map.
      */
-    private void jumpToNextMap() {
+    public void jumpToNextMap() {
         Portal portal = this.findNextPortal();
         if (portal != null) {
             this.jumper.travelAndJump(portal);

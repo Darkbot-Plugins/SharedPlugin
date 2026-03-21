@@ -11,7 +11,7 @@ import eu.darkbot.api.game.galaxy.GateInfo;
 import eu.darkbot.api.managers.GalaxySpinnerAPI;
 import eu.darkbot.util.Timer;
 
-public class GateBuilder {
+public final class GateBuilder {
     public enum BuildState {
         NONE,
         PREPARE,

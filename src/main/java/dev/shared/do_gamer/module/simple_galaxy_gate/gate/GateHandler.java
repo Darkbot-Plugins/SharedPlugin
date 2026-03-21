@@ -11,6 +11,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.config.types.NpcInfo;
+import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.other.EntityInfo;
@@ -28,12 +29,15 @@ public class GateHandler {
     protected double kamikazeShiftX = Defaults.KAMIKAZE_SHIFT_X;
     protected double kamikazeShiftY = Defaults.KAMIKAZE_SHIFT_Y;
     protected double repairRadius = Defaults.REPAIR_RADIUS;
+    protected double farTargetDistance = Defaults.FAR_TARGET_DISTANCE;
     protected boolean jumpToNextMap = true;
     protected boolean moveToCenter = true;
     protected boolean approachToCenter = true;
     protected boolean skipFarTargets = true;
+    protected boolean extraPriority = false;
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
+    protected String statusDetails = null;
 
     // Enum to represent the decision on whether to kill an NPC
     public enum KillDecision {
@@ -77,35 +81,35 @@ public class GateHandler {
     /**
      * Gets the X coordinate of the map center point.
      */
-    public double getMapCenterX() {
+    public final double getMapCenterX() {
         return this.mapCenterX;
     }
 
     /**
      * Gets the Y coordinate of the map center point.
      */
-    public double getMapCenterY() {
+    public final double getMapCenterY() {
         return this.mapCenterY;
     }
 
     /**
      * Gets the tolerance distance from the center point to safely kill NPCs.
      */
-    public double getToleranceDistance() {
+    public final double getToleranceDistance() {
         return this.toleranceDistance;
     }
 
     /**
      * Gets shift on X coordinate for the kamikaze strategy.
      */
-    public double getKamikazeShiftX() {
+    public final double getKamikazeShiftX() {
         return this.kamikazeShiftX;
     }
 
     /**
      * Gets shift on Y coordinate for the kamikaze strategy.
      */
-    public double getKamikazeShiftY() {
+    public final double getKamikazeShiftY() {
         return this.kamikazeShiftY;
     }
 
@@ -159,8 +163,15 @@ public class GateHandler {
     /**
      * Specific radius to use for repair
      */
-    public double getRepairRadius() {
+    public final double getRepairRadius() {
         return this.repairRadius;
+    }
+
+    /**
+     * Specific distance to consider a target as "far"
+     */
+    public final double getFarTargetDistance() {
+        return this.farTargetDistance;
     }
 
     /**
@@ -190,15 +201,29 @@ public class GateHandler {
     /**
      * Return true to activate approach-to-center logic
      */
-    public boolean isApproachToCenter() {
+    public final boolean isApproachToCenter() {
         return this.approachToCenter;
     }
 
     /**
      * Return true to skip far targets when have closer ones
      */
-    public boolean isSkipFarTargets() {
+    public final boolean isSkipFarTargets() {
         return this.skipFarTargets;
+    }
+
+    /**
+     * Return true to use extra priority based on HP percentage
+     */
+    public final boolean useExtraPriority() {
+        return this.extraPriority;
+    }
+
+    /**
+     * Return the status details to use in module status
+     */
+    public final String getStatusDetails() {
+        return this.statusDetails;
     }
 
     /**
@@ -223,6 +248,13 @@ public class GateHandler {
     }
 
     /**
+     * Implement the stopped tick logic, called when the module is stopped
+     */
+    public void stoppedTickModule() {
+        // Default implementation does nothing, override if needed
+    }
+
+    /**
      * Return the gate ID to travel to, or null to use default logic
      */
     public GameMap getMapForTravel() {
@@ -234,7 +266,7 @@ public class GateHandler {
      * based on the hero's faction and specified map number.
      */
     protected final GameMap getFactionMapForTravel(int mapNumber) {
-        if (!Maps.isGateOnCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
+        if (!Maps.isGateAccessibleFromCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
             int faction = this.getHeroFractionIdx();
             if (faction == -1) {
                 return null; // Unknown faction, cannot determine map
@@ -264,6 +296,13 @@ public class GateHandler {
                             .anyMatch(p -> p.distanceTo(this.module.hero) < 1_000.0);
         }
         return false;
+    }
+
+    /**
+     * Determines if the specified box should be ignored for collection.
+     */
+    public boolean shouldIgnoreBox(Box box) {
+        return box == null; // Default implementation ingnores null boxes, override if needed
     }
 
     /**
@@ -355,6 +394,16 @@ public class GateHandler {
      */
     protected final boolean handleTravelToGate(int portalTypeId) {
         return this.handleTravelToGate(List.of(portalTypeId));
+    }
+
+    /**
+     * Checks if the configured gate is accessible from the current map.
+     */
+    protected final boolean isGateAccessibleFromCurrentMap() {
+        if (this.module.getConfig() == null) {
+            return false;
+        }
+        return Maps.isGateAccessibleFromCurrentMap(this.module.getConfig().gateId, this.module.starSystem);
     }
 
 }
