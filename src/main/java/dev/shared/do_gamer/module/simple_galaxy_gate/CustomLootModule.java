@@ -101,7 +101,8 @@ public final class CustomLootModule extends LootModule {
 
     @Override
     protected boolean findTarget() {
-        this.attack.setTarget(this.closestNpc(this.gateHandler.getNpcSearchSource()));
+        Locatable location = this.gateHandler.getNpcSearchLocation();
+        this.attack.setTarget(this.closestNpc(location));
         return this.attack.hasTarget();
     }
 

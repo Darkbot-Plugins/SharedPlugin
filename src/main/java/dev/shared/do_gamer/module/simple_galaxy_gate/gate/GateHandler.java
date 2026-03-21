@@ -115,10 +115,10 @@ public class GateHandler {
     }
 
     /**
-     * Gets the source location for NPC searching.
+     * Gets the location reference for NPC searching.
      * By default, it returns the hero's position.
      */
-    public Locatable getNpcSearchSource() {
+    public Locatable getNpcSearchLocation() {
         return this.module.hero;
     }
 

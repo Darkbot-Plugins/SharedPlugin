@@ -101,7 +101,7 @@ public final class MimesisMutinyGate extends GateHandler {
     }
 
     @Override
-    public Locatable getNpcSearchSource() {
+    public Locatable getNpcSearchLocation() {
         Npc freighter = this.getFreighter();
         if (freighter != null) {
             return freighter;
