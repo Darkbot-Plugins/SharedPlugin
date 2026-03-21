@@ -29,6 +29,7 @@ public class DseGate extends GateHandler {
         this.defaultNpcParam = new NpcParam(580.0);
         this.repairRadius = REPAIR_RADIUS;
         this.approachToCenter = false;
+        this.extraPriority = true;
     }
 
     @Override
@@ -92,9 +93,10 @@ public class DseGate extends GateHandler {
      * Finds the closest NPC to the given location
      */
     private Npc findClosestNpcTo(Locatable location) {
+        Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
         return this.module.lootModule.getNpcs().stream()
                 .filter(n -> !this.isGuardableNpc(n) && !this.hasNearbyMissileStorm(n, location))
-                .min(this.module.lootModule.getNpcComparator(location))
+                .min(this.module.lootModule.getNpcComparator(location, target))
                 .orElse(null);
     }
 

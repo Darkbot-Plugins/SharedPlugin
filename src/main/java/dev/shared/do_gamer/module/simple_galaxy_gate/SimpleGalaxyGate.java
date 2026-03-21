@@ -224,10 +224,6 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
         this.gateVisited = gateVisited;
     }
 
-    public void setStatusDetails(String statusDetails) {
-        this.statusDetails = statusDetails;
-    }
-
     public SimpleGalaxyGateConfig getConfig() {
         return this.config;
     }
@@ -265,12 +261,11 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
 
     @Override
     public String getStoppedStatus() {
-        StringBuilder status = new StringBuilder("Simple GG (paused)");
         if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
             String state = StateStore.State.WAITING.message;
-            status.append(String.format(" | %s: %s", state, this.statusDetails));
+            return String.format("Simple GG (paused) | %s: %s", state, this.statusDetails);
         }
-        return status.toString();
+        return null;
     }
 
     @Override
@@ -278,7 +273,6 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
         if (this.config == null) {
             return;
         }
-
         this.stuckInGateTimer.disarm();
         this.switchProfileTimer.disarm();
         this.gateBuilder.reset();
@@ -323,9 +317,6 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
             return;
         }
 
-        // Clear status details
-        this.setStatusDetails(null);
-
         // Handle traveling to the Galaxy Gate
         if (this.handleTravelToGalaxyGate(gateHandler)) {
             StateStore.request(StateStore.State.TRAVELING_TO_GATE);
@@ -353,12 +344,14 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
      * Create a GateHandler instance.
      */
     private GateHandler createGateHandler() {
-        GateHandler handler = Maps.getGateHandler(this.config.gateId, this);
+        Integer gateId = this.config != null ? this.config.gateId : null;
+        GateHandler handler = Maps.getGateHandler(gateId, this);
         Maps.setMapCenterX(handler.getMapCenterX());
         Maps.setMapCenterY(handler.getMapCenterY());
         Maps.setToleranceDistance(handler.getToleranceDistance());
         this.fetchServerOffset = handler.isFetchServerOffset();
         this.safeRefreshInGate = handler.canSafeRefreshInGate();
+        this.statusDetails = handler.getStatusDetails();
         return handler;
     }
 
@@ -594,7 +587,7 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
     /**
      * Handles the logic to jump to the next map.
      */
-    private void jumpToNextMap() {
+    public void jumpToNextMap() {
         Portal portal = this.findNextPortal();
         if (portal != null) {
             this.jumper.travelAndJump(portal);

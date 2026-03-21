@@ -29,12 +29,15 @@ public class GateHandler {
     protected double kamikazeShiftX = Defaults.KAMIKAZE_SHIFT_X;
     protected double kamikazeShiftY = Defaults.KAMIKAZE_SHIFT_Y;
     protected double repairRadius = Defaults.REPAIR_RADIUS;
+    protected double farTargetDistance = Defaults.FAR_TARGET_DISTANCE;
     protected boolean jumpToNextMap = true;
     protected boolean moveToCenter = true;
     protected boolean approachToCenter = true;
     protected boolean skipFarTargets = true;
+    protected boolean extraPriority = false;
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
+    protected String statusDetails = null;
 
     // Enum to represent the decision on whether to kill an NPC
     public enum KillDecision {
@@ -165,6 +168,13 @@ public class GateHandler {
     }
 
     /**
+     * Specific distance to consider a target as "far"
+     */
+    public final double getFarTargetDistance() {
+        return this.farTargetDistance;
+    }
+
+    /**
      * Return:
      * YES - to kill the NPC,
      * NO - to skip it,
@@ -200,6 +210,20 @@ public class GateHandler {
      */
     public final boolean isSkipFarTargets() {
         return this.skipFarTargets;
+    }
+
+    /**
+     * Return true to use extra priority based on HP percentage
+     */
+    public final boolean useExtraPriority() {
+        return this.extraPriority;
+    }
+
+    /**
+     * Return the status details to use in module status
+     */
+    public final String getStatusDetails() {
+        return this.statusDetails;
     }
 
     /**

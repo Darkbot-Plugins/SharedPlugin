@@ -1,6 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
@@ -14,6 +15,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final double RADIUS = 1_200.0;
     private static final double MAX_RADIUS = 1_900.0;
     private static final double REPAIR_RADIUS = 900.0;
+    private static final double FAR_TARGET_DISTANCE = 1_200.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
     private final Timer stopTimer = Timer.get(60_000L);
@@ -38,13 +40,26 @@ public final class MimesisMutinyGate extends GateHandler {
         this.npcMap.put("-={EM Freighter}=-", new NpcParam(560.0, 100, NpcFlag.NO_CIRCLE, NpcFlag.PASSIVE));
 
         this.moveToCenter = false;
+        this.jumpToNextMap = false;
         this.safeRefreshInGate = false;
         this.skipFarTargets = false;
+        this.extraPriority = true;
         this.fetchServerOffset = true;
         this.repairRadius = REPAIR_RADIUS;
+        this.farTargetDistance = FAR_TARGET_DISTANCE;
     }
 
+    /**
+     * Checks if the given NPC is the cached freighter.
+     */
     private boolean isFreighter(Npc npc) {
+        return this.cachedFreighter != null && Objects.equals(npc, this.cachedFreighter);
+    }
+
+    /**
+     * Checks if the NPC's name matches the freighter's name.
+     */
+    private boolean isNameFreighter(Npc npc) {
         return this.nameEquals(npc, "-={EM Freighter}=-");
     }
 
@@ -80,7 +95,7 @@ public final class MimesisMutinyGate extends GateHandler {
         // Find a new freighter and update cache
         this.cachedFreighter = null;
         for (Npc npc : this.module.lootModule.getNpcs()) {
-            if (this.isFreighter(npc)) {
+            if (this.isNameFreighter(npc)) {
                 this.cachedFreighter = npc;
                 break;
             }
@@ -94,6 +109,10 @@ public final class MimesisMutinyGate extends GateHandler {
     public KillDecision shouldKillNpc(Npc npc) {
         // Only attack NPCs that are within a certain distance
         if (npc.distanceTo(this.getMapCenterX(), this.getMapCenterY()) > MAX_RADIUS) {
+            return KillDecision.NO;
+        }
+        // Never attack the freighter
+        if (this.isFreighter(npc)) {
             return KillDecision.NO;
         }
         return KillDecision.YES;
@@ -115,7 +134,10 @@ public final class MimesisMutinyGate extends GateHandler {
     private boolean isGuardingFreighter() {
         // If there are portal present, prioritize collecting boxes
         if (!this.module.entities.getPortals().isEmpty()) {
-            return this.handleCollectBoxes();
+            if (!this.handleCollectBoxes()) {
+                this.module.jumpToNextMap();
+            }
+            return true;
         }
 
         Npc freighter = this.getFreighter();
@@ -191,8 +213,7 @@ public final class MimesisMutinyGate extends GateHandler {
      */
     private void setWaitingStatus(long seconds) {
         String time = ServerTimeHelper.remainingTimeFormat(seconds);
-        String status = String.format("start in %s", time);
-        this.module.setStatusDetails(status);
+        this.statusDetails = String.format("start in %s", time);
     }
 
     @Override
@@ -204,7 +225,7 @@ public final class MimesisMutinyGate extends GateHandler {
 
         // Ensure server time offset is updated before calculating waiting time
         if (!ServerTimeHelper.offsetUpdated()) {
-            this.module.setStatusDetails("fetching server time...");
+            this.statusDetails = "fetching server time...";
             return true; // Wait until server time offset is updated
         }
 
@@ -245,19 +266,18 @@ public final class MimesisMutinyGate extends GateHandler {
     @Override
     public void stoppedTickModule() {
         if (!this.autoStart) {
+            this.statusDetails = null;
             return; // Only handle auto-start scenario
         }
         StateStore.request(StateStore.State.WAITING);
         long seconds = this.getWaitingDurationInSeconds();
+        this.setWaitingStatus(seconds);
         if (seconds <= PRE_START_WAIT_TIMEOUT) {
             // Time to start preparing for the gate, resume the bot
-            this.module.setStatusDetails("preparing for gate...");
             this.module.bot.handleRefresh();
             this.module.bot.setRunning(true);
             this.autoStart = false;
-            return;
         }
-        this.setWaitingStatus(seconds);
         this.stopTimer.disarm();
     }
 

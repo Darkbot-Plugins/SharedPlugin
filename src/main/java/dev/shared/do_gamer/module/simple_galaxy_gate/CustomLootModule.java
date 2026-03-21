@@ -41,7 +41,6 @@ public final class CustomLootModule extends LootModule {
     private boolean approachingCenter = false;
 
     private final KamikazeHandler kamikazeHandler;
-    private static final double FAR_TARGET_DISTANCE = 2_000.0;
 
     CustomLootModule(PluginAPI api) {
         super(api);
@@ -155,7 +154,7 @@ public final class CustomLootModule extends LootModule {
      * Determines if the target NPC is considered far from the hero.
      */
     private boolean isFarTarget(Npc npc) {
-        return this.hero.distanceTo(npc) >= FAR_TARGET_DISTANCE;
+        return this.hero.distanceTo(npc) >= this.gateHandler.getFarTargetDistance();
     }
 
     @Override
@@ -165,7 +164,7 @@ public final class CustomLootModule extends LootModule {
         }
         Npc target = (Npc) this.attack.getTargetAs(Npc.class);
         if (target != null && target.isValid()) {
-            if (this.hero.distanceTo(target) > FAR_TARGET_DISTANCE) {
+            if (this.hero.distanceTo(target) > this.gateHandler.getFarTargetDistance()) {
                 this.hero.setRoamMode(); // If target is far, switch to roam mode
             } else {
                 this.hero.setAttackMode(target);
@@ -206,10 +205,22 @@ public final class CustomLootModule extends LootModule {
     /**
      * Gets a comparator for NPCs based on priority, distance and HP percentage.
      */
-    public Comparator<Npc> getNpcComparator(Locatable location) {
-        return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority())
+    public Comparator<Npc> getNpcComparator(Locatable location, Npc target) {
+        return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority() + this.getExtraPriority(n, target))
                 .thenComparingDouble(n -> n.distanceTo(location))
                 .thenComparingDouble(n -> n.getHealth().hpPercent());
+    }
+
+    /**
+     * Calculates extra priority for an NPC based HP percentage
+     */
+    private int getExtraPriority(Npc npc, Npc target) {
+        if (target != null && Objects.equals(npc, target)
+                && this.gateHandler.useExtraPriority()
+                && this.hero.distanceTo(target) <= 800.0) {
+            return 20 - (int) (target.getHealth().hpPercent() * 10.0);
+        }
+        return 0;
     }
 
     @Override
@@ -217,7 +228,7 @@ public final class CustomLootModule extends LootModule {
         Npc target = this.attack.getTargetAs(Npc.class);
         Npc best = this.getNpcs().stream()
                 .filter(this::shouldKill)
-                .min(this.getNpcComparator(location))
+                .min(this.getNpcComparator(location, target))
                 .orElse(null);
 
         // Return current target if it's the best one
@@ -225,19 +236,20 @@ public final class CustomLootModule extends LootModule {
             return target;
         }
 
-        // Skip far target if needed and return best
-        if (target != null && this.skipFarTarget(target)) {
-            return best;
-        }
+        if (target != null) {
+            // Skip far target if needed and return best
+            if (this.skipFarTarget(target)) {
+                return best;
+            }
 
-        // Prefer current target if close enough
-        double shift = 50.0; // Shift to prefer already targeted NPCs
-        boolean isAttackingTarget = target != null && this.hero.isAttacking(target) && this.shouldKill(target);
-        if (isAttackingTarget && target.distanceTo(location) < (best.distanceTo(location) + shift)) {
-            return target;
-        } else {
-            return best;
+            // Prefer current target if close enough to avoid unnecessary switching
+            double offset = 100.0 - (target.getHealth().hpPercent() * 50.0);
+            boolean isAttackingTarget = this.hero.isAttacking(target) && this.shouldKill(target);
+            if (isAttackingTarget && target.distanceTo(location) < (best.distanceTo(location) + offset)) {
+                return target;
+            }
         }
+        return best;
     }
 
     /**
