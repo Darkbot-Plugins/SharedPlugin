@@ -256,6 +256,7 @@ public final class MimesisMutinyGate extends GateHandler {
         }
 
         this.statusDetails = null; // reset status details
+        this.reset();
         return false; // Allow default preparation logic to take over
     }
 
@@ -290,5 +291,10 @@ public final class MimesisMutinyGate extends GateHandler {
             this.autoStart = false;
         }
         this.stopTimer.disarm();
+    }
+
+    @Override
+    public void reset() {
+        this.cachedFreighter = null;
     }
 }
