@@ -64,7 +64,7 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
     public final ConfigSetting<BrowserApi> botBrowserApi;
 
     private final Timer stuckInGateTimer = Timer.get();
-    private final Timer switchProfileTimer = Timer.get(30_000L);
+    private final Timer switchProfileTimer = Timer.get(120_000L);
     private boolean triedReloadOnStuck = false;
     private boolean shouldMoveToRefinery = false;
     private boolean updateHangarData = true;

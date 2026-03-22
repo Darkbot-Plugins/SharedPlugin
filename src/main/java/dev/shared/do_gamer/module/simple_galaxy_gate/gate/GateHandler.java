@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 
+import com.github.weisj.jsvg.nodes.prototype.spec.NotImplemented;
+
 import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
@@ -39,6 +41,8 @@ public class GateHandler {
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
     protected String statusDetails = null;
+    protected boolean useGuardableNpcAsSearchLocation = false;
+    private Npc cachedGuardableNpc = null;
 
     // Enum to represent the decision on whether to kill an NPC
     public enum KillDecision {
@@ -118,7 +122,13 @@ public class GateHandler {
      * Gets the location reference for NPC searching.
      * By default, it returns the hero's position.
      */
-    public Locatable getNpcSearchLocation() {
+    public final Locatable getNpcSearchLocation() {
+        if (this.useGuardableNpcAsSearchLocation) {
+            Npc guardableNpc = this.getGuardableNpc();
+            if (guardableNpc != null) {
+                return guardableNpc;
+            }
+        }
         return this.module.hero;
     }
 
@@ -415,4 +425,47 @@ public class GateHandler {
         return Maps.isGateAccessibleFromCurrentMap(this.module.getConfig().gateId, this.module.starSystem);
     }
 
+    /**
+     * Finds the guardable NPC if present
+     */
+    protected final Npc getGuardableNpc() {
+        // Return cached guardable NPC if still valid
+        if (this.cachedGuardableNpc != null && this.module.lootModule.getNpcs().contains(this.cachedGuardableNpc)) {
+            return this.cachedGuardableNpc;
+        }
+
+        // Search for guardable NPC and cache it for future ticks
+        this.resetCachedGuardableNpc();
+        for (Npc npc : this.module.lootModule.getNpcs()) {
+            if (this.npcHasGuardableName(npc)) {
+                this.cachedGuardableNpc = npc;
+                break;
+            }
+        }
+
+        return this.cachedGuardableNpc;
+    }
+
+    /**
+     * Resets the cached guardable NPC
+     */
+    protected final void resetCachedGuardableNpc() {
+        this.cachedGuardableNpc = null;
+    }
+
+    /**
+     * Determines if the specified NPC is a guardable NPC based on its name.
+     */
+    @NotImplemented("Override in specific gate handler to define guardable NPCs")
+    protected boolean npcHasGuardableName(Npc npc) {
+        return false;
+    }
+
+    /**
+     * Checks if the given NPC is the cached guardable NPC
+     */
+    protected final boolean isGuardableNpc(Npc npc) {
+        Npc guardableNpc = this.getGuardableNpc();
+        return guardableNpc != null && Objects.equals(npc, guardableNpc);
+    }
 }
