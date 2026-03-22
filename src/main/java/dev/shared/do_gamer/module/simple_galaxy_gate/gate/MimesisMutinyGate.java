@@ -1,14 +1,12 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
-import eu.darkbot.api.game.other.Locatable;
 import eu.darkbot.util.Timer;
 
 public final class MimesisMutinyGate extends GateHandler {
@@ -21,7 +19,6 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
     private final Timer stopTimer = Timer.get();
     private boolean autoStart = false;
-    private Npc cachedFreighter = null;
 
     public MimesisMutinyGate() {
         this.npcMap.put("-=[ Warhead ]=-", new NpcParam(560.0, -100));
@@ -45,6 +42,7 @@ public final class MimesisMutinyGate extends GateHandler {
         this.safeRefreshInGate = false;
         this.skipFarTargets = false;
         this.fetchServerOffset = true;
+        this.useGuardableNpcAsSearchLocation = true;
         this.toleranceDistance = RADIUS;
         this.repairRadius = REPAIR_RADIUS;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
@@ -52,61 +50,19 @@ public final class MimesisMutinyGate extends GateHandler {
     }
 
     /**
-     * Checks if the given NPC is the cached freighter.
-     */
-    private boolean isFreighter(Npc npc) {
-        Npc freighter = this.getFreighter();
-        return freighter != null && Objects.equals(npc, freighter);
-    }
-
-    /**
      * Checks if the NPC's name matches the freighter's name.
      */
-    private boolean isNameFreighter(Npc npc) {
+    @Override
+    protected boolean npcHasGuardableName(Npc npc) {
         return this.nameEquals(npc, "-={EM Freighter}=-");
     }
 
     /**
      * Updates the map center coordinates based on the freighter's position.
      */
-    private void updateMapCenter(Npc freighter) {
-        if (freighter != null) {
-            this.mapCenterX = freighter.getX();
-            this.mapCenterY = freighter.getY();
-        }
-    }
-
-    /**
-     * Finds the freighter NPC and updates map center/tolerance for guarding logic
-     */
-    private Npc getFreighter() {
-        // Check if cached freighter is still valid
-        if (this.cachedFreighter != null && this.module.lootModule.getNpcs().contains(this.cachedFreighter)) {
-            // Update map center to cached freighter's position
-            this.updateMapCenter(this.cachedFreighter);
-            return this.cachedFreighter;
-        }
-
-        // Find a new freighter and update cache
-        this.cachedFreighter = null;
-        for (Npc npc : this.module.lootModule.getNpcs()) {
-            if (this.isNameFreighter(npc)) {
-                this.cachedFreighter = npc;
-                break;
-            }
-        }
-
-        this.updateMapCenter(this.cachedFreighter);
-        return this.cachedFreighter;
-    }
-
-    @Override
-    public Locatable getNpcSearchLocation() {
-        Npc freighter = this.getFreighter();
-        if (freighter != null) {
-            return freighter;
-        }
-        return this.module.hero;
+    private void updateMapCenter(Npc guardableNpc) {
+        this.mapCenterX = guardableNpc.getX();
+        this.mapCenterY = guardableNpc.getY();
     }
 
     @Override
@@ -116,7 +72,7 @@ public final class MimesisMutinyGate extends GateHandler {
             return KillDecision.NO;
         }
         // Never attack the freighter
-        if (this.isFreighter(npc)) {
+        if (this.isGuardableNpc(npc)) {
             return KillDecision.NO;
         }
         return KillDecision.YES;
@@ -144,8 +100,11 @@ public final class MimesisMutinyGate extends GateHandler {
             return true;
         }
 
-        Npc freighter = this.getFreighter();
-        if (freighter != null) {
+        Npc guardableNpc = this.getGuardableNpc();
+        if (guardableNpc != null) {
+            // Update map center to cached freighter's position
+            this.updateMapCenter(guardableNpc);
+
             if (this.npcsCount() == 1) {
                 // Try to collect boxes while guarding
                 if (this.handleCollectBoxes(true)) {
@@ -153,7 +112,7 @@ public final class MimesisMutinyGate extends GateHandler {
                 }
                 // If no boxes to collect, just guard the freighter
                 StateStore.request(StateStore.State.GUARDING);
-                this.module.lootModule.getAttacker().setTarget(freighter);
+                this.module.lootModule.getAttacker().setTarget(guardableNpc);
                 this.module.lootModule.moveToNpc();
                 return true;
             }
@@ -298,6 +257,6 @@ public final class MimesisMutinyGate extends GateHandler {
 
     @Override
     public void reset() {
-        this.cachedFreighter = null;
+        this.resetCachedGuardableNpc();
     }
 }
