@@ -19,7 +19,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final double PREFER_TARGET_DISTANCE_OFFSET = 200.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
-    private final Timer stopTimer = Timer.get(60_000L);
+    private final Timer stopTimer = Timer.get();
     private boolean autoStart = false;
     private Npc cachedFreighter = null;
 
@@ -249,7 +249,7 @@ public final class MimesisMutinyGate extends GateHandler {
                 StateStore.request(StateStore.State.WAITING);
                 this.setWaitingStatus(seconds);
                 if (seconds > PRE_START_WAIT_TIMEOUT) {
-                    this.handleStopping();
+                    this.handleStopping(seconds);
                 }
             }
             return true;
@@ -263,10 +263,13 @@ public final class MimesisMutinyGate extends GateHandler {
     /**
      * Handles stopping the bot when waiting for the gate to open.
      */
-    private void handleStopping() {
+    private void handleStopping(long seconds) {
         // Activate the delay to allow bot refresh is needed
         if (!this.stopTimer.isArmed()) {
-            this.stopTimer.activate();
+            // Default delay 1 minute, but if next gate opening time more than an hour,
+            // set delay to 3 minutes to allow profile switching logic to work correctly.
+            long delay = seconds > 3_600 ? 180_000L : 60_000L;
+            this.stopTimer.activate(delay);
             return;
         }
         if (this.stopTimer.isInactive()) {
