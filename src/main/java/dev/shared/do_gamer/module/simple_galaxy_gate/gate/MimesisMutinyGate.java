@@ -17,6 +17,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final double PREFER_TARGET_DISTANCE_OFFSET = 200.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
+    private static final long EXTENDED_WAIT_THRESHOLD_SECONDS = 3_600L; // 1 hour
     private final Timer stopTimer = Timer.get();
     private boolean autoStart = false;
 
@@ -225,9 +226,8 @@ public final class MimesisMutinyGate extends GateHandler {
     private void handleStopping(long seconds) {
         // Activate the delay to allow bot refresh is needed
         if (!this.stopTimer.isArmed()) {
-            // Default delay 1 minute, but if next gate opening time more than an hour,
-            // set delay to 3 minutes to allow profile switching logic to work correctly.
-            long delay = seconds > 3_600 ? 180_000L : 60_000L;
+            // Use 1m delay normally, 3m when wait exceeds extended threshold.
+            long delay = seconds > EXTENDED_WAIT_THRESHOLD_SECONDS ? 180_000L : 60_000L;
             this.stopTimer.activate(delay);
             return;
         }
