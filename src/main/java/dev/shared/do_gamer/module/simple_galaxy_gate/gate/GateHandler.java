@@ -29,8 +29,8 @@ public class GateHandler {
     protected double mapCenterX = Defaults.MAP_CENTER_X;
     protected double mapCenterY = Defaults.MAP_CENTER_Y;
     protected double toleranceDistance = Defaults.TOLERANCE_DISTANCE;
-    protected double kamikazeShiftX = Defaults.KAMIKAZE_SHIFT_X;
-    protected double kamikazeShiftY = Defaults.KAMIKAZE_SHIFT_Y;
+    protected double kamikazeOffsetX = Defaults.KAMIKAZE_OFFSET_X;
+    protected double kamikazeOffsetY = Defaults.KAMIKAZE_OFFSET_Y;
     protected double repairRadius = Defaults.REPAIR_RADIUS;
     protected double farTargetDistance = Defaults.FAR_TARGET_DISTANCE;
     protected double preferTargetDistanceOffset = Defaults.PREFER_TARGET_DISTANCE_OFFSET;
@@ -105,17 +105,17 @@ public class GateHandler {
     }
 
     /**
-     * Gets shift on X coordinate for the kamikaze strategy.
+     * Gets offset on X coordinate for the kamikaze strategy.
      */
-    public final double getKamikazeShiftX() {
-        return this.kamikazeShiftX;
+    public final double getKamikazeOffsetX() {
+        return this.kamikazeOffsetX;
     }
 
     /**
-     * Gets shift on Y coordinate for the kamikaze strategy.
+     * Gets offset on Y coordinate for the kamikaze strategy.
      */
-    public final double getKamikazeShiftY() {
-        return this.kamikazeShiftY;
+    public final double getKamikazeOffsetY() {
+        return this.kamikazeOffsetY;
     }
 
     /**

@@ -26,6 +26,7 @@ public final class GateBuilder {
     private final Timer placeTimer = Timer.get(3_000L);
     private final Timer spinTimer = Timer.get();
     private final Timer moveShipTimer = Timer.get(30_000L);
+    private final Timer globalTimer = Timer.get(60_000L);
 
     private int galaxyInfoFailCount = 0;
     private int shipSwitchAttempts = 0;
@@ -54,6 +55,7 @@ public final class GateBuilder {
         this.spinTimer.disarm();
         this.placeTimer.disarm();
         this.moveShipTimer.disarm();
+        this.globalTimer.disarm();
     }
 
     public boolean tick() {
@@ -70,6 +72,7 @@ public final class GateBuilder {
             return false; // Not buildable gate
         }
 
+        this.handleGlobalTimeout();
         if (this.spinTimer.isActive()) {
             return true; // In timeout period, skip building
         }
@@ -90,7 +93,7 @@ public final class GateBuilder {
             return true;
         }
 
-        Boolean updated = this.galaxyManager.updateGalaxyInfos(500);
+        Boolean updated = this.galaxyManager.updateGalaxyInfos(10_000);
         if (Boolean.FALSE.equals(updated)) {
             this.spinTimer.activate(1_000L);
             this.handleGalaxyInfoFetchFailure();
@@ -134,6 +137,7 @@ public final class GateBuilder {
         this.spinTimer.activate(waitTime);
         this.galaxyManager.spinGate(targetGate, this.module.getConfig().builder.useMultiAt, spinOption.spins, 10);
         this.moveShipPeriodically(); // Move ship to avoid AFK
+        this.globalTimer.disarm(); // Reset global timeout after successful spin
         return true;
     }
 
@@ -387,6 +391,20 @@ public final class GateBuilder {
             System.out.println("Failed to fetch galaxy info for 10 consecutive times, refreshing the game...");
             this.module.bot.handleRefresh();
             this.galaxyInfoFailCount = 0;
+        }
+    }
+
+    /**
+     * Handles the global timeout by refreshing the game and resetting the state
+     * if the builder has been active for too long without completing the build.
+     */
+    private void handleGlobalTimeout() {
+        if (!this.globalTimer.isArmed()) {
+            this.globalTimer.activate();
+        } else if (this.globalTimer.isInactive()) {
+            System.out.println("Global timeout reached, resetting builder state and refreshing the game...");
+            this.module.bot.handleRefresh();
+            this.reset();
         }
     }
 }

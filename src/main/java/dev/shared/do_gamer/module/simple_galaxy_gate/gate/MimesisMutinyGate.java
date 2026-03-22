@@ -48,6 +48,10 @@ public final class MimesisMutinyGate extends GateHandler {
         this.repairRadius = REPAIR_RADIUS;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
         this.preferTargetDistanceOffset = PREFER_TARGET_DISTANCE_OFFSET;
+        // Probaly will never used Kamikaze in this gate,
+        // but set offset to 0 just in case
+        this.kamikazeOffsetX = 0.0;
+        this.kamikazeOffsetY = 0.0;
     }
 
     /**

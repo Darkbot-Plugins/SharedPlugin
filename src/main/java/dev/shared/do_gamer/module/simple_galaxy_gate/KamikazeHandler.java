@@ -115,7 +115,7 @@ public final class KamikazeHandler {
         if (this.gateHandler == null) {
             return Maps.getMapCenterX();
         }
-        return Maps.getMapCenterX() + this.gateHandler.getKamikazeShiftX();
+        return Maps.getMapCenterX() + this.gateHandler.getKamikazeOffsetX();
     }
 
     /**
@@ -125,7 +125,7 @@ public final class KamikazeHandler {
         if (this.gateHandler == null) {
             return Maps.getMapCenterY();
         }
-        return Maps.getMapCenterY() + this.gateHandler.getKamikazeShiftY();
+        return Maps.getMapCenterY() + this.gateHandler.getKamikazeOffsetY();
     }
 
     /**
