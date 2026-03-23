@@ -20,7 +20,7 @@ import eu.darkbot.api.managers.StatsAPI;
 
 @Feature(name = "Auto refiner", description = "Automatically refine materials")
 public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
-    private static final long FAILED_RETRY_DELAY_MS = 3_000L;
+    private static final long FAILED_RETRY_DELAY_NANOS = 3_000_000_000L;
 
     private final OreAPI ores;
     private final GuiManager guiManager;
@@ -33,7 +33,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
     // Track cargo to prevent unnecessary API calls when unable to refine
     private int lastCargoAmount = -1;
     private boolean lastRefineAttemptFailed = false;
-    private long lastRefineAttemptAt = 0L;
+    private long lastRefineAttemptAtNanos = 0L;
 
     public AutoRefin(OreAPI ores,
             GuiManager guiManager,
@@ -64,19 +64,19 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
             if (lastCargoAmount != -1) {
                 lastCargoAmount = -1;
                 lastRefineAttemptFailed = false;
-                lastRefineAttemptAt = 0L;
+                lastRefineAttemptAtNanos = 0L;
             }
             return;
         }
 
         int currentCargo = stats.getCargo();
-        long now = System.currentTimeMillis();
+        long nowNanos = System.nanoTime();
 
         // If cargo hasn't changed since last failed refine attempt, skip to prevent
         // unnecessary API calls
         if (lastRefineAttemptFailed
                 && currentCargo == lastCargoAmount
-                && (now - lastRefineAttemptAt) < FAILED_RETRY_DELAY_MS) {
+                && (nowNanos - lastRefineAttemptAtNanos) < FAILED_RETRY_DELAY_NANOS) {
             return;
         }
 
@@ -89,7 +89,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
 
         lastRefineAttemptFailed = true; // assume refine attempt will fail
         lastCargoAmount = currentCargo; // update last cargo amount
-        lastRefineAttemptAt = now; // delay next retry if this attempt fails
+        lastRefineAttemptAtNanos = nowNanos; // delay next retry if this attempt fails
 
         // Find the ore with the highest refineable amount
         refineMap.entrySet().stream()
@@ -101,7 +101,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
                             entry.getKey(),
                             entry.getValue());
                     lastRefineAttemptFailed = false; // refine attempt succeeded
-                    lastRefineAttemptAt = 0L;
+                    lastRefineAttemptAtNanos = 0L;
                 });
     }
 
