@@ -20,6 +20,7 @@ import eu.darkbot.api.managers.StatsAPI;
 
 @Feature(name = "Auto refiner", description = "Automatically refine materials")
 public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
+    private static final long TRADE_WINDOW_ADDRESS_OFFSET = 0x78L;
 
     private final OreAPI ores;
     private final GuiManager guiManager;
@@ -54,57 +55,56 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
     // behavior
     @Override
     public void onTickBehavior() {
-        try {
-            if (!isReadyForRefining())
-                return; // check if we can refine
+        if (!isReadyForRefining())
+            return; // check if we can refine
 
-            if (getCargoPercent() < config.triggerPercent) {
-                // Reset tracking variables when cargo is below trigger percent
-                if (lastCargoAmount != -1) {
-                    lastCargoAmount = -1;
-                    lastRefineAttemptFailed = false;
-                }
-                return;
+        if (getCargoPercent() < config.triggerPercent) {
+            // Reset tracking variables when cargo is below trigger percent
+            if (lastCargoAmount != -1) {
+                lastCargoAmount = -1;
+                lastRefineAttemptFailed = false;
             }
+            return;
+        }
 
-            int currentCargo = stats.getCargo();
+        int currentCargo = stats.getCargo();
 
-            // If cargo hasn't changed since last failed refine attempt, skip to prevent
-            // unnecessary API calls
-            if (lastRefineAttemptFailed && currentCargo == lastCargoAmount) {
-                return;
-            }
+        // If cargo hasn't changed since last failed refine attempt, skip to prevent
+        // unnecessary API calls
+        if (lastRefineAttemptFailed && currentCargo == lastCargoAmount) {
+            return;
+        }
 
-            // Cache maxRefine values to avoid duplicate calculations
-            Map<Ore, Integer> refineMap = Arrays.stream(Ore.values())
-                    .filter(this::shouldRefineOre)
-                    .collect(Collectors.toMap(
-                            ore -> ore,
-                            this::maxRefine));
+        // Cache maxRefine values to avoid duplicate calculations
+        Map<Ore, Integer> refineMap = Arrays.stream(Ore.values())
+                .filter(this::shouldRefineOre)
+                .collect(Collectors.toMap(
+                        ore -> ore,
+                        this::maxRefine));
 
-            lastRefineAttemptFailed = true; // assume refine attempt will fail
-            lastCargoAmount = currentCargo; // update last cargo amount
-
-            // Find the ore with the highest refineable amount
-            refineMap.entrySet().stream()
-                    .filter(e -> e.getValue() > 0)
-                    .max(Map.Entry.comparingByValue())
-                    .ifPresent(entry -> {
+        // Find the ore with the highest refineable amount
+        refineMap.entrySet().stream()
+                .filter(e -> e.getValue() > 0)
+                .max(Map.Entry.comparingByValue())
+                .ifPresent(entry -> {
+                    try {
                         long guiAddress = guiManager.getAddress();
                         if (guiAddress == 0)
                             return;
 
-                        long tradeWindowAddress = darkbotApi.readLong(guiAddress + 0x78);
+                        long tradeWindowAddress = darkbotApi.readLong(guiAddress + TRADE_WINDOW_ADDRESS_OFFSET);
                         if (tradeWindowAddress == 0)
                             return;
 
+                        lastRefineAttemptFailed = true; // assume refine attempt will fail
+                        lastCargoAmount = currentCargo; // update last cargo amount
                         darkbotApi.refine(tradeWindowAddress, entry.getKey(), entry.getValue());
                         lastRefineAttemptFailed = false; // refine attempt succeeded
-                    });
-        } catch (RuntimeException ignored) {
-            // Keep bot alive on transient client/API states (for example while user interacts
-            // with upgrade windows), retry next tick.
-        }
+                    } catch (RuntimeException ignored) {
+                        // Keep bot alive on transient client/API states (for example while user
+                        // interacts with upgrade windows), retry next tick.
+                    }
+                });
     }
 
     /////////////////////////////// helper methods ///////////////////////////////
