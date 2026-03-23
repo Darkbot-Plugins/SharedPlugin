@@ -37,6 +37,9 @@ public class HttpTelemetrySender implements TelemetrySender {
 
             HttpResponse<String> response = this.http.send(builder.build(), HttpResponse.BodyHandlers.ofString());
             return response.statusCode() >= 200 && response.statusCode() < 300;
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
+            return false;
         } catch (Exception ignored) {
             return false;
         }

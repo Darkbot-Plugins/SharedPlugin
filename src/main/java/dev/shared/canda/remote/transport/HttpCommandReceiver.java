@@ -44,6 +44,8 @@ public class HttpCommandReceiver implements CommandReceiver {
                     return Optional.of(body);
                 }
             }
+        } catch (InterruptedException interrupted) {
+            Thread.currentThread().interrupt();
         } catch (Exception ignored) {
             // Network errors are expected when no backend is connected yet.
         }

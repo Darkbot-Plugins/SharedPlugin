@@ -77,21 +77,21 @@ public class RemotePanel implements Task, Configurable<RemotePanelConfig>, Instr
 
     private RemoteSnapshot buildSnapshot(long tick, String botPublicId) {
         RemoteSnapshot snapshot = new RemoteSnapshot();
-        snapshot.tick = tick;
-        snapshot.botPublicId = botPublicId;
-        snapshot.heroId = this.hero.getId();
-        snapshot.username = this.hero.getEntityInfo() == null ? "" : this.hero.getEntityInfo().getUsername();
-        snapshot.botRunning = this.bot.getModule() != null;
-        snapshot.moduleStatus = this.bot.getModule() == null ? "-" : this.bot.getModule().getStatus();
-        snapshot.moduleId = this.getCurrentModuleId();
+        snapshot.setTick(tick);
+        snapshot.setBotPublicId(botPublicId);
+        snapshot.setHeroId(this.hero.getId());
+        snapshot.setUsername(this.hero.getEntityInfo() == null ? "" : this.hero.getEntityInfo().getUsername());
+        snapshot.setBotRunning(this.bot.getModule() != null);
+        snapshot.setModuleStatus(this.bot.getModule() == null ? "-" : this.bot.getModule().getStatus());
+        snapshot.setModuleId(this.getCurrentModuleId());
 
         GameMap map = this.starSystem.getCurrentMap();
-        snapshot.mapId = map == null ? -1 : map.getId();
-        snapshot.mapName = map == null ? "-" : map.getShortName();
+        snapshot.setMapId(map == null ? -1 : map.getId());
+        snapshot.setMapName(map == null ? "-" : map.getShortName());
 
         Health health = this.hero.getHealth();
-        snapshot.hpPercent = health == null ? 0.0 : health.hpPercent();
-        snapshot.shieldPercent = health == null ? 0.0 : health.shieldPercent();
+        snapshot.setHpPercent(health == null ? 0.0 : health.hpPercent());
+        snapshot.setShieldPercent(health == null ? 0.0 : health.shieldPercent());
         return snapshot;
     }
 
