@@ -73,6 +73,7 @@ public final class GateBuilder {
         }
 
         if (this.state == BuildState.EXIT) {
+            this.globalTimer.disarm(); // Reset global timer when exiting build state
             return false; // Finished building
         }
 
@@ -135,9 +136,9 @@ public final class GateBuilder {
         SpinOption spinOption = this.getSpinOption(progress);
         long waitTime = (spinOption.waitMs * this.module.getConfig().builder.speed.multiplier);
         this.spinTimer.activate(waitTime);
-        this.galaxyManager.spinGate(targetGate, this.module.getConfig().builder.useMultiAt, spinOption.spins, 10);
+        this.galaxyManager.spinGate(targetGate, this.module.getConfig().builder.useMultiAt, spinOption.spins, 10)
+                .ifPresent(success -> this.globalTimer.disarm()); // Reset global timer on successful spin
         this.moveShipPeriodically(); // Move ship to avoid AFK
-        this.globalTimer.disarm(); // Reset global timeout after successful spin
     }
 
     /**
@@ -187,6 +188,7 @@ public final class GateBuilder {
             this.state = successState;
             this.spinTimer.activate(5_000L); // Wait after switching
             this.shipSwitchAttempts = 0; // Reset fail count on successful switch
+            this.globalTimer.disarm(); // Reset global timer on successful switch
             return;
         }
         this.spinTimer.activate(3_000L); // Wait before retrying

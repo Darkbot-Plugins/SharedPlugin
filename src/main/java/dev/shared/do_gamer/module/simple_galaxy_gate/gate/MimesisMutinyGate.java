@@ -219,7 +219,6 @@ public final class MimesisMutinyGate extends GateHandler {
             return true;
         }
 
-        this.statusDetails = null; // reset status details
         this.reset();
         return false; // Allow default preparation logic to take over
     }
@@ -262,5 +261,8 @@ public final class MimesisMutinyGate extends GateHandler {
     @Override
     public void reset() {
         this.resetCachedGuardableNpc();
+        if (!this.autoStart) {
+            this.statusDetails = null; // reset status details
+        }
     }
 }
