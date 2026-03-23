@@ -54,47 +54,57 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
     // behavior
     @Override
     public void onTickBehavior() {
-        if (!isReadyForRefining())
-            return; // check if we can refine
+        try {
+            if (!isReadyForRefining())
+                return; // check if we can refine
 
-        if (getCargoPercent() < config.triggerPercent) {
-            // Reset tracking variables when cargo is below trigger percent
-            if (lastCargoAmount != -1) {
-                lastCargoAmount = -1;
-                lastRefineAttemptFailed = false;
+            if (getCargoPercent() < config.triggerPercent) {
+                // Reset tracking variables when cargo is below trigger percent
+                if (lastCargoAmount != -1) {
+                    lastCargoAmount = -1;
+                    lastRefineAttemptFailed = false;
+                }
+                return;
             }
-            return;
+
+            int currentCargo = stats.getCargo();
+
+            // If cargo hasn't changed since last failed refine attempt, skip to prevent
+            // unnecessary API calls
+            if (lastRefineAttemptFailed && currentCargo == lastCargoAmount) {
+                return;
+            }
+
+            // Cache maxRefine values to avoid duplicate calculations
+            Map<Ore, Integer> refineMap = Arrays.stream(Ore.values())
+                    .filter(this::shouldRefineOre)
+                    .collect(Collectors.toMap(
+                            ore -> ore,
+                            this::maxRefine));
+
+            lastRefineAttemptFailed = true; // assume refine attempt will fail
+            lastCargoAmount = currentCargo; // update last cargo amount
+
+            // Find the ore with the highest refineable amount
+            refineMap.entrySet().stream()
+                    .filter(e -> e.getValue() > 0)
+                    .max(Map.Entry.comparingByValue())
+                    .ifPresent(entry -> {
+                        long guiAddress = guiManager.getAddress();
+                        if (guiAddress == 0)
+                            return;
+
+                        long tradeWindowAddress = darkbotApi.readLong(guiAddress + 0x78);
+                        if (tradeWindowAddress == 0)
+                            return;
+
+                        darkbotApi.refine(tradeWindowAddress, entry.getKey(), entry.getValue());
+                        lastRefineAttemptFailed = false; // refine attempt succeeded
+                    });
+        } catch (RuntimeException ignored) {
+            // Keep bot alive on transient client/API states (for example while user interacts
+            // with upgrade windows), retry next tick.
         }
-
-        int currentCargo = stats.getCargo();
-
-        // If cargo hasn't changed since last failed refine attempt, skip to prevent
-        // unnecessary API calls
-        if (lastRefineAttemptFailed && currentCargo == lastCargoAmount) {
-            return;
-        }
-
-        // Cache maxRefine values to avoid duplicate calculations
-        Map<Ore, Integer> refineMap = Arrays.stream(Ore.values())
-                .filter(this::shouldRefineOre)
-                .collect(Collectors.toMap(
-                        ore -> ore,
-                        this::maxRefine));
-
-        lastRefineAttemptFailed = true; // assume refine attempt will fail
-        lastCargoAmount = currentCargo; // update last cargo amount
-
-        // Find the ore with the highest refineable amount
-        refineMap.entrySet().stream()
-                .filter(e -> e.getValue() > 0)
-                .max(Map.Entry.comparingByValue())
-                .ifPresent(entry -> {
-                    darkbotApi.refine(
-                            darkbotApi.readLong(guiManager.getAddress() + 0x78),
-                            entry.getKey(),
-                            entry.getValue());
-                    lastRefineAttemptFailed = false; // refine attempt succeeded
-                });
     }
 
     /////////////////////////////// helper methods ///////////////////////////////
