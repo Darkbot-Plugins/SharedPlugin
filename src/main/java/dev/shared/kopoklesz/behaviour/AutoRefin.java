@@ -20,6 +20,7 @@ import eu.darkbot.api.managers.StatsAPI;
 
 @Feature(name = "Auto refiner", description = "Automatically refine materials")
 public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
+    private static final long TRADE_WINDOW_ADDRESS_OFFSET = 0x78L;
 
     private final OreAPI ores;
     private final GuiManager guiManager;
@@ -81,19 +82,28 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
                         ore -> ore,
                         this::maxRefine));
 
-        lastRefineAttemptFailed = true; // assume refine attempt will fail
-        lastCargoAmount = currentCargo; // update last cargo amount
-
         // Find the ore with the highest refineable amount
         refineMap.entrySet().stream()
                 .filter(e -> e.getValue() > 0)
                 .max(Map.Entry.comparingByValue())
                 .ifPresent(entry -> {
-                    darkbotApi.refine(
-                            darkbotApi.readLong(guiManager.getAddress() + 0x78),
-                            entry.getKey(),
-                            entry.getValue());
-                    lastRefineAttemptFailed = false; // refine attempt succeeded
+                    try {
+                        long guiAddress = guiManager.getAddress();
+                        if (guiAddress == 0)
+                            return;
+
+                        long tradeWindowAddress = darkbotApi.readLong(guiAddress + TRADE_WINDOW_ADDRESS_OFFSET);
+                        if (tradeWindowAddress == 0)
+                            return;
+
+                        lastRefineAttemptFailed = true; // assume refine attempt will fail
+                        lastCargoAmount = currentCargo; // update last cargo amount
+                        darkbotApi.refine(tradeWindowAddress, entry.getKey(), entry.getValue());
+                        lastRefineAttemptFailed = false; // refine attempt succeeded
+                    } catch (RuntimeException ignored) {
+                        // Keep bot alive on transient client/API states (for example while user
+                        // interacts with upgrade windows), retry next tick.
+                    }
                 });
     }
 
