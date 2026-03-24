@@ -251,7 +251,7 @@ public class GateHandler {
     /**
      * Return true to stick to current target and ignore new ones (except priority)
      */
-    public boolean isStickToTarget() {
+    public final boolean isStickToTarget() {
         return this.stickToTarget;
     }
 
