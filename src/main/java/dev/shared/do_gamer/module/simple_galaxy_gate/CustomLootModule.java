@@ -237,12 +237,20 @@ public final class CustomLootModule extends LootModule {
             if (this.skipFarTarget(target)) {
                 return best;
             }
-            // Prefer current target if close enough to avoid unnecessary switching
-            double offset = this.gateHandler.getPreferTargetDistanceOffset();
             boolean isAttackingTarget = this.hero.isAttacking(target) && this.shouldKill(target);
-            if (isAttackingTarget && target.distanceTo(location) < (best.distanceTo(location) + offset)) {
-                return target;
+            if (isAttackingTarget) {
+                // Stick to current target if enabled and it has higher or equal priority
+                if (this.gateHandler.isStickToTarget()
+                        && target.getInfo().getPriority() <= best.getInfo().getPriority()) {
+                    return target;
+                }
+                // Prefer current target if close enough to avoid unnecessary switching
+                double offset = this.gateHandler.getPreferTargetDistanceOffset();
+                if (target.distanceTo(location) < (best.distanceTo(location) + offset)) {
+                    return target;
+                }
             }
+
         }
         return best;
     }
