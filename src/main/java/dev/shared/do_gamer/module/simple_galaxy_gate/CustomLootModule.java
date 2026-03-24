@@ -233,17 +233,36 @@ public final class CustomLootModule extends LootModule {
                 return best;
             }
             // Check if need to prioritize current target
-            if (this.hero.isAttacking(target) && this.shouldKill(target)) {
-                double offset = this.gateHandler.getPreferTargetDistanceOffset();
-                if ((this.gateHandler.isStickToTarget()
-                        && target.getInfo().getPriority() <= best.getInfo().getPriority())
-                        || target.distanceTo(location) < (best.distanceTo(location) + offset)) {
-                    return target;
-                }
+            if (this.shouldKill(target) && this.shouldPreferCurrentTarget(target, best, location)) {
+                return target;
             }
 
         }
         return best;
+    }
+
+    /**
+     * Determines if the module should keep the current target
+     * instead of switching to the best target.
+     */
+    private boolean shouldPreferCurrentTarget(Npc target, Npc best, Locatable location) {
+        // Stick to target if enabled and it has higher or equal priority than best
+        if (this.gateHandler.isStickToTarget() && target.getInfo().getPriority() <= best.getInfo().getPriority()) {
+            return true;
+        }
+
+        // Prefer current target if it's attacking us and best is not significantly
+        // better in terms of distance to location
+        if (this.hero.isAttacking(target)) {
+            double offset = this.gateHandler.getPreferTargetDistanceOffset();
+            double targetDist = target.distanceTo(location);
+            double bestDist = best.distanceTo(location);
+            if (targetDist < (bestDist + offset)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
