@@ -130,6 +130,8 @@ public final class MimesisMutinyGate extends GateHandler {
                 this.module.lootModule.moveToAnSafePosition();
                 return true;
             }
+            // Update stick to target
+            this.handleStickToTarget();
         } else {
             // If no freighter found, try to collect boxes if any
             return this.handleCollectBoxes(false);
@@ -168,6 +170,24 @@ public final class MimesisMutinyGate extends GateHandler {
     @Override
     public boolean shouldIgnoreBox(Box box) {
         return box == null || box.distanceTo(this.getMapCenterX(), this.getMapCenterY()) > MAX_RADIUS;
+    }
+
+    private boolean npcHasMirrorName(Npc npc) {
+        return this.nameEquals(npc, "-=[ Mirror M1m3si5 ]=-");
+    }
+
+    /**
+     * Determines whether to stick to the current target
+     */
+    private void handleStickToTarget() {
+        Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
+        if (this.npcHasMirrorName(target)) {
+            // If the target is the Mirror M1m3si5,
+            // only stick to it if it's the NPC with 3 million HP
+            this.stickToTarget = (target.getHealth().getMaxHp() == 3_000_000.0);
+        } else {
+            this.stickToTarget = true;
+        }
     }
 
     /**
