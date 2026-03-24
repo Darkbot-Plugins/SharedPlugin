@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
@@ -91,7 +92,8 @@ public final class CustomLootModule extends LootModule {
         if (this.npcs == null || this.gateHandler == null) {
             return Collections.emptyList();
         }
-        return this.gateHandler.getFilteredNpcs(this.npcs);
+        List<Npc> npcs = this.npcs.stream().map(Npc.class::cast).collect(Collectors.toList());
+        return this.gateHandler.getFilteredNpcs(npcs);
     }
 
     @Override

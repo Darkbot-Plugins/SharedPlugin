@@ -1,12 +1,10 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import com.github.weisj.jsvg.nodes.prototype.spec.NotImplemented;
 
@@ -139,8 +137,8 @@ public class GateHandler {
      * By default, it returns a list of the given NPCs without any filtering.
      * Override this method to implement custom filtering logic.
      */
-    public List<Npc> getFilteredNpcs(Collection<? extends Npc> npcs) {
-        return npcs.stream().collect(Collectors.toList());
+    public List<Npc> getFilteredNpcs(List<Npc> npcs) {
+        return npcs;
     }
 
     /**
