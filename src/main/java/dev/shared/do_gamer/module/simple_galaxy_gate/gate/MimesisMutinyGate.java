@@ -181,7 +181,7 @@ public final class MimesisMutinyGate extends GateHandler {
      */
     private void handleStickToTarget() {
         Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
-        if (this.npcHasMirrorName(target)) {
+        if (target != null && this.npcHasMirrorName(target)) {
             // If the target is the Mirror M1m3si5,
             // only stick to it if it's the NPC with 3 million HP
             this.stickToTarget = (target.getHealth().getMaxHp() == 3_000_000.0);
