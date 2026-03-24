@@ -238,8 +238,7 @@ public final class CustomLootModule extends LootModule {
                 return best;
             }
             // Check if need to prioritize current target
-            boolean isAttackingTarget = this.hero.isAttacking(target) && this.shouldKill(target);
-            if (isAttackingTarget) {
+            if (this.hero.isAttacking(target) && this.shouldKill(target)) {
                 double offset = this.gateHandler.getPreferTargetDistanceOffset();
                 if ((this.gateHandler.isStickToTarget()
                         && target.getInfo().getPriority() <= best.getInfo().getPriority())
