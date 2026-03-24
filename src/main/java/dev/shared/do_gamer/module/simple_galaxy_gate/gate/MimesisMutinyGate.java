@@ -47,7 +47,7 @@ public final class MimesisMutinyGate extends GateHandler {
         this.jumpToNextMap = false;
         this.safeRefreshInGate = false;
         this.skipFarTargets = false;
-        this.stickTotarget = true;
+        this.stickToTarget = true;
         this.fetchServerOffset = true;
         this.useGuardableNpcAsSearchLocation = true;
         this.toleranceDistance = TOLERANCE_DISTANCE;

@@ -38,7 +38,7 @@ public class GateHandler {
     protected boolean moveToCenter = true;
     protected boolean approachToCenter = true;
     protected boolean skipFarTargets = true;
-    protected boolean stickTotarget = false;
+    protected boolean stickToTarget = false;
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
     protected String statusDetails = null;
@@ -252,7 +252,7 @@ public class GateHandler {
      * Return true to stick to current target and ignore new ones (except priority)
      */
     public boolean isStickToTarget() {
-        return this.stickTotarget;
+        return this.stickToTarget;
     }
 
     /**

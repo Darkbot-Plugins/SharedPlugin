@@ -223,14 +223,9 @@ public final class CustomLootModule extends LootModule {
                 .min(this.getNpcComparator(location))
                 .orElse(null);
 
-        // If no valid targets, keep current target
-        if (best == null) {
-            return target;
-        }
-
         if (target != null && target.isValid()) {
             // If current target is still the best, keep it
-            if (Objects.equals(target, best)) {
+            if (best == null || Objects.equals(target, best)) {
                 return target;
             }
             // Skip far target if needed and return best
