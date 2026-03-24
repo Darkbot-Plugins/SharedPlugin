@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Relay;
@@ -137,6 +138,7 @@ public class LowGate extends GateHandler {
         // Get the first available Relay
         Relay targetRelay = relays.iterator().next();
         this.statusDetails = String.format("Attacking Relay %d", this.getNumber(targetRelay));
+        StateStore.request(StateStore.State.ATTACKING);
 
         // Set target to Relay
         this.module.lootModule.getAttacker().setTarget(targetRelay);

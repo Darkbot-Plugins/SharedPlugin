@@ -19,7 +19,6 @@ public class HadesGate extends GateHandler {
         this.kamikazeOffsetX = KAMIKAZE_OFFSET_X;
         this.kamikazeOffsetY = KAMIKAZE_OFFSET_Y;
         this.moveToCenter = false;
-        this.approachToCenter = false;
         this.skipFarTargets = false;
     }
 
