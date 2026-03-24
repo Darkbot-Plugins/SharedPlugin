@@ -3,7 +3,6 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
@@ -142,7 +141,7 @@ public class LowGate extends GateHandler {
         this.module.lootModule.getAttacker().setTarget(targetRelay);
         this.module.hero.setLocalTarget(targetRelay);
         // Move closer to Relay
-        this.module.lootModule.moveToNpc();
+        this.module.lootModule.moveToAnSafePosition();
 
         // Relay attack not supported for Tanos API in bot versions older than 1.131.8
         if (this.module.botBrowserApi.getValue().equals(BrowserApi.TANOS_API)
@@ -159,10 +158,16 @@ public class LowGate extends GateHandler {
      */
     private List<Relay> getRelays() {
         return this.module.entities.getNpcs().stream()
-                .filter(Objects::nonNull)
                 .filter(n -> this.nameEquals(n, null) && RELAY_IDS.contains(n.getId()))
                 .map(Relay.class::cast)
                 .sorted(Comparator.comparingInt(r -> RELAY_IDS.indexOf(r.getId())))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Npc> getFilteredNpcs(Collection<? extends Npc> npcs) {
+        return npcs.stream()
+                .filter(n -> !this.nameEquals(n, null)) // Exclude NPCs without a name (e.g., Relays)
                 .collect(Collectors.toList());
     }
 

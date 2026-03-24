@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
@@ -86,17 +85,13 @@ public final class CustomLootModule extends LootModule {
     }
 
     /**
-     * Gets the list of valid NPCs
+     * Gets the list of valid NPCs based on gate handler filtering logic.
      */
     public List<Npc> getNpcs() {
-        if (this.npcs == null) {
+        if (this.npcs == null || this.gateHandler == null) {
             return Collections.emptyList();
         }
-        return this.npcs.stream()
-                .filter(Objects::nonNull)
-                .filter(n -> !n.getEntityInfo().getUsername().isEmpty())
-                .map(Npc.class::cast)
-                .collect(Collectors.toList());
+        return this.gateHandler.getFilteredNpcs(this.npcs);
     }
 
     @Override
@@ -226,17 +221,20 @@ public final class CustomLootModule extends LootModule {
                 .min(this.getNpcComparator(location))
                 .orElse(null);
 
-        // Return current target if it's the best one
+        // If no valid targets, keep current target
         if (best == null) {
             return target;
         }
 
-        if (target != null) {
+        if (target != null && target.isValid()) {
+            // If current target is still the best, keep it
+            if (Objects.equals(target, best)) {
+                return target;
+            }
             // Skip far target if needed and return best
             if (this.skipFarTarget(target)) {
                 return best;
             }
-
             // Prefer current target if close enough to avoid unnecessary switching
             double offset = this.gateHandler.getPreferTargetDistanceOffset();
             boolean isAttackingTarget = this.hero.isAttacking(target) && this.shouldKill(target);
@@ -296,14 +294,14 @@ public final class CustomLootModule extends LootModule {
             radius = npc.getInfo().getRadius();
         }
 
-        double distance = npc.distanceTo(this.hero) + 100.0; // Add small buffer to distance
         // Stay closer to low HP NPCs if no others are nearby
-        if (npc.getHealth().hpPercent() <= 0.25
-                && !npc.getInfo().hasExtraFlag(NpcFlag.AGGRESSIVE_FOLLOW)
-                && this.getNpcs().stream()
-                        .filter(n -> !Objects.equals(n, npc))
-                        .noneMatch(n -> n.distanceTo(this.hero) < distance)) {
-            radius *= 0.75;
+        if (npc.getHealth().hpPercent() <= 0.25 && !npc.getInfo().hasExtraFlag(NpcFlag.AGGRESSIVE_FOLLOW)) {
+            double distance = npc.distanceTo(this.hero) + 100.0; // Add small buffer to distance
+            if (this.getNpcs().stream()
+                    .filter(n -> !Objects.equals(n, npc))
+                    .noneMatch(n -> n.distanceTo(this.hero) < distance)) {
+                radius *= 0.75;
+            }
         }
 
         return this.attack.modifyRadius(radius);
@@ -398,13 +396,10 @@ public final class CustomLootModule extends LootModule {
         return base - sum;
     }
 
-    /**
-     * Proxy method to move to NPC while considering safe position.
-     */
-    public void moveToNpc() {
-        if (this.attack.hasTarget()) {
-            super.moveToAnSafePosition();
-        }
+    // Make moveToAnSafePosition accessible publicly
+    @Override
+    public void moveToAnSafePosition() {
+        super.moveToAnSafePosition();
     }
 
     // Make searchValidLocation accessible publicly

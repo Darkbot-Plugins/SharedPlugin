@@ -43,8 +43,6 @@ import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Galaxy Gate", description = "Automates Galaxy Gate building and farming.")
 public final class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
-    private static final Pattern GG_MAP_PATTERN = Pattern.compile("^[1-5]-[1-8]$");
-    private static final Pattern BL_MAP_PATTERN = Pattern.compile("^[1-3]BL$");
 
     public final HeroAPI hero;
     public final MovementAPI movement;
@@ -63,6 +61,7 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
 
     public final ConfigSetting<BrowserApi> botBrowserApi;
 
+    private static final Pattern GENERAL_MAP_PATTERN = Pattern.compile("^([1-5]-[1-8]|[1-3]BL)$");
     private final Timer stuckInGateTimer = Timer.get();
     private final Timer switchProfileTimer = Timer.get(120_000L);
     private boolean triedReloadOnStuck = false;
@@ -476,7 +475,7 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
         }
         String name = currentMap.getShortName();
         // Except general maps like 1-1, 2-3, 3BL, etc.
-        return !GG_MAP_PATTERN.matcher(name).matches() && !BL_MAP_PATTERN.matcher(name).matches();
+        return !GENERAL_MAP_PATTERN.matcher(name).matches();
     }
 
     /**
