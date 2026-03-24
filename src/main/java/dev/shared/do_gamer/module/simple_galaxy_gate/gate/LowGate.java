@@ -53,7 +53,7 @@ public class LowGate extends GateHandler {
 
     @Override
     public boolean prepareTickModule() {
-        this.statusDetails = null;
+        this.reset();
         return false;
     }
 
@@ -205,6 +205,12 @@ public class LowGate extends GateHandler {
 
         // In other cases, kill all NPCs
         return KillDecision.YES;
+    }
+
+    @Override
+    public void reset() {
+        this.bossState = BossState.NONE;
+        this.statusDetails = null;
     }
 
 }
