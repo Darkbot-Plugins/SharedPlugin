@@ -5,7 +5,9 @@ import eu.darkbot.api.game.other.Lockable;
 
 public class AnyGate extends GateHandler {
     public AnyGate() {
-        // No specific initialization needed
+        this.approachToCenter = false;
+        this.skipFarTargets = false;
+        this.safeRefreshInGate = false;
     }
 
     @Override

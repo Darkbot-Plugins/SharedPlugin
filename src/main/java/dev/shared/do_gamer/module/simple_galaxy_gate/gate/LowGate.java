@@ -8,8 +8,8 @@ import java.util.stream.Collectors;
 
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.config.types.NpcFlag;
-import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Relay;
 import eu.darkbot.api.game.other.Lockable;
@@ -33,7 +33,11 @@ public class LowGate extends GateHandler {
     private BossState bossState = BossState.NONE;
 
     public LowGate() {
-        // No specific initialization needed
+        this.defaultNpcParam = new NpcParam(540.0, NpcFlag.AGGRESSIVE_FOLLOW);
+        this.jumpToNextMap = false;
+        this.moveToCenter = false;
+        this.approachToCenter = false;
+        this.skipFarTargets = false;
     }
 
     @Override
@@ -45,6 +49,12 @@ public class LowGate extends GateHandler {
     @Override
     public boolean attackTickModule() {
         return this.processAttackTick();
+    }
+
+    @Override
+    public boolean prepareTickModule() {
+        this.reset();
+        return false;
     }
 
     /**
@@ -64,13 +74,13 @@ public class LowGate extends GateHandler {
 
         switch (this.bossState) {
             case ARRIVED:
-                this.module.setStatusDetails("Boss has arrived!");
+                this.statusDetails = "Boss has arrived!";
                 break;
             case DESTROYED:
-                this.module.setStatusDetails("Boss destroyed!");
+                this.statusDetails = "Boss destroyed!";
                 break;
             default:
-                this.module.setStatusDetails("");
+                this.statusDetails = "";
                 break;
         }
         return false;
@@ -127,13 +137,14 @@ public class LowGate extends GateHandler {
     private void handleRelayAttack(Collection<? extends Relay> relays) {
         // Get the first available Relay
         Relay targetRelay = relays.iterator().next();
-        this.module.setStatusDetails(String.format("Attacking Relay %d", this.getNumber(targetRelay)));
+        this.statusDetails = String.format("Attacking Relay %d", this.getNumber(targetRelay));
+        StateStore.request(StateStore.State.ATTACKING);
 
         // Set target to Relay
         this.module.lootModule.getAttacker().setTarget(targetRelay);
         this.module.hero.setLocalTarget(targetRelay);
         // Move closer to Relay
-        this.module.lootModule.moveToNpc();
+        this.module.lootModule.moveToAnSafePosition();
 
         // Relay attack not supported for Tanos API in bot versions older than 1.131.8
         if (this.module.botBrowserApi.getValue().equals(BrowserApi.TANOS_API)
@@ -157,6 +168,13 @@ public class LowGate extends GateHandler {
                 .collect(Collectors.toList());
     }
 
+    @Override
+    public List<Npc> getFilteredNpcs(List<Npc> npcs) {
+        return npcs.stream()
+                .filter(n -> !this.nameEquals(n, null)) // Exclude NPCs without a name (e.g., Relays)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Gets the Relay number based on its ID.
      */
@@ -165,33 +183,12 @@ public class LowGate extends GateHandler {
     }
 
     @Override
-    public boolean isJumpToNextMap() {
-        return false;
-    }
-
-    @Override
-    public boolean isApproachToCenter() {
-        return false;
-    }
-
-    @Override
     public double getTargetRadius(Lockable target) {
         // Static radius for Relays
         if (target instanceof Relay) {
             return 400.0;
         }
-
-        NpcInfo npcInfo = ((Npc) target).getInfo();
-        // If the NPC is already marked to be killed, return the stored radius
-        if (npcInfo.getShouldKill()) {
-            return npcInfo.getRadius();
-        }
-        // Otherwise, populate the radius.
-        double radius = 540.0;
-        npcInfo.setShouldKill(true);
-        npcInfo.setRadius(radius);
-        npcInfo.setExtraFlag(NpcFlag.AGGRESSIVE_FOLLOW, true);
-        return radius;
+        return super.getTargetRadius(target);
     }
 
     @Override
@@ -211,7 +208,9 @@ public class LowGate extends GateHandler {
     }
 
     @Override
-    public boolean isSkipFarTargets() {
-        return false;
+    public void reset() {
+        this.bossState = BossState.NONE;
+        this.statusDetails = null;
     }
+
 }

@@ -153,37 +153,6 @@ public class SimpleGalaxyGateConfig {
     }
 
     /**
-     * Speed options for the builder
-     */
-    public enum BuilderSpeed {
-        VERY_FAST(1, "Very Fast"),
-        FAST(2, "Fast"),
-        NORMAL(3, "Normal"),
-        SLOW(4, "Slow"),
-        VERY_SLOW(5, "Very Slow");
-
-        public final int multiplier;
-        public final String label;
-
-        BuilderSpeed(int multiplier, String label) {
-            this.multiplier = multiplier;
-            this.label = label;
-        }
-    }
-
-    public static class BuilderSpeedDropdown implements Dropdown.Options<BuilderSpeed> {
-        @Override
-        public List<BuilderSpeed> options() {
-            return List.of(BuilderSpeed.values());
-        }
-
-        @Override
-        public String getText(BuilderSpeed option) {
-            return option.label;
-        }
-    }
-
-    /**
      * Settings for the Galaxy Gate Builder
      */
     public static class BuilderSettings {
@@ -229,6 +198,10 @@ public class SimpleGalaxyGateConfig {
         @Dropdown(options = BuilderSpeedDropdown.class)
         public BuilderSpeed speed = BuilderSpeed.NORMAL;
 
+        @Option("do_gamer.simple_galaxy_gate.builder.build_until")
+        @Dropdown(options = BuildUntilDropdown.class)
+        public BuildUntil buildUntil = BuildUntil.PLACED;
+
         @Option("do_gamer.simple_galaxy_gate.builder.switch_ship")
         public SwitchShipSettings switchShip = new SwitchShipSettings();
 
@@ -245,6 +218,63 @@ public class SimpleGalaxyGateConfig {
             @Override
             public String getText(Integer option) {
                 return option == null ? "" : "x" + option;
+            }
+        }
+
+        /**
+         * Build until options for the builder
+         */
+        public enum BuildUntil {
+            PLACED("1 of 2"),
+            COMPLETED("2 of 2");
+
+            public final String label;
+
+            BuildUntil(String label) {
+                this.label = label;
+            }
+        }
+
+        public static class BuildUntilDropdown implements Dropdown.Options<BuildUntil> {
+            @Override
+            public List<BuildUntil> options() {
+                return List.of(BuildUntil.values());
+            }
+
+            @Override
+            public String getText(BuildUntil option) {
+                return option.label;
+            }
+        }
+
+        /**
+         * Speed options for the builder
+         */
+        public enum BuilderSpeed {
+            VERY_FAST(1, "Very Fast"),
+            FAST(2, "Fast"),
+            NORMAL(3, "Normal"),
+            SLOW(4, "Slow"),
+            VERY_SLOW(5, "Very Slow");
+
+            public final int multiplier;
+            public final String label;
+
+            BuilderSpeed(int multiplier, String label) {
+                this.multiplier = multiplier;
+                this.label = label;
+            }
+        }
+
+        public static class BuilderSpeedDropdown implements Dropdown.Options<BuilderSpeed> {
+            @Override
+            public List<BuilderSpeed> options() {
+                return List.of(BuilderSpeed.values());
+            }
+
+            @Override
+            public String getText(BuilderSpeed option) {
+                return option.label;
             }
         }
 

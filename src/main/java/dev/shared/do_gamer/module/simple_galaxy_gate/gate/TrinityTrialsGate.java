@@ -2,21 +2,18 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
+import java.util.regex.Pattern;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
-import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
-import eu.darkbot.api.config.types.NpcInfo;
-import eu.darkbot.api.game.entities.Npc;
-import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
-import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.util.Timer;
 
 public class TrinityTrialsGate extends GateHandler {
     private static final String DIFFICULTY_SELECT_GUI = "trinitytrials_difficultyselect";
     private static final int PORTAL_TYPE_ID = 304; // Portal type ID for Trinity Trials
+    private static final Pattern MAP_PATTERN = Pattern.compile("^[1-5]-[1-4]$");
     private Timer clickTimer = Timer.get(10_000L);
     private int clickCount = 0;
     private boolean trySelectSecondGate = false;
@@ -25,30 +22,11 @@ public class TrinityTrialsGate extends GateHandler {
     private boolean setFlags = false;
 
     public TrinityTrialsGate() {
-        this.npcRadiusMap.put("..::{ Pyrospire }::..", 620.0);
-        this.npcRadiusMap.put("..::{ Vinespire }::..", 620.0);
-    }
-
-    @Override
-    public boolean isJumpToNextMap() {
-        return false;
-    }
-
-    @Override
-    public double getTargetRadius(Lockable target) {
-        double radius = super.getTargetRadius(target);
-        if (radius > 0) {
-            return radius; // Return stored radius if already processed
-        }
-
-        Npc npc = (Npc) target;
-        NpcInfo npcInfo = npc.getInfo();
-
-        // Populate the radius.
-        radius = 580.0;
-        npcInfo.setShouldKill(true);
-        npcInfo.setRadius(radius);
-        return radius;
+        this.npcMap.put("..::{ Pyrospire }::..", new NpcParam(620.0));
+        this.npcMap.put("..::{ Vinespire }::..", new NpcParam(620.0));
+        this.defaultNpcParam = new NpcParam(580.0);
+        this.jumpToNextMap = false;
+        this.fetchServerOffset = true;
     }
 
     @Override
@@ -71,7 +49,7 @@ public class TrinityTrialsGate extends GateHandler {
             return false; // Allow default logic to take over
         }
         // Handle GUI interaction or traveling to gate
-        if (this.handleGui() || this.handleTravelToGate()) {
+        if (this.handleGui() || this.handleTravelToGate(PORTAL_TYPE_ID)) {
             StateStore.request(StateStore.State.TRAVELING_TO_GATE);
             return true;
         }
@@ -99,19 +77,10 @@ public class TrinityTrialsGate extends GateHandler {
 
     @Override
     public GameMap getMapForTravel() {
-        if (!Maps.isGateOnCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
-            int faction = this.getHeroFractionIdx();
-            if (faction == -1) {
-                return null; // Unknown faction, cannot determine map
-            }
-
-            String currentMapName = this.module.starSystem.getCurrentMap().getShortName();
-            // Check if current map x-4 (include PvP and Pirates)
-            boolean toLowMap = currentMapName.matches("^[1-5]-[1-4]$");
-            String map = String.format("%d-%d", faction, toLowMap ? 1 : 8);
-            return this.module.starSystem.getOrCreateMap(map);
-        }
-        return null; // Already on gate map, no need to travel
+        String currentMapName = this.module.starSystem.getCurrentMap().getShortName();
+        // Check if current map x-4 (include PvP and Pirates)
+        boolean toLowMap = MAP_PATTERN.matcher(currentMapName).matches();
+        return this.getFactionMapForTravel(toLowMap ? 1 : 8); // travel to map x-1 or x-8
     }
 
     /**
@@ -159,24 +128,6 @@ public class TrinityTrialsGate extends GateHandler {
                 // Wait for select timer to finish before allowing next action
                 return this.selectTimer.isActive();
         }
-    }
-
-    /**
-     * Handles traveling to the gate portal if it's visible
-     */
-    private boolean handleTravelToGate() {
-        // Check for portal and travel if found
-        Portal portal = this.getPortalByTypeId(PORTAL_TYPE_ID);
-        if (portal != null) {
-            this.module.jumper.travelAndJump(portal);
-            return true;
-        }
-        return false; // Not traveling, allow default logic
-    }
-
-    @Override
-    public boolean fetchServerOffset() {
-        return true;
     }
 
     private boolean isSunday() {

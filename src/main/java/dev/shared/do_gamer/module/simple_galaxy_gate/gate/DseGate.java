@@ -1,16 +1,11 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
-import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import eu.darkbot.api.config.types.BoxInfo;
 import eu.darkbot.api.config.types.NpcFlag;
-import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
-import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.other.GameMap;
-import eu.darkbot.api.game.other.Locatable;
-import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.util.Timer;
 
 public class DseGate extends GateHandler {
@@ -23,17 +18,23 @@ public class DseGate extends GateHandler {
     private Timer jumpTimer = Timer.get(20_000L);
 
     public DseGate() {
-        this.npcRadiusMap.put("-=[ Emperor Sibelon ]=-", 630.0);
-        this.npcRadiusMap.put("-=[ Convict ]=-", 590.0);
-        this.npcRadiusMap.put("<=< Boss Kucurbium >=>", 630.0);
-        this.npcRadiusMap.put("..::{ Boss Lordakium }::...", 590.0);
-        this.npcRadiusMap.put("\\\\ Find VII //", 580.0);
+        this.npcMap.put("-={ Gygerim Overlord }=-", new NpcParam(590.0, -95));
+        this.npcMap.put("-=[ Convict ]=-", new NpcParam(590.0, -95));
+        this.npcMap.put("<=< Boss Kucurbium >=>", new NpcParam(630.0, -95));
+        this.npcMap.put("..::{ Boss Lordakium }::...", new NpcParam(590.0, -95));
+        this.npcMap.put("-=[ Emperor Sibelon ]=-", new NpcParam(630.0));
+        this.npcMap.put("-=[ Transport Ship ]=-", new NpcParam(400.0, 100, NpcFlag.NO_CIRCLE, NpcFlag.PASSIVE));
+        this.npcMap.put("-=[ Command Center ]=-", new NpcParam(400.0, 100, NpcFlag.NO_CIRCLE, NpcFlag.PASSIVE));
+        this.defaultNpcParam = new NpcParam(580.0);
+        this.repairRadius = REPAIR_RADIUS;
+        this.approachToCenter = false;
+        this.useGuardableNpcAsSearchLocation = true;
     }
 
     @Override
     public boolean prepareTickModule() {
         // Handle GUI interaction or traveling to gate
-        if (this.handleTravelToGate()) {
+        if (this.handleTravelToGate(PORTAL_TYPE_ID)) {
             StateStore.request(StateStore.State.TRAVELING_TO_GATE);
             this.reset();
             return true;
@@ -42,83 +43,42 @@ public class DseGate extends GateHandler {
     }
 
     @Override
-    public boolean isApproachToCenter() {
-        return false;
-    }
-
-    @Override
     public void reset() {
         this.jumpTimer.disarm();
+        this.resetCachedGuardableNpc();
     }
 
     @Override
     public GameMap getMapForTravel() {
-        if (!Maps.isGateOnCurrentMap(this.module.getConfig().gateId, this.module.starSystem)) {
-            int faction = this.getHeroFractionIdx();
-            if (faction == -1) {
-                return null; // Unknown faction, cannot determine map
-            }
-
-            String map = String.format("%d-1", faction);
-            return this.module.starSystem.getOrCreateMap(map);
-        }
-        return null; // Already on gate map, no need to travel
+        return this.getFactionMapForTravel(1); // travel to map x-1
     }
 
     /**
-     * Handles traveling to the gate portal if it's visible
+     * Checks if the given NPC has the name of the guardable NPCs
+     * (Transport Ship or Command Center).
      */
-    private boolean handleTravelToGate() {
-        // Check for portal and travel if found
-        Portal portal = this.getPortalByTypeId(PORTAL_TYPE_ID);
-        if (portal != null) {
-            this.module.jumper.travelAndJump(portal);
-            return true;
-        }
-        return false; // Not traveling, allow default logic
-    }
-
-    private boolean isGuardableNpc(Npc npc) {
+    @Override
+    protected boolean npcHasGuardableName(Npc npc) {
         return this.nameEquals(npc, "-=[ Transport Ship ]=-")
                 || this.nameEquals(npc, "-=[ Command Center ]=-");
     }
 
-    private boolean isMissileStorm(Npc npc) {
+    /**
+     * Checks if the given NPC has the name of the Missile-Storm,
+     * which should be prioritized for killing.
+     */
+    private boolean npcHasMissileStormName(Npc npc) {
         return this.nameEquals(npc, "-=[ Missile-Storm ]=-");
-    }
-
-    @Override
-    public double getTargetRadius(Lockable target) {
-        double radius = super.getTargetRadius(target);
-        if (radius > 0) {
-            return radius; // Return stored radius if already processed
-        }
-
-        Npc npc = (Npc) target;
-        NpcInfo npcInfo = npc.getInfo();
-
-        // Populate the radius.
-        radius = 560.0;
-        if (this.isGuardableNpc(npc)) {
-            radius = 400.0;
-            npcInfo.setPriority(100);
-            npcInfo.setExtraFlag(NpcFlag.NO_CIRCLE, true);
-            npcInfo.setExtraFlag(NpcFlag.PASSIVE, true);
-        }
-        npcInfo.setShouldKill(true);
-        npcInfo.setRadius(radius);
-        return radius;
-    }
-
-    @Override
-    public double getRepairRadius() {
-        return REPAIR_RADIUS;
     }
 
     @Override
     public KillDecision shouldKillNpc(Npc npc) {
         // Kill first the Missile-Storm if present
-        if (this.hasNearbyMissileStorm(npc, this.module.hero)) {
+        if (this.hasNearbyMissileStorm(npc)) {
+            return KillDecision.NO;
+        }
+        // Never kill the guardable NPCs
+        if (this.isGuardableNpc(npc)) {
             return KillDecision.NO;
         }
         return super.shouldKillNpc(npc);
@@ -127,52 +87,20 @@ public class DseGate extends GateHandler {
     /**
      * Checks if there is a nearby Missile-Storm NPC.
      */
-    private boolean hasNearbyMissileStorm(Npc npc, Locatable location) {
-        return !this.isMissileStorm(npc) && this.module.lootModule.getNpcs().stream()
-                .anyMatch(n -> this.isMissileStorm(n) && n.distanceTo(location) < 2_000.0);
-    }
-
-    /**
-     * Finds the guardable NPC if present
-     */
-    private Npc getGuardableNpc() {
-        return this.module.lootModule.getNpcs().stream()
-                .filter(this::isGuardableNpc)
-                .findFirst()
-                .orElse(null);
-    }
-
-    /**
-     * Finds the closest NPC to the given location
-     */
-    private Npc findClosestNpcTo(Locatable location) {
-        return this.module.lootModule.getNpcs().stream()
-                .filter(n -> !this.isGuardableNpc(n) && !this.hasNearbyMissileStorm(n, location))
-                .min(this.module.lootModule.getNpcComparator(location))
-                .orElse(null);
+    private boolean hasNearbyMissileStorm(Npc npc) {
+        return !this.npcHasMissileStormName(npc) && this.module.lootModule.getNpcs().stream()
+                .anyMatch(n -> this.npcHasMissileStormName(n) && n.distanceTo(this.getNpcSearchLocation()) < 2_000.0);
     }
 
     @Override
     public boolean attackTickModule() {
+        // If we have a guardable NPC and it's the only one left, follow it.
         Npc guardableNpc = this.getGuardableNpc();
-        if (guardableNpc != null) {
-            // If only one NPC is present, follow the guardable NPC
-            if (this.module.lootModule.getNpcs().size() == 1) {
-                StateStore.request(StateStore.State.GUARDING);
-                this.module.lootModule.getAttacker().setTarget(guardableNpc);
-                this.module.lootModule.moveToNpc();
-                return true;
-            }
-
-            // Attack the closest NPC to the guardable one
-            Npc closestNpc = this.findClosestNpcTo(guardableNpc);
-            if (closestNpc != null) {
-                StateStore.request(StateStore.State.ATTACKING);
-                this.module.lootModule.getAttacker().setTarget(closestNpc);
-                this.module.lootModule.moveToNpc();
-                this.module.lootModule.getAttacker().tryLockAndAttack();
-                return true;
-            }
+        if (guardableNpc != null && this.module.lootModule.getNpcs().size() == 1) {
+            StateStore.request(StateStore.State.GUARDING);
+            this.module.lootModule.getAttacker().setTarget(guardableNpc);
+            this.module.lootModule.moveToAnSafePosition();
+            return true;
         }
         return false; // Allow default logic to take over
     }

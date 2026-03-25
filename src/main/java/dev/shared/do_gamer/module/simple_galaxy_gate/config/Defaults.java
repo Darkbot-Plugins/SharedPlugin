@@ -8,7 +8,8 @@ public final class Defaults {
     public static final double MAP_CENTER_X = 10_000.0;
     public static final double MAP_CENTER_Y = 6_000.0;
     public static final double TOLERANCE_DISTANCE = 4_000.0; // Distance from center to kill NPCs safely
-    public static final double KAMIKAZE_SHIFT_X = -1_500.0;
-    public static final double KAMIKAZE_SHIFT_Y = -1_000.0;
+    public static final double KAMIKAZE_OFFSET_X = -1_500.0;
+    public static final double KAMIKAZE_OFFSET_Y = -1_000.0;
     public static final double REPAIR_RADIUS = 2_000.0;
+    public static final double FAR_TARGET_DISTANCE = 2_000.0;
 }

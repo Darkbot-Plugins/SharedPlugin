@@ -8,27 +8,27 @@ import eu.darkbot.api.config.types.NpcFlag;
 public class ZetaGate extends GateHandler {
 
     public ZetaGate() {
-        this.npcRadiusMap.put("( UberKristallin )", 590.0);
-        this.npcRadiusMap.put("( UberLordakia )", 550.0);
-        this.npcRadiusMap.put("( UberSaimon )", 580.0);
-        this.npcRadiusMap.put("( UberSibelonit )", 590.0);
-        this.npcRadiusMap.put("( UberStreuneR )", 590.0);
-        this.npcRadiusMap.put("( UberStreuner )", 560.0);
-        this.npcRadiusMap.put("-=[ Devourer ]=-", 590.0);
-        this.npcRadiusMap.put("-=[ Infernal ]=-", 550.0);
-        this.npcRadiusMap.put("-=[ Kristallin ]=-", 590.0);
-        this.npcRadiusMap.put("-=[ Lordakia ]=-", 550.0);
-        this.npcRadiusMap.put("-=[ Melter ]=-", 590.0);
-        this.npcRadiusMap.put("-=[ Saimon ]=-", 550.0);
-        this.npcRadiusMap.put("-=[ Scorcher ]=-", 590.0);
-        this.npcRadiusMap.put("-=[ Sibelonit ]=-", 590.0);
-        this.npcRadiusMap.put("-=[ StreuneR ]=-", 590.0);
-        this.npcRadiusMap.put("-=[ Streuner ]=-", 550.0);
-        this.npcRadiusMap.put("..::{ Boss Kristallin }::..", 590.0);
-        this.npcRadiusMap.put("..::{ Boss Lordakia }::..", 550.0);
-        this.npcRadiusMap.put("..::{ Boss Saimon }::..", 550.0);
-        this.npcRadiusMap.put("..::{ Boss Sibelonit }::..", 590.0);
-        this.npcRadiusMap.put("..::{ Boss Streuner }::..", 550.0);
+        this.npcMap.put("( UberKristallin )", new NpcParam(590.0));
+        this.npcMap.put("( UberLordakia )", new NpcParam(550.0));
+        this.npcMap.put("( UberSaimon )", new NpcParam(580.0));
+        this.npcMap.put("( UberSibelonit )", new NpcParam(590.0));
+        this.npcMap.put("( UberStreuneR )", new NpcParam(590.0));
+        this.npcMap.put("( UberStreuner )", new NpcParam(560.0));
+        this.npcMap.put("-=[ Devourer ]=-", new NpcParam(590.0));
+        this.npcMap.put("-=[ Infernal ]=-", new NpcParam(550.0));
+        this.npcMap.put("-=[ Kristallin ]=-", new NpcParam(590.0));
+        this.npcMap.put("-=[ Lordakia ]=-", new NpcParam(550.0));
+        this.npcMap.put("-=[ Melter ]=-", new NpcParam(590.0));
+        this.npcMap.put("-=[ Saimon ]=-", new NpcParam(550.0));
+        this.npcMap.put("-=[ Scorcher ]=-", new NpcParam(590.0));
+        this.npcMap.put("-=[ Sibelonit ]=-", new NpcParam(590.0));
+        this.npcMap.put("-=[ StreuneR ]=-", new NpcParam(590.0));
+        this.npcMap.put("-=[ Streuner ]=-", new NpcParam(550.0));
+        this.npcMap.put("..::{ Boss Kristallin }::..", new NpcParam(590.0));
+        this.npcMap.put("..::{ Boss Lordakia }::..", new NpcParam(550.0));
+        this.npcMap.put("..::{ Boss Saimon }::..", new NpcParam(550.0));
+        this.npcMap.put("..::{ Boss Sibelonit }::..", new NpcParam(590.0));
+        this.npcMap.put("..::{ Boss Streuner }::..", new NpcParam(550.0));
     }
 
     @Override

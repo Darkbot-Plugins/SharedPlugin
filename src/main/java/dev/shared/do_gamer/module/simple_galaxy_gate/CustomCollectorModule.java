@@ -12,7 +12,7 @@ import eu.darkbot.api.game.entities.FakeEntity;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.shared.modules.CollectorModule;
 
-public class CustomCollectorModule extends CollectorModule {
+public final class CustomCollectorModule extends CollectorModule {
 
     private static final long FAKE_BOX_TIMEOUT_MS = 300_000L;
 
@@ -27,7 +27,6 @@ public class CustomCollectorModule extends CollectorModule {
     @Override
     public void onTickModule() {
         if (this.isNotWaiting()) {
-            this.hero.setRoamMode();
             this.pet.setEnabled(true);
             this.findBox();
             this.tryCollectNearestBox();

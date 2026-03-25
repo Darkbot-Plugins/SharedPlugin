@@ -5,6 +5,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import com.github.manolo8.darkbot.backpage.BackpageManager;
 import com.github.manolo8.darkbot.backpage.entities.ShipInfo;
@@ -26,15 +27,11 @@ import eu.darkbot.api.extensions.Module;
 import eu.darkbot.api.extensions.Task;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Station;
-import eu.darkbot.api.game.galaxy.GalaxyGate;
-import eu.darkbot.api.game.galaxy.GalaxyInfo;
-import eu.darkbot.api.game.galaxy.GateInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.ExtensionsAPI;
-import eu.darkbot.api.managers.GalaxySpinnerAPI;
 import eu.darkbot.api.managers.GameScreenAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
@@ -45,7 +42,8 @@ import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Galaxy Gate", description = "Automates Galaxy Gate building and farming.")
-public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
+public final class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
+
     public final HeroAPI hero;
     public final MovementAPI movement;
     private final PetAPI pet;
@@ -55,39 +53,25 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     public final StarSystemAPI starSystem;
     public final MapTraveler traveler;
     public final PortalJumper jumper;
-    private final GalaxySpinnerAPI galaxyManager;
     public final BotAPI bot;
-    private final BackpageManager backpageManager;
+    public final BackpageManager backpageManager;
     private final ExtensionsAPI extensionsAPI;
     private final ConfigAPI configApi;
     public final GameScreenAPI gameScreenApi;
 
     public final ConfigSetting<BrowserApi> botBrowserApi;
 
-    private final Timer placeTimer = Timer.get(3_000L);
-    private final Timer spinTimer = Timer.get();
-    private final Timer moveShipTimer = Timer.get(60_000L);
+    private static final Pattern GENERAL_MAP_PATTERN = Pattern.compile("^([1-5]-[1-8]|[1-3]BL)$");
     private final Timer stuckInGateTimer = Timer.get();
-    private final Timer switchProfileTimer = Timer.get(30_000L);
+    private final Timer switchProfileTimer = Timer.get(120_000L);
     private boolean triedReloadOnStuck = false;
     private boolean shouldMoveToRefinery = false;
-    private boolean shipOffsetPositive = true;
-    private int galaxyInfoFailCount = 0;
-    private int shipSwitchAttempts = 0;
-    private boolean isSwitchingShip = false;
     private boolean updateHangarData = true;
     private boolean gateVisited = false;
     private boolean fetchServerOffset = false;
+    private boolean safeRefreshInGate = false;
 
-    private enum buildState {
-        NONE, // not building
-        PREPARE, // switch to build ship
-        BUILD, // building progress
-        END, // switch back to gate ship
-        EXIT // finished building
-    }
-
-    private buildState currentBuildState = buildState.NONE;
+    private final GateBuilder gateBuilder;
 
     private SimpleGalaxyGateConfig config;
     private String statusDetails = null;
@@ -102,16 +86,15 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.traveler = api.requireInstance(MapTraveler.class);
         this.jumper = api.requireInstance(PortalJumper.class);
-        this.galaxyManager = api.requireAPI(GalaxySpinnerAPI.class);
         this.bot = api.requireAPI(BotAPI.class);
         this.backpageManager = api.requireInstance(BackpageManager.class);
         this.extensionsAPI = api.requireAPI(ExtensionsAPI.class);
         this.configApi = api.requireAPI(ConfigAPI.class);
         this.gameScreenApi = api.requireAPI(GameScreenAPI.class);
 
-        this.lootModule.setCollector(this.collectorModule); // Link collector module
-
         this.botBrowserApi = this.configApi.requireConfig("bot_settings.api_config.browser_api");
+        this.lootModule.setCollector(this.collectorModule); // Link collector module
+        this.gateBuilder = new GateBuilder(this, api);
     }
 
     @Override
@@ -128,38 +111,24 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
     @Override
     public String getStatus() {
-        StringBuilder status = new StringBuilder(
-                String.format("Simple Galaxy Gate | %s", StateStore.current().message));
+        String state = StateStore.current().message;
+        StringBuilder status = new StringBuilder(String.format("Simple GG | %s", state));
 
         switch (StateStore.current()) {
             case TRAVELING_TO_GATE:
-                if (this.isSwitchingShip) {
-                    status.append(": Switching Ship");
-                } else {
-                    status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
-                }
+                this.appendTravelingStatus(status);
                 break;
             case BUILDING:
-                if (this.isSwitchingShip) {
-                    status.append(": Switching Ship");
-                } else if (this.currentBuildState == buildState.BUILD) {
-                    status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
-                } else {
-                    status.append(": Waiting...");
-                }
+                this.appendBuildingStatus(status);
                 break;
             case ATTACKING:
             case COLLECTING:
             case KAMIKAZE:
             case GUARDING:
-                status.append(String.format(" | NPC: %d", this.lootModule.getNpcs().size()));
-                if (this.statusDetails != null) {
-                    if (!this.statusDetails.isEmpty()) {
-                        status.append(String.format(" | %s", this.statusDetails));
-                    }
-                } else {
-                    status.append(String.format(" | Box: %d", this.collectorModule.count()));
-                }
+                this.appendNpcStatus(status);
+                break;
+            case WAITING:
+                this.appendWaitingStatus(status);
                 break;
             default:
                 break;
@@ -167,6 +136,41 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
         this.appendDebugInfo(status);
         return status.toString();
+    }
+
+    private void appendTravelingStatus(StringBuilder status) {
+        if (this.gateBuilder.isSwitchingShip()) {
+            status.append(": Switching Ship");
+        } else {
+            status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
+        }
+    }
+
+    private void appendBuildingStatus(StringBuilder status) {
+        if (this.gateBuilder.isSwitchingShip()) {
+            status.append(": Switching Ship");
+        } else if (this.gateBuilder.isBuildState()) {
+            status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
+        } else {
+            status.append(": Waiting...");
+        }
+    }
+
+    private void appendNpcStatus(StringBuilder status) {
+        status.append(String.format(" | NPC: %d", this.lootModule.getNpcs().size()));
+        if (this.statusDetails != null) {
+            if (!this.statusDetails.isEmpty()) {
+                status.append(String.format(" | %s", this.statusDetails));
+            }
+        } else {
+            status.append(String.format(" | Box: %d", this.collectorModule.count()));
+        }
+    }
+
+    private void appendWaitingStatus(StringBuilder status) {
+        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
+            status.append(String.format(": %s", this.statusDetails));
+        }
     }
 
     /**
@@ -183,7 +187,9 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                 } else if (this.entities.getPortals().stream().anyMatch(Portal::isJumping)) {
                     heroAction = "Jumping";
                 }
-                status.append(String.format("%nPosition: X: %.0f, Y: %.0f | %s", heroX, heroY, heroAction));
+                int heroMapId = this.hero.getMap().getId();
+                status.append(String.format("%nPosition: X: %.0f, Y: %.0f | %s | MapID: %d",
+                        heroX, heroY, heroAction, heroMapId));
                 break;
             case PORTALS:
                 for (Portal p : this.entities.getPortals()) {
@@ -202,15 +208,15 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
     @Override
     public boolean canRefresh() {
-        return (!this.isMapGG() && StateStore.current() == StateStore.State.WAITING)
-                || (this.lootModule.getNpcs().isEmpty()
-                        && this.canJump()
-                        && this.hero.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY()) <= Maps
-                                .getToleranceDistance());
+        return (!this.isMapGG() && StateStore.current() == StateStore.State.WAITING) || this.safeRefreshInGate;
     }
 
     public void setShouldMoveToRefinery(boolean shouldMoveToRefinery) {
         this.shouldMoveToRefinery = shouldMoveToRefinery;
+    }
+
+    public void setUpdateHangarData(boolean updateHangarData) {
+        this.updateHangarData = updateHangarData;
     }
 
     public void setGateVisited(boolean gateVisited) {
@@ -218,11 +224,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     }
 
     public SimpleGalaxyGateConfig getConfig() {
-        return config;
-    }
-
-    public void setStatusDetails(String statusDetails) {
-        this.statusDetails = statusDetails;
+        return this.config;
     }
 
     @Override
@@ -238,7 +240,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
         if (this.updateHangarData) {
             this.backpageManager.legacyHangarManager.updateHangarData(500);
-            this.updateHangarData = false;
+            this.setUpdateHangarData(false);
         }
 
         // Populate ship dropdown if empty
@@ -246,7 +248,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         if (ships.isEmpty()) {
             List<ShipInfo> shipInfos = this.backpageManager.legacyHangarManager.getShipInfos();
             if (shipInfos.isEmpty()) {
-                this.updateHangarData = true;
+                this.setUpdateHangarData(true);
                 return;
             }
             shipInfos.stream()
@@ -257,13 +259,26 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     }
 
     @Override
-    public void onTickStopped() {
-        this.currentBuildState = buildState.NONE; // Reset build state
-        this.isSwitchingShip = false; // Reset switching flag
-        this.shipSwitchAttempts = 0; // Reset fail count after refresh
+    public String getStoppedStatus() {
+        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
+            String state = StateStore.State.WAITING.message;
+            return String.format("Simple GG (paused) | %s: %s", state, this.statusDetails);
+        }
+        return null;
+    }
 
-        // Reset gate handler state if needed
-        this.createGateHandler().reset();
+    @Override
+    public void onTickStopped() {
+        if (this.config == null) {
+            return;
+        }
+        this.stuckInGateTimer.disarm();
+        this.switchProfileTimer.disarm();
+        this.gateBuilder.reset();
+        // Call stopped tick logic for the current gate
+        GateHandler gateHandler = this.createGateHandler();
+        gateHandler.stoppedTickModule();
+        gateHandler.reset();
     }
 
     @Override
@@ -277,24 +292,20 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         // Apply previous state requests
         StateStore.apply();
 
-        if (StateStore.current() != StateStore.State.WAITING_IN_GATE && this.stuckInGateTimer.isArmed()) {
-            this.stuckInGateTimer.disarm(); // Reset stuck timer when not waiting in gate
-            this.triedReloadOnStuck = false;
-        }
-
         // Create gate handler instance
         GateHandler gateHandler = this.createGateHandler();
 
         // Handle Galaxy Gate map
         if (this.isMapGG()) {
-            this.shouldMoveToRefinery = true;
-            this.currentBuildState = buildState.NONE; // Reset build state
-            this.gateVisited = true; // Mark gate as visited
+            this.setShouldMoveToRefinery(true);
+            this.gateBuilder.reset(); // Reset build state
+            this.setGateVisited(true); // Mark gate as visited
             this.handleGalaxyGate(gateHandler);
             return;
         }
 
-        this.statusDetails = null; // Clear status details
+        // Reset stuck timer when not in gate map
+        this.deactivateStuckInGateTimer();
 
         // Handle profile switching
         if (this.switchProfile()) {
@@ -318,10 +329,9 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         }
 
         // Handle building the Galaxy Gate
-        if (this.handleGateBuilding()) {
+        if (this.gateBuilder.tick()) {
             StateStore.request(StateStore.State.BUILDING);
             this.moveToRefinery(); // Stay near refinery while building
-            this.moveShipPeriodically(); // Move ship to avoid AFK
             this.pet.setEnabled(false); // Disable pet while building
             return;
         }
@@ -333,11 +343,14 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
      * Create a GateHandler instance.
      */
     private GateHandler createGateHandler() {
-        GateHandler handler = Maps.getGateHandler(this.config.gateId, this);
+        Integer gateId = this.config != null ? this.config.gateId : null;
+        GateHandler handler = Maps.getGateHandler(gateId, this);
         Maps.setMapCenterX(handler.getMapCenterX());
         Maps.setMapCenterY(handler.getMapCenterY());
         Maps.setToleranceDistance(handler.getToleranceDistance());
-        this.fetchServerOffset = handler.fetchServerOffset();
+        this.fetchServerOffset = handler.isFetchServerOffset();
+        this.safeRefreshInGate = handler.canSafeRefreshInGate();
+        this.statusDetails = handler.getStatusDetails();
         return handler;
     }
 
@@ -346,6 +359,11 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
      */
     private void handleGalaxyGate(GateHandler gateHandler) {
         this.lootModule.setGateHandler(gateHandler); // Link gate handler to loot module
+
+        // Reset stuck timer when not waiting in gate
+        if (StateStore.current() != StateStore.State.WAITING_IN_GATE) {
+            this.deactivateStuckInGateTimer();
+        }
 
         // Attack NPCs
         if (!this.lootModule.getNpcs().isEmpty()) {
@@ -356,6 +374,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
         // No NPCs, collect boxes or jump to next map
         StateStore.request(StateStore.State.COLLECTING);
+        this.hero.setRunMode();
         if (gateHandler.collectTickModule()) {
             return; // Gate handler took action, skip default collection
         }
@@ -363,41 +382,33 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
 
         if (gateHandler.isJumpToNextMap() && this.canJump()) {
             // Jump to next map
-            StateStore.request(StateStore.State.JUMPING);
             this.jumpToNextMap();
             return;
         }
         if (this.collectorModule.hasNoBox()) {
             // No boxes to collect, move to center
             StateStore.request(StateStore.State.WAITING_IN_GATE);
-            this.moveToCenter(gateHandler);
+            if (!this.handleStuckInGate() && gateHandler.isMoveToCenter()) {
+                this.moveToCenter();
+            }
         }
     }
 
     /**
      * Moves the hero to the center of the map.
-     * If stuck in the gate for too long, move to radiation
      */
-    private void moveToCenter(GateHandler gateHandler) {
-        double shift = 500.0;
-        double x = (Maps.getMapCenterX() - shift);
-        double y = (Maps.getMapCenterY() - shift);
-
-        if (!this.handleStuckInGate(x) && gateHandler.isMoveToCenter()) {
-            this.moveToPosition(x, y);
-        }
-
-        if (StateStore.current() == StateStore.State.WAITING_IN_GATE && !this.stuckInGateTimer.isArmed()) {
-            this.activateStuckInGateTimer(); // Activate stuck timer
-        }
+    private void moveToCenter() {
+        double offset = 500.0;
+        double x = (Maps.getMapCenterX() - offset);
+        double y = (Maps.getMapCenterY() - offset);
+        this.moveToPosition(x, y, 250.0);
     }
 
     /**
      * Moves the hero to the specified position
      * if far enough and movement is possible.
      */
-    public void moveToPosition(double x, double y) {
-        double gap = 500.0;
+    public void moveToPosition(double x, double y, double gap) {
         if (this.hero.distanceTo(x, y) > gap && this.movement.canMove(x, y)) {
             this.movement.moveTo(x, y);
         }
@@ -406,8 +417,15 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Handles the logic for when the hero is stuck in the gate.
      */
-    private boolean handleStuckInGate(double x) {
-        if (this.stuckInGateTimer.isArmed() && this.stuckInGateTimer.isInactive()) {
+    private boolean handleStuckInGate() {
+        if (!this.stuckInGateTimer.isArmed()) {
+            if (StateStore.current() == StateStore.State.WAITING_IN_GATE && !this.movement.isMoving()) {
+                this.activateStuckInGateTimer(); // Activate stuck timer
+            }
+            return false;
+        }
+
+        if (this.stuckInGateTimer.isInactive()) {
             if (!this.triedReloadOnStuck) {
                 // First try to reload the game
                 this.triedReloadOnStuck = true;
@@ -417,10 +435,16 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                 return true;
             } else {
                 // Else move to radiation to destroy the ship
-                this.moveToPosition(x, 0);
+                this.moveToPosition(Maps.getMapCenterX(), 0, 50.0);
                 return true;
             }
         }
+
+        // If hero is moving, reset the stuck timer
+        if (this.movement.isMoving()) {
+            this.deactivateStuckInGateTimer();
+        }
+
         return false;
     }
 
@@ -434,16 +458,24 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     }
 
     /**
+     * Deactivates the stuck in gate timer and resets related flag.
+     */
+    private void deactivateStuckInGateTimer() {
+        this.stuckInGateTimer.disarm();
+        this.triedReloadOnStuck = false;
+    }
+
+    /**
      * Determines if the current map is a Galaxy Gate map (not a general map).
      */
-    private boolean isMapGG() {
+    public boolean isMapGG() {
         GameMap currentMap = this.starSystem.getCurrentMap();
         if (currentMap == null) {
             return false;
         }
         String name = currentMap.getShortName();
         // Except general maps like 1-1, 2-3, 3BL, etc.
-        return !name.matches("^[1-5]-[1-8]$") && !name.matches("^[1-3]BL$");
+        return !GENERAL_MAP_PATTERN.matcher(name).matches();
     }
 
     /**
@@ -464,7 +496,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
         // If we have a target map to travel to, do it.
         if (map != null) {
             // Switch ship if needed
-            if (!this.switchToGateShip()) {
+            if (!this.gateBuilder.switchToGateShip()) {
                 this.travelToGalaxyGate(map);
             }
             return true;
@@ -481,7 +513,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return null;
         }
 
-        if (!Maps.isGateOnCurrentMap(gateId, this.starSystem)) {
+        if (!Maps.isGateAccessibleFromCurrentMap(gateId, this.starSystem)) {
             // Not on current map, return configured gate ID or Alpha gate ID for ABG
             int map = gateId == 0 ? Maps.ABG_IDS.get(0) : gateId;
             return this.starSystem.getOrCreateMap(map);
@@ -525,7 +557,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     /**
      * Move to the refinery station if not already nearby.
      */
-    private boolean moveToRefinery() {
+    public boolean moveToRefinery() {
         Station refinery = this.entities.getStations().stream()
                 .filter(Station.Refinery.class::isInstance)
                 .findFirst()
@@ -538,7 +570,7 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
                 return true;
             }
             // Reached, set flag to false
-            this.shouldMoveToRefinery = false;
+            this.setShouldMoveToRefinery(false);
         }
         return false;
     }
@@ -551,184 +583,12 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     }
 
     /**
-     * Handles building the configured gate when not inside a GG map.
-     */
-    private boolean handleGateBuilding() {
-        if (!this.config.builder.enabled) {
-            return false; // Building disabled
-        }
-
-        StateStore.State current = StateStore.current();
-        if (current != StateStore.State.WAITING && current != StateStore.State.BUILDING) {
-            return false; // Not in a state to build
-        }
-
-        GalaxyGate targetGate = Maps.resolveBuildGate(this.config.gateId);
-        if (targetGate == null) {
-            return false; // Not buildable gate
-        }
-
-        if (this.spinTimer.isActive()) {
-            return true; // In timeout period, skip building
-        }
-
-        if (this.currentBuildState == buildState.EXIT) {
-            return false; // Finished building
-        }
-
-        if (this.currentBuildState == buildState.END) {
-            this.handleShipSwitch(this.config.builder.switchShip.shipForGate, buildState.EXIT);
-            return true; // Switch back to gate ship after building
-        }
-
-        if (this.currentBuildState == buildState.NONE) {
-            // Wait before start build (also helps to prevent the builder stuck)
-            this.spinTimer.activate(5_000L);
-            this.currentBuildState = buildState.PREPARE;
-            return true;
-        }
-
-        Boolean updated = this.galaxyManager.updateGalaxyInfos(500);
-        if (Boolean.FALSE.equals(updated)) {
-            this.spinTimer.activate(1_000L);
-            this.handleGalaxyInfoFetchFailure();
-            return true;
-        }
-
-        GalaxyInfo info = this.galaxyManager.getGalaxyInfo();
-        if (info == null) {
-            this.spinTimer.activate(1_000L);
-            this.handleGalaxyInfoFetchFailure();
-            return true;
-        }
-
-        this.galaxyInfoFailCount = 0; // Reset fail count on success
-
-        if (this.isGateBuiltOnMap(info, targetGate)) {
-            this.currentBuildState = buildState.END;
-            return true; // Gate already built
-        }
-
-        GalaxyGate gateToPlace = this.findGateToPlace(info, targetGate);
-        if (gateToPlace != null) {
-            this.handleGatePlacement(gateToPlace);
-            return true; // Placing gate
-        }
-
-        if (!this.canBuildGG(info)) {
-            this.currentBuildState = buildState.END;
-            System.out.println("Cannot build gate due to insufficient resources, skipping building.");
-            return true; // Cannot build gate due to resources
-        }
-
-        if (this.currentBuildState == buildState.PREPARE) {
-            this.handleShipSwitch(this.config.builder.switchShip.shipForBuild, buildState.BUILD);
-            return true; // Switch to build ship before starting to build
-        }
-
-        double progress = this.getProgress(info, targetGate);
-        SpinOption spinOption = this.getSpinOption(progress);
-        long waitTime = (spinOption.waitMs * this.config.builder.speed.multiplier);
-        this.spinTimer.activate(waitTime);
-        this.galaxyManager.spinGate(targetGate, this.config.builder.useMultiAt, spinOption.spins, 10);
-        return true;
-    }
-
-    /**
-     * Handles switching to the gate ship if needed.
-     */
-    private boolean switchToGateShip() {
-        if (this.config.builder.enabled
-                && this.config.builder.switchShip.enabled
-                && this.currentBuildState != buildState.EXIT) {
-            if (this.spinTimer.isInactive()) {
-                this.handleShipSwitch(this.config.builder.switchShip.shipForGate, buildState.EXIT);
-            }
-            return true; // In switching process, wait for next tick
-        }
-        return false; // No switching needed
-    }
-
-    /**
-     * Handles ship switching for build states.
-     */
-    private void handleShipSwitch(String hangarId, buildState successState) {
-        if (this.switchToShip(hangarId)) {
-            this.currentBuildState = successState;
-            this.spinTimer.activate(5_000L); // Wait after switching
-            this.shipSwitchAttempts = 0; // Reset fail count on successful switch
-            return;
-        }
-        this.spinTimer.activate(3_000L); // Wait before retrying
-        this.handleShipSwitchFailure();
-    }
-
-    /**
-     * Handles ship switch failure by incrementing attempt count
-     * and refreshing the game if too many failures occur.
-     */
-    private void handleShipSwitchFailure() {
-        this.shipSwitchAttempts++;
-        if (this.shipSwitchAttempts > 10) {
-            System.out.println("Failed to switch ship for 10 consecutive attempts, refreshing the game...");
-            this.bot.handleRefresh();
-            this.shipSwitchAttempts = 0; // Reset fail count after refresh
-            this.isSwitchingShip = false; // Reset switching flag after refresh
-            this.currentBuildState = buildState.PREPARE; // Retry switching to build ship after refresh
-        }
-    }
-
-    /**
-     * Switches to the specified ship if ship switching is enabled and ship is
-     * different.
-     */
-    private boolean switchToShip(String hangarId) {
-        if (!this.config.builder.switchShip.enabled) {
-            return true; // No switching needed
-        }
-
-        if (SimpleGalaxyGateConfig.BuilderSettings.ShipDropdown.getShips().isEmpty() || hangarId == null) {
-            return false; // No ship available to switch, wait for next update
-        }
-
-        String currentHangar = this.backpageManager.legacyHangarManager.getActiveHangar();
-        if (hangarId.equals(currentHangar)) {
-            if (this.isActiveShip(hangarId)) {
-                this.isSwitchingShip = false;
-                return true; // Already in the correct hangar and ship active
-            }
-            if (this.isSwitchingShip) {
-                return false; // Hangar matches but ship not active yet; still switching
-            }
-        } else if (this.isSwitchingShip) {
-            this.updateHangarData = true;
-            return false; // Still switching to some other hangar
-        }
-
-        // Attempt to switch hangar
-        this.isSwitchingShip = true;
-        this.backpageManager.legacyHangarManager.changeHangar(hangarId);
-        return false; // Switching in progress
-    }
-
-    /**
-     * Checks if the specified hangar ID corresponds to the active ship.
-     */
-    private boolean isActiveShip(String hangarId) {
-        String shipName = SimpleGalaxyGateConfig.BuilderSettings.ShipDropdown.getShipName(hangarId);
-        if (shipName == null) {
-            return false;
-        }
-        String shipType = this.hero.getShipType();
-        return shipType.equals(shipName) || shipType.startsWith(shipName + "_design");
-    }
-
-    /**
      * Handles the logic to jump to the next map.
      */
-    private void jumpToNextMap() {
+    public void jumpToNextMap() {
         Portal portal = this.findNextPortal();
         if (portal != null) {
+            StateStore.request(StateStore.State.JUMPING);
             this.jumper.travelAndJump(portal);
         }
     }
@@ -760,174 +620,6 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
     }
 
     /**
-     * Checks if the target gate (or ABG gates) is already built on the map.
-     */
-    private boolean isGateBuiltOnMap(GalaxyInfo info, GalaxyGate targetGate) {
-        if (targetGate == GalaxyGate.ALPHA) {
-            GalaxyGate[] abgGates = { GalaxyGate.ALPHA, GalaxyGate.BETA, GalaxyGate.GAMMA };
-            int onMapCount = 0;
-            for (GalaxyGate gate : abgGates) {
-                GateInfo gi = info.getGateInfo(gate);
-                if (gi.isOnMap()) {
-                    // If any ABG gates are also completed(ready for place), consider it's built.
-                    if (gi.isCompleted()) {
-                        return true;
-                    }
-                    onMapCount++;
-                }
-            }
-            return onMapCount == 3;
-        }
-        return info.getGateInfo(targetGate).isOnMap();
-    }
-
-    /**
-     * Checks if a gate is completed but not yet placed on the map.
-     */
-    private boolean isGateReadyToPlace(GalaxyInfo info, GalaxyGate gate) {
-        return info.getGateInfo(gate).isCompleted() && !info.getGateInfo(gate).isOnMap();
-    }
-
-    /**
-     * Finds which gate to place based on the configuration.
-     */
-    private GalaxyGate findGateToPlace(GalaxyInfo info, GalaxyGate targetGate) {
-        // ABG gates
-        if (targetGate == GalaxyGate.ALPHA) {
-            for (GalaxyGate gate : new GalaxyGate[] { GalaxyGate.ALPHA, GalaxyGate.BETA, GalaxyGate.GAMMA }) {
-                if (this.isGateReadyToPlace(info, gate)) {
-                    return gate;
-                }
-            }
-            return null;
-        }
-
-        // Regular gate
-        if (this.isGateReadyToPlace(info, targetGate)) {
-            return targetGate;
-        }
-        return null;
-    }
-
-    /**
-     * Handles the placement of the Galaxy Gate.
-     */
-    private void handleGatePlacement(GalaxyGate gate) {
-        if (this.placeTimer.isInactive()) {
-            if (this.galaxyManager.placeGate(gate, 100)) {
-                this.spinTimer.activate(5_000L);
-            } else {
-                this.placeTimer.activate(1_000L);
-            }
-        }
-    }
-
-    /**
-     * Checks if can build the Galaxy Gate based on energy and uridium.
-     */
-    private boolean canBuildGG(GalaxyInfo info) {
-        SimpleGalaxyGateConfig.BuilderSettings builder = this.config.builder;
-        if (info.getFreeEnergy() > 0) {
-            return true;
-        }
-        if (builder.useExtraEnergyOnly) {
-            return false;
-        }
-        if (info.getEnergyCost() > builder.maxSpinCost) {
-            return false;
-        }
-        return info.getUridium() >= builder.minUriBalance;
-    }
-
-    /**
-     * Gets the overall progress ratio for the target gate(s).
-     */
-    private double getProgress(GalaxyInfo info, GalaxyGate targetGate) {
-        if (targetGate == GalaxyGate.ALPHA) {
-            // For ABG, take the minimum progress among Alpha, Beta, Gamma
-            double alphaProgress = this.getGateProgress(info, GalaxyGate.ALPHA);
-            double betaProgress = this.getGateProgress(info, GalaxyGate.BETA);
-            double gammaProgress = this.getGateProgress(info, GalaxyGate.GAMMA);
-            return Math.min(alphaProgress, Math.min(betaProgress, gammaProgress));
-        } else {
-            // For other gates, just the target gate's progress
-            return this.getGateProgress(info, targetGate);
-        }
-    }
-
-    /**
-     * Gets the progress ratio for a specific gate.
-     */
-    private double getGateProgress(GalaxyInfo info, GalaxyGate gate) {
-        return (double) info.getGateInfo(gate).getCurrentParts()
-                / (double) info.getGateInfo(gate).getTotalParts();
-    }
-
-    /**
-     * Determines the spin option (number of spins and wait time)
-     * based on the current progress of the gate building.
-     */
-    private SpinOption getSpinOption(double progress) {
-        // Define spin options in descending order of threshold
-        List<SpinOption> options = List.of(
-                new SpinOption(this.config.builder.spins100, 100,
-                        SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_100),
-                new SpinOption(this.config.builder.spins10, 10,
-                        SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_10),
-                new SpinOption(this.config.builder.spins5, 5,
-                        SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_5));
-
-        return options.stream()
-                .filter(option -> option.threshold > progress)
-                .findFirst()
-                .orElse(new SpinOption(0.0, 1, SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_1));
-    }
-
-    /**
-     * Helper class to hold spin options based on progress thresholds.
-     */
-    private static final class SpinOption {
-        private final double threshold;
-        private final int spins;
-        private final int waitMs;
-
-        private SpinOption(double threshold, int spins, int waitMs) {
-            this.threshold = threshold;
-            this.spins = spins;
-            this.waitMs = waitMs;
-        }
-    }
-
-    /**
-     * Moves the ship periodically to avoid AFK detection.
-     * Works only in BUILD state and when building is in progress.
-     */
-    private void moveShipPeriodically() {
-        StateStore.State state = StateStore.current();
-        if (state == StateStore.State.BUILDING
-                && this.currentBuildState == buildState.BUILD
-                && this.moveShipTimer.isInactive()) {
-            double targetX = this.shipOffsetPositive ? hero.getX() + 100 : hero.getX() - 100;
-            movement.moveTo(targetX, hero.getY());
-            this.shipOffsetPositive = !this.shipOffsetPositive;
-            this.moveShipTimer.activate();
-        }
-    }
-
-    /**
-     * Handles failures in fetching galaxy info by counting consecutive failures
-     * and refreshing the game if too many occur.
-     */
-    private void handleGalaxyInfoFetchFailure() {
-        this.galaxyInfoFailCount++;
-        if (this.galaxyInfoFailCount > 10) {
-            System.out.println("Failed to fetch galaxy info for 10 consecutive times, refreshing the game...");
-            this.bot.handleRefresh();
-            this.galaxyInfoFailCount = 0; // Reset fail count after refresh
-        }
-    }
-
-    /**
      * Resolves conflicts with other Galaxy Gate related features by disabling them.
      */
     private void conflictResolver() {
@@ -952,11 +644,23 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return false;
         }
 
-        if (this.config.other.onlyWhenNotAvailable && this.shouldDelayProfileSwitch()) {
-            return false;
+        if (this.config.other.onlyWhenNotAvailable) {
+            if (StateStore.current() != StateStore.State.WAITING) {
+                this.switchProfileTimer.disarm(); // Reset timer
+                return false;
+            }
+            // activate timer to make sure there is no more activity before switching
+            if (!this.switchProfileTimer.isArmed()) {
+                this.switchProfileTimer.activate();
+                return false; // Wait before checking availability again
+            }
+
+            if (this.switchProfileTimer.isActive()) {
+                return false; // Still waiting to check availability
+            }
         }
 
-        this.gateVisited = false; // Reset for next time
+        this.setGateVisited(false); // Reset for next time
         this.switchProfileTimer.disarm(); // Reset timer
         if (this.config.other.botProfile != null) {
             // Switch to the specified profile
@@ -964,24 +668,6 @@ public class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxy
             return true;
         }
         return false;
-    }
-
-    /**
-     * Returns true when switching should be delayed to ensure no more activity.
-     */
-    private boolean shouldDelayProfileSwitch() {
-        if (StateStore.current() != StateStore.State.WAITING) {
-            this.switchProfileTimer.disarm(); // Reset timer
-            return false;
-        }
-
-        // Activate timer to make sure there is no more activity before switching
-        if (!this.switchProfileTimer.isArmed()) {
-            this.switchProfileTimer.activate();
-            return true; // Wait before checking availability again
-        }
-
-        return this.switchProfileTimer.isActive(); // Still waiting to check availability
     }
 
 }

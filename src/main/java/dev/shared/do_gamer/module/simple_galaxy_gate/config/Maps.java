@@ -16,8 +16,10 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DseGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EpsilonGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.InvasionGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.KuiperGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.LowGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.MimesisMutinyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.TrinityTrialsGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.ZetaGate;
 import eu.darkbot.api.game.galaxy.GalaxyGate;
@@ -89,8 +91,10 @@ public final class Maps {
         list.add(new MapInfo(203, "Hades", GalaxyGate.HADES, StarSystemAPI.HOME_MAPS, HadesGate::new));
         list.add(new MapInfo(300, "Kuiper", GalaxyGate.KUIPER, StarSystemAPI.HOME_MAPS, KuiperGate::new));
         list.add(new MapInfo(200, "LoW", null, List.of("1-3", "2-3", "3-3"), LowGate::new));
+        list.add(new MapInfo(61, "Invasion", null, List.of("1-5", "2-5", "3-5"), InvasionGate::new));
         list.add(new MapInfo(499, "Trinity Trials", null, StarSystemAPI.BASE_MAPS, TrinityTrialsGate::new));
         list.add(new MapInfo(473, "DSE", null, StarSystemAPI.HOME_MAPS, DseGate::new));
+        list.add(new MapInfo(-3, "Mimesis Mutiny", null, StarSystemAPI.BASE_MAPS, MimesisMutinyGate::new));
 
         ggMaps = Collections.unmodifiableList(list);
     }
@@ -118,7 +122,7 @@ public final class Maps {
     /**
      * Checks if the specified gate ID is accessible from the current map.
      */
-    public static boolean isGateOnCurrentMap(Integer gateId, StarSystemAPI startSystem) {
+    public static boolean isGateAccessibleFromCurrentMap(Integer gateId, StarSystemAPI startSystem) {
         String currentMapName = startSystem.getCurrentMap().getShortName();
         if (gateId == null || currentMapName == null) {
             return false;
