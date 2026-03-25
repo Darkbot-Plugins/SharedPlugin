@@ -118,7 +118,10 @@ public final class MimesisMutinyGate extends GateHandler {
             // Update map center to cached freighter's position
             this.updateMapCenter(guardableNpc);
 
-            if (this.npcsCount() == 1) {
+            if (this.npcsCount() > 1) {
+                // Update stick to target
+                this.handleStickToTarget();
+            } else {
                 // Try to collect boxes while guarding
                 if (this.handleCollectBoxes(true)) {
                     return true;
@@ -129,8 +132,6 @@ public final class MimesisMutinyGate extends GateHandler {
                 this.module.lootModule.moveToAnSafePosition();
                 return true;
             }
-            // Update stick to target
-            this.handleStickToTarget();
         } else {
             // If no freighter found, try to collect boxes if any
             return this.handleCollectBoxes(false);
