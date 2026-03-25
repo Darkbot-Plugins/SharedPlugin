@@ -172,20 +172,17 @@ public final class MimesisMutinyGate extends GateHandler {
         return box == null || box.distanceTo(this.getMapCenterX(), this.getMapCenterY()) > MAX_RADIUS;
     }
 
-    private boolean npcHasMirrorName(Npc npc) {
-        return this.nameEquals(npc, "-=[ Mirror M1m3si5 ]=-");
-    }
-
     /**
      * Determines whether to stick to the current target
      */
     private void handleStickToTarget() {
         Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
-        if (target != null && this.npcHasMirrorName(target)) {
-            // If the target is the Mirror M1m3si5,
-            // only stick to it if it's the NPC with 3 million HP
-            this.stickToTarget = (target.getHealth().getMaxHp() == 3_000_000.0);
+        if (target != null) {
+            // Stick to target if has high HP, otherwise allow switching targets
+            this.stickToTarget = (target.getHealth().getMaxHp() > 2_400_000.0);
         } else {
+            // Default sticking to the target. For example, if an NPC uses a skill
+            // to reset the targeting, then need to keep the same target.
             this.stickToTarget = true;
         }
     }
