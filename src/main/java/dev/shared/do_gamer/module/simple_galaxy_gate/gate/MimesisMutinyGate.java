@@ -18,7 +18,6 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final double MAX_RADIUS = 1_800.0;
     private static final double REPAIR_RADIUS = 800.0;
     private static final double FAR_TARGET_DISTANCE = 1_200.0;
-    private static final double PREFER_TARGET_DISTANCE_OFFSET = 200.0;
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
     private static final long EXTENDED_WAIT_THRESHOLD_SECONDS = 3_600L; // 1 hour
@@ -53,7 +52,6 @@ public final class MimesisMutinyGate extends GateHandler {
         this.toleranceDistance = TOLERANCE_DISTANCE;
         this.repairRadius = REPAIR_RADIUS;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
-        this.preferTargetDistanceOffset = PREFER_TARGET_DISTANCE_OFFSET;
         // Probably will never use Kamikaze in this gate,
         // but set offset to 0 just in case
         this.kamikazeOffsetX = 0.0;

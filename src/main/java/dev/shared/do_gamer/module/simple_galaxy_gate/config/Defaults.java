@@ -12,5 +12,4 @@ public final class Defaults {
     public static final double KAMIKAZE_OFFSET_Y = -1_000.0;
     public static final double REPAIR_RADIUS = 2_000.0;
     public static final double FAR_TARGET_DISTANCE = 2_000.0;
-    public static final double PREFER_TARGET_DISTANCE_OFFSET = 100.0;
 }

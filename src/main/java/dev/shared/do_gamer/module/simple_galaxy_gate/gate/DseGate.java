@@ -15,7 +15,6 @@ public class DseGate extends GateHandler {
     private static final int PORTAL_TYPE_ID = 300; // Portal type ID for DSE
     private static final int COMMAND_HALL_MAP_ID = 473; // Map ID for Command Center
     private static final double REPAIR_RADIUS = 3_000.0;
-    private static final double PREFER_TARGET_DISTANCE_OFFSET = 200.0;
     private Timer jumpTimer = Timer.get(20_000L);
 
     public DseGate() {
@@ -28,7 +27,6 @@ public class DseGate extends GateHandler {
         this.npcMap.put("-=[ Command Center ]=-", new NpcParam(400.0, 100, NpcFlag.NO_CIRCLE, NpcFlag.PASSIVE));
         this.defaultNpcParam = new NpcParam(580.0);
         this.repairRadius = REPAIR_RADIUS;
-        this.preferTargetDistanceOffset = PREFER_TARGET_DISTANCE_OFFSET;
         this.approachToCenter = false;
         this.useGuardableNpcAsSearchLocation = true;
     }
