@@ -177,7 +177,8 @@ public final class MimesisMutinyGate extends GateHandler {
         Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
         if (target != null) {
             // Stick to target if has high HP, otherwise allow switching targets
-            this.stickToTarget = (target.getHealth().getMaxHp() > 2_400_000.0);
+            int maxHp = target.getHealth().getMaxHp();
+            this.stickToTarget = (maxHp > 2_400_000);
         } else {
             // Default sticking to the target. For example, if an NPC uses a skill
             // to reset the targeting, then need to keep the same target.
