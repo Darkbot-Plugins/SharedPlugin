@@ -416,10 +416,30 @@ public final class CustomLootModule extends LootModule {
         return base - sum;
     }
 
-    // Make moveToAnSafePosition accessible publicly
-    @Override
-    public void moveToAnSafePosition() {
-        super.moveToAnSafePosition();
+    /**
+     * Moves towards the target, using no-circling logic.
+     */
+    public void moveToTarget(Lockable target) {
+        if (target == null) {
+            return;
+        }
+        Location direction = this.movement.getDestination();
+        Location targetLoc = target.getLocationInfo().destinationInTime(400L);
+        double angle = targetLoc.angleTo(this.hero);
+        double radius = this.getRadius(target);
+        double minRad = Math.max(0.0, Math.min(radius - 200.0, radius * 0.5));
+
+        double dist = targetLoc.distanceTo(direction);
+        if (dist <= radius && dist >= minRad) {
+            return;
+        }
+
+        double distance = minRad + Math.random() * (radius - minRad - 10.0);
+        double angleDiff = Math.random() * 0.1 - 0.05;
+
+        direction = this.getBestDir(targetLoc, angle, angleDiff, distance);
+        this.searchValidLocation(direction, targetLoc, angle, distance);
+        this.movement.moveTo(direction);
     }
 
     // Make searchValidLocation accessible publicly

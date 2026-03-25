@@ -98,8 +98,7 @@ public class DseGate extends GateHandler {
         Npc guardableNpc = this.getGuardableNpc();
         if (guardableNpc != null && this.module.lootModule.getNpcs().size() == 1) {
             StateStore.request(StateStore.State.GUARDING);
-            this.module.lootModule.getAttacker().setTarget(guardableNpc);
-            this.module.lootModule.moveToAnSafePosition();
+            this.module.lootModule.moveToTarget(guardableNpc);
             return true;
         }
         return false; // Allow default logic to take over
