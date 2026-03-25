@@ -254,7 +254,7 @@ public final class CustomLootModule extends LootModule {
         // Prefer current target if it's attacking us and best is not significantly
         // better in terms of distance to location
         if (this.hero.isAttacking(target)) {
-            double offset = this.gateHandler.getPreferTargetDistanceOffset();
+            double offset = 100.0;
             double targetDist = target.distanceTo(location);
             double bestDist = best.distanceTo(location);
             if (targetDist < (bestDist + offset)) {

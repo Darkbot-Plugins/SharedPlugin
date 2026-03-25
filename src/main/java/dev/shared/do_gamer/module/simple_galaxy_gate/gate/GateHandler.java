@@ -33,7 +33,6 @@ public class GateHandler {
     protected double kamikazeOffsetY = Defaults.KAMIKAZE_OFFSET_Y;
     protected double repairRadius = Defaults.REPAIR_RADIUS;
     protected double farTargetDistance = Defaults.FAR_TARGET_DISTANCE;
-    protected double preferTargetDistanceOffset = Defaults.PREFER_TARGET_DISTANCE_OFFSET;
     protected boolean jumpToNextMap = true;
     protected boolean moveToCenter = true;
     protected boolean approachToCenter = true;
@@ -201,13 +200,6 @@ public class GateHandler {
      */
     public final double getFarTargetDistance() {
         return this.farTargetDistance;
-    }
-
-    /**
-     * Specific distance offset to prefer current target over new ones
-     */
-    public final double getPreferTargetDistanceOffset() {
-        return this.preferTargetDistanceOffset;
     }
 
     /**
