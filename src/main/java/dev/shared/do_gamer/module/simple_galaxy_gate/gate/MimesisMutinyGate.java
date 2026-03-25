@@ -24,6 +24,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private final Timer stopTimer = Timer.get();
     private boolean autoStart = false;
     private EscortProxy escort;
+    private int cachedTargetId = -1;
 
     public MimesisMutinyGate() {
         this.npcMap.put("-=[ Warhead ]=-", new NpcParam(560.0, -100));
@@ -176,12 +177,18 @@ public final class MimesisMutinyGate extends GateHandler {
     private void handleStickToTarget() {
         Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
         if (target != null) {
-            // Stick to target if has high HP, otherwise allow switching targets
-            this.stickToTarget = (target.getHealth().getMaxHp() > 2_400_000.0);
+            // Cache target ID to avoid unnecessary HP checks
+            if (target.getId() != this.cachedTargetId) {
+                // Stick to target if has high HP, otherwise allow switching targets
+                int maxHp = target.getHealth().getMaxHp();
+                this.stickToTarget = (maxHp > 2_400_000);
+                this.cachedTargetId = target.getId();
+            }
         } else {
             // Default sticking to the target. For example, if an NPC uses a skill
             // to reset the targeting, then need to keep the same target.
             this.stickToTarget = true;
+            this.cachedTargetId = -1;
         }
     }
 
@@ -299,5 +306,7 @@ public final class MimesisMutinyGate extends GateHandler {
         if (!this.autoStart) {
             this.statusDetails = null; // reset status details
         }
+        this.stickToTarget = true;
+        this.cachedTargetId = -1;
     }
 }
