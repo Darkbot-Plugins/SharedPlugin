@@ -434,7 +434,7 @@ public final class CustomLootModule extends LootModule {
             return;
         }
 
-        double distance = minRad + Math.random() * (radius - minRad - 10.0);
+        double distance = minRad + Math.random() * Math.max(radius - minRad - 10.0, 0.0);
         double angleDiff = Math.random() * 0.1 - 0.05;
 
         direction = this.getBestDir(targetLoc, angle, angleDiff, distance);
