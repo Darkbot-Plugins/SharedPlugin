@@ -1,6 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 import com.github.manolo8.darkbot.Main;
 import com.github.manolo8.darkbot.core.objects.facades.EscortProxy;
@@ -24,7 +25,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private final Timer stopTimer = Timer.get();
     private boolean autoStart = false;
     private EscortProxy escort;
-    private int cachedTargetId = -1;
+    private Npc cachedTarget;
 
     public MimesisMutinyGate() {
         this.npcMap.put("-=[ Warhead ]=-", new NpcParam(560.0, -100));
@@ -178,18 +179,18 @@ public final class MimesisMutinyGate extends GateHandler {
     private void handleStickToTarget() {
         Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
         if (target != null) {
-            // Cache target ID to avoid unnecessary HP checks
-            if (target.getId() != this.cachedTargetId) {
+            // Cache target to avoid unnecessary HP checks
+            if (this.cachedTarget == null || !Objects.equals(target, this.cachedTarget)) {
                 // Stick to target if has high HP, otherwise allow switching targets
                 int maxHp = target.getHealth().getMaxHp();
                 this.stickToTarget = (maxHp > 2_400_000);
-                this.cachedTargetId = target.getId();
+                this.cachedTarget = target;
             }
         } else {
             // Default sticking to the target. For example, if an NPC uses a skill
             // to reset the targeting, then need to keep the same target.
             this.stickToTarget = true;
-            this.cachedTargetId = -1;
+            this.cachedTarget = null;
         }
     }
 
@@ -308,6 +309,6 @@ public final class MimesisMutinyGate extends GateHandler {
             this.statusDetails = null; // reset status details
         }
         this.stickToTarget = true;
-        this.cachedTargetId = -1;
+        this.cachedTarget = null;
     }
 }
