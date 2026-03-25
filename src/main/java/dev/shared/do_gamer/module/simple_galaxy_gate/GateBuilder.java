@@ -258,22 +258,37 @@ public final class GateBuilder {
      * Checks if the target gate (or ABG gates) is already built on the map.
      */
     private boolean isGateBuiltOnMap(GalaxyInfo info, GalaxyGate targetGate) {
+        boolean needCompleted = (this.module
+                .getConfig().builder.buildUntil == SimpleGalaxyGateConfig.BuilderSettings.BuildUntil.COMPLETED);
+
         if (targetGate == GalaxyGate.ALPHA) {
-            GalaxyGate[] abgGates = { GalaxyGate.ALPHA, GalaxyGate.BETA, GalaxyGate.GAMMA };
-            int onMapCount = 0;
-            for (GalaxyGate gate : abgGates) {
-                GateInfo gi = info.getGateInfo(gate);
-                if (gi.isOnMap()) {
-                    // If any ABG gates are also completed(ready for place), consider it's built.
-                    if (gi.isCompleted()) {
-                        return true;
-                    }
-                    onMapCount++;
+            return this.isAbgBuilt(info, needCompleted);
+        }
+
+        GateInfo gi = info.getGateInfo(targetGate);
+        return gi.isOnMap() && (!needCompleted || gi.isCompleted());
+    }
+
+    /**
+     * Checks if all ABG gates satisfy the build-until condition.
+     */
+    private boolean isAbgBuilt(GalaxyInfo info, boolean needCompleted) {
+        GalaxyGate[] abgGates = { GalaxyGate.ALPHA, GalaxyGate.BETA, GalaxyGate.GAMMA };
+        int onMapCount = 0;
+        int completedCount = 0;
+        for (GalaxyGate gate : abgGates) {
+            GateInfo gi = info.getGateInfo(gate);
+            if (gi.isOnMap()) {
+                onMapCount++;
+                if (gi.isCompleted()) {
+                    completedCount++;
                 }
             }
-            return onMapCount == 3;
         }
-        return info.getGateInfo(targetGate).isOnMap();
+        if (needCompleted) {
+            return onMapCount == 3 && completedCount == 3;
+        }
+        return onMapCount == 3 || completedCount > 0;
     }
 
     /**
