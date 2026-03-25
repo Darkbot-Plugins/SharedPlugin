@@ -1,5 +1,6 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -39,6 +40,8 @@ public final class CustomLootModule extends LootModule {
     private GateHandler gateHandler;
     private boolean repair = false;
     private boolean approachingCenter = false;
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final KamikazeHandler kamikazeHandler;
 
@@ -434,8 +437,8 @@ public final class CustomLootModule extends LootModule {
             return;
         }
 
-        double distance = minRad + Math.random() * Math.max(radius - minRad - 10.0, 0.0);
-        double angleDiff = Math.random() * 0.1 - 0.05;
+        double distance = minRad + SECURE_RANDOM.nextDouble() * Math.max(radius - minRad - 10.0, 0.0);
+        double angleDiff = SECURE_RANDOM.nextDouble() * 0.1 - 0.05;
 
         direction = this.getBestDir(targetLoc, angle, angleDiff, distance);
         this.searchValidLocation(direction, targetLoc, angle, distance);
