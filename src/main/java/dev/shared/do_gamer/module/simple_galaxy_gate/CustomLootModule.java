@@ -236,8 +236,8 @@ public final class CustomLootModule extends LootModule {
             if (this.shouldKill(target) && this.shouldPreferCurrentTarget(target, best, location)) {
                 return target;
             }
-
         }
+
         return best;
     }
 
@@ -419,7 +419,7 @@ public final class CustomLootModule extends LootModule {
     /**
      * Moves towards the target, using no-circling logic.
      */
-    public void moveToTarget(Lockable target) {
+    public void approachTarget(Lockable target) {
         if (target == null) {
             return;
         }

@@ -129,7 +129,7 @@ public final class MimesisMutinyGate extends GateHandler {
                 }
                 // If no boxes to collect, just guard the freighter
                 StateStore.request(StateStore.State.GUARDING);
-                this.module.lootModule.moveToTarget(guardableNpc);
+                this.module.lootModule.approachTarget(guardableNpc);
                 return true;
             }
         } else {
