@@ -1,6 +1,5 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate;
 
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -40,8 +39,6 @@ public final class CustomLootModule extends LootModule {
     private GateHandler gateHandler;
     private boolean repair = false;
     private boolean approachingCenter = false;
-
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
     private final KamikazeHandler kamikazeHandler;
 
@@ -185,7 +182,7 @@ public final class CustomLootModule extends LootModule {
      * Skips far target logic when low HP and others are better targets.
      */
     private boolean skipFarTarget(Npc target) {
-        if (!this.gateHandler.isSkipFarTargets()) {
+        if (!this.gateHandler.isSkipFarTargets() || this.gateHandler.isStickToTarget(target)) {
             return false; // Skip disabled
         }
 
@@ -250,7 +247,8 @@ public final class CustomLootModule extends LootModule {
      */
     private boolean shouldPreferCurrentTarget(Npc target, Npc best, Locatable location) {
         // Stick to target if enabled and it has higher or equal priority than best
-        if (this.gateHandler.isStickToTarget() && target.getInfo().getPriority() <= best.getInfo().getPriority()) {
+        if (this.gateHandler.isStickToTarget(target)
+                && target.getInfo().getPriority() <= best.getInfo().getPriority()) {
             return true;
         }
 
@@ -420,29 +418,11 @@ public final class CustomLootModule extends LootModule {
     }
 
     /**
-     * Moves towards the target, using no-circling logic.
+     * Moves towards the target NPC while maintaining a safe distance.
      */
-    public void approachTarget(Lockable target) {
-        if (target == null) {
-            return;
-        }
-        Location direction = this.movement.getDestination();
-        Location targetLoc = target.getLocationInfo().destinationInTime(400L);
-        double angle = targetLoc.angleTo(this.hero);
-        double radius = this.getRadius(target);
-        double minRad = Math.max(0.0, Math.min(radius - 200.0, radius * 0.5));
-
-        double dist = targetLoc.distanceTo(direction);
-        if (dist <= radius && dist >= minRad) {
-            return;
-        }
-
-        double distance = minRad + SECURE_RANDOM.nextDouble() * Math.max(radius - minRad - 10.0, 0.0);
-        double angleDiff = SECURE_RANDOM.nextDouble() * 0.1 - 0.05;
-
-        direction = this.getBestDir(targetLoc, angle, angleDiff, distance);
-        this.searchValidLocation(direction, targetLoc, angle, distance);
-        this.movement.moveTo(direction);
+    public void moveToTarget(Lockable target) {
+        this.attack.setTarget(target);
+        this.moveToAnSafePosition();
     }
 
     // Make searchValidLocation accessible publicly

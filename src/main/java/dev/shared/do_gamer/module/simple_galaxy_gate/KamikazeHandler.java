@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import com.github.manolo8.darkbot.Main;
 import com.github.manolo8.darkbot.core.objects.facades.SettingsProxy;
 
-import dev.shared.do_gamer.module.simple_galaxy_gate.config.KamikazeNpcFlag;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
@@ -225,7 +225,7 @@ public final class KamikazeHandler {
      * Determines if the NPC is a valid target for the kamikaze strategy.
      */
     private boolean isValidTarget(Npc npc) {
-        return npc.getInfo().hasExtraFlag(KamikazeNpcFlag.KAMIKAZE) && this.recentlyAimingAtHero(npc)
+        return npc.getInfo().hasExtraFlag(GateNpcFlag.KAMIKAZE) && this.recentlyAimingAtHero(npc)
                 && (this.isPrimed() || npc.distanceTo(this.centerX(), this.centerY()) <= MAX_DISTANCE);
     }
 
