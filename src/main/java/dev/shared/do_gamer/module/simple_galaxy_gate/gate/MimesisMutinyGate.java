@@ -1,13 +1,13 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 
 import com.github.manolo8.darkbot.Main;
 import com.github.manolo8.darkbot.core.objects.facades.EscortProxy;
 import com.github.manolo8.darkbot.core.utils.ByteUtils;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Box;
@@ -25,19 +25,18 @@ public final class MimesisMutinyGate extends GateHandler {
     private final Timer stopTimer = Timer.get();
     private boolean autoStart = false;
     private EscortProxy escort;
-    private Npc cachedTarget;
 
     public MimesisMutinyGate() {
         this.npcMap.put("-=[ Warhead ]=-", new NpcParam(560.0, -100));
-        this.npcMap.put("-=[ Medic Mim3sis ]=-", new NpcParam(600.0, -90));
-        this.npcMap.put("-=[ Obscured M1mes1s ]=-", new NpcParam(650.0, -80));
-        this.npcMap.put("-=[ Mirror M1m3si5 ]=-", new NpcParam(650.0, -80));
-        this.npcMap.put("-=[ Marker Mim3si5 ]=-", new NpcParam(650.0, -80));
-        this.npcMap.put("-=[ Sniper M1mesi5 ]=-", new NpcParam(600.0, -70));
-        this.npcMap.put("-=[ Piercing Mimesi5 ]=-", new NpcParam(600.0, -60));
-        this.npcMap.put("-=[ Hounding Mim3si5 ]=-", new NpcParam(600.0, -50));
-        this.npcMap.put("-=[ Inspirit M1mesi5 ]=-", new NpcParam(600.0, -30));
-        this.npcMap.put("-=[ Hardy Mime5is ]=-", new NpcParam(600.0, -10));
+        this.npcMap.put("-=[ Medic Mim3sis ]=-", new NpcParam(600.0, -90, GateNpcFlag.STICK_TO_TARGET));
+        this.npcMap.put("-=[ Obscured M1mes1s ]=-", new NpcParam(650.0, -80, GateNpcFlag.STICK_TO_TARGET));
+        this.npcMap.put("-=[ Mirror M1m3si5 ]=-", new NpcParam(650.0, -80, GateNpcFlag.STICK_TO_TARGET));
+        this.npcMap.put("-=[ Marker Mim3si5 ]=-", new NpcParam(650.0, -80, GateNpcFlag.STICK_TO_TARGET));
+        this.npcMap.put("-=[ Sniper M1mesi5 ]=-", new NpcParam(600.0, -70, GateNpcFlag.STICK_TO_TARGET));
+        this.npcMap.put("-=[ Piercing Mimesi5 ]=-", new NpcParam(600.0, -60, GateNpcFlag.STICK_TO_TARGET));
+        this.npcMap.put("-=[ Hounding Mim3si5 ]=-", new NpcParam(600.0, -50, GateNpcFlag.STICK_TO_TARGET));
+        this.npcMap.put("-=[ Inspirit M1mesi5 ]=-", new NpcParam(600.0, -30, GateNpcFlag.STICK_TO_TARGET));
+        this.npcMap.put("-=[ Hardy Mime5is ]=-", new NpcParam(600.0, -10, GateNpcFlag.STICK_TO_TARGET));
         this.npcMap.put("-=[ Raider Mimes1s ]=-", new NpcParam(600.0, 0));
         this.npcMap.put("-=[ Assailant M1mesis ]=-", new NpcParam(600.0, 0));
         this.npcMap.put("-=[ Seeker Rocket ]=-", new NpcParam(560.0, 20));
@@ -48,7 +47,6 @@ public final class MimesisMutinyGate extends GateHandler {
         this.jumpToNextMap = false;
         this.safeRefreshInGate = false;
         this.skipFarTargets = false;
-        this.stickToTarget = true;
         this.fetchServerOffset = true;
         this.useGuardableNpcAsSearchLocation = true;
         this.toleranceDistance = TOLERANCE_DISTANCE;
@@ -119,10 +117,7 @@ public final class MimesisMutinyGate extends GateHandler {
             // Update map center to cached freighter's position
             this.updateMapCenter(guardableNpc);
 
-            if (this.npcsCount() > 1) {
-                // Update stick to target
-                this.handleStickToTarget();
-            } else {
+            if (this.npcsCount() == 1) {
                 // Try to collect boxes while guarding
                 if (this.handleCollectBoxes(true)) {
                     return true;
@@ -173,24 +168,19 @@ public final class MimesisMutinyGate extends GateHandler {
     }
 
     /**
-     * Determines whether to stick to the current target
+     * Checks if the NPC name is Mirror M1m3si5
      */
-    private void handleStickToTarget() {
-        Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
-        if (target != null) {
-            // Cache target to avoid unnecessary HP checks
-            if (this.cachedTarget == null || !Objects.equals(target, this.cachedTarget)) {
-                // Stick to target if has high HP, otherwise allow switching targets
-                int maxHp = target.getHealth().getMaxHp();
-                this.stickToTarget = (maxHp > 2_400_000);
-                this.cachedTarget = target;
-            }
-        } else {
-            // Default sticking to the target. For example, if an NPC uses a skill
-            // to reset the targeting, then need to keep the same target.
-            this.stickToTarget = true;
-            this.cachedTarget = null;
+    private boolean npcHasMirrorName(Npc npc) {
+        return this.nameEquals(npc, "-=[ Mirror M1m3si5 ]=-");
+    }
+
+    @Override
+    public boolean isStickToTarget(Npc target) {
+        boolean isStick = super.isStickToTarget(target);
+        if (isStick && this.npcHasMirrorName(target) && target.getHealth().getMaxHp() < 3_000_000) {
+            return false; // Don't stick to Mirror clones
         }
+        return isStick;
     }
 
     /**
@@ -307,7 +297,5 @@ public final class MimesisMutinyGate extends GateHandler {
         if (!this.autoStart) {
             this.statusDetails = null; // reset status details
         }
-        this.stickToTarget = true;
-        this.cachedTarget = null;
     }
 }

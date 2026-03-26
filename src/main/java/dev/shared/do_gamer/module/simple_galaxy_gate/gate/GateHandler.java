@@ -10,8 +10,8 @@ import com.github.weisj.jsvg.nodes.prototype.spec.NotImplemented;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
-import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
@@ -37,7 +37,6 @@ public class GateHandler {
     protected boolean moveToCenter = true;
     protected boolean approachToCenter = true;
     protected boolean skipFarTargets = true;
-    protected boolean stickToTarget = false;
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
     protected String statusDetails = null;
@@ -55,9 +54,9 @@ public class GateHandler {
     protected static final class NpcParam {
         public final double radius;
         public final int priority;
-        public final List<NpcFlag> flags;
+        public final List<Enum<?>> flags;
 
-        public NpcParam(double radius, int priority, NpcFlag... flags) {
+        public NpcParam(double radius, int priority, Enum<?>... flags) {
             this.radius = radius;
             this.priority = priority;
             this.flags = List.of(flags);
@@ -67,7 +66,7 @@ public class GateHandler {
             this(radius, 0);
         }
 
-        public NpcParam(double radius, NpcFlag... flags) {
+        public NpcParam(double radius, Enum<?>... flags) {
             this(radius, 0, flags);
         }
     }
@@ -181,7 +180,7 @@ public class GateHandler {
         }
         // populate flags
         if (!params.flags.isEmpty()) {
-            for (NpcFlag flag : params.flags) {
+            for (Enum<?> flag : params.flags) {
                 npcInfo.setExtraFlag(flag, true);
             }
         }
@@ -241,10 +240,10 @@ public class GateHandler {
     }
 
     /**
-     * Return true to stick to current target and ignore new ones (except priority)
+     * Return true to stick to current target if it has the corresponding flag
      */
-    public final boolean isStickToTarget() {
-        return this.stickToTarget;
+    public boolean isStickToTarget(Npc target) {
+        return target.getInfo().hasExtraFlag(GateNpcFlag.STICK_TO_TARGET);
     }
 
     /**

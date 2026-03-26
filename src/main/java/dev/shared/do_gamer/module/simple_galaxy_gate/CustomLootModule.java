@@ -185,7 +185,7 @@ public final class CustomLootModule extends LootModule {
      * Skips far target logic when low HP and others are better targets.
      */
     private boolean skipFarTarget(Npc target) {
-        if (!this.gateHandler.isSkipFarTargets()) {
+        if (!this.gateHandler.isSkipFarTargets() || this.gateHandler.isStickToTarget(target)) {
             return false; // Skip disabled
         }
 
@@ -250,7 +250,8 @@ public final class CustomLootModule extends LootModule {
      */
     private boolean shouldPreferCurrentTarget(Npc target, Npc best, Locatable location) {
         // Stick to target if enabled and it has higher or equal priority than best
-        if (this.gateHandler.isStickToTarget() && target.getInfo().getPriority() <= best.getInfo().getPriority()) {
+        if (this.gateHandler.isStickToTarget(target)
+                && target.getInfo().getPriority() <= best.getInfo().getPriority()) {
             return true;
         }
 

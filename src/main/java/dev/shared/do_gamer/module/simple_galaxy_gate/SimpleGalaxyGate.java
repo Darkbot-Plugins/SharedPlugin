@@ -13,7 +13,7 @@ import com.github.manolo8.darkbot.config.NpcExtraFlag;
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
 import com.github.manolo8.darkbot.core.itf.NpcExtraProvider;
 
-import dev.shared.do_gamer.module.simple_galaxy_gate.config.KamikazeNpcFlag;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
@@ -106,7 +106,7 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
 
     @Override
     public NpcExtraFlag[] values() {
-        return KamikazeNpcFlag.values();
+        return GateNpcFlag.values();
     }
 
     @Override
