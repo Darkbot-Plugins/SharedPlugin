@@ -140,11 +140,8 @@ public class LowGate extends GateHandler {
         this.statusDetails = String.format("Attacking Relay %d", this.getNumber(targetRelay));
         StateStore.request(StateStore.State.ATTACKING);
 
-        // Set target to Relay
-        this.module.lootModule.getAttacker().setTarget(targetRelay);
-        this.module.hero.setLocalTarget(targetRelay);
         // Move closer to Relay
-        this.module.lootModule.approachTarget(targetRelay);
+        this.module.lootModule.moveToTarget(targetRelay);
 
         // Relay attack not supported for Tanos API in bot versions older than 1.131.8
         if (this.module.botBrowserApi.getValue().equals(BrowserApi.TANOS_API)
