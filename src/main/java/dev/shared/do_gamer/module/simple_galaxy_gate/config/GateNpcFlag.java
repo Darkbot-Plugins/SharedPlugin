@@ -18,16 +18,16 @@ public enum GateNpcFlag implements NpcExtraFlag {
 
     @Override
     public String getDescription() {
-        return description;
+        return this.description;
     }
 
     @Override
     public String getName() {
-        return name;
+        return this.name;
     }
 
     @Override
     public String getShortName() {
-        return shortName;
+        return this.shortName;
     }
 }
