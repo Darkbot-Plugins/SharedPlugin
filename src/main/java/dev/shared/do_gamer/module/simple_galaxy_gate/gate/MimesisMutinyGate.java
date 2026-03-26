@@ -27,7 +27,6 @@ public final class MimesisMutinyGate extends GateHandler {
     private EscortProxy escort;
 
     public MimesisMutinyGate() {
-        this.npcMap.put("-=[ Warhead ]=-", new NpcParam(560.0, -100));
         this.npcMap.put("-=[ Medic Mim3sis ]=-", new NpcParam(600.0, -90, GateNpcFlag.STICK_TO_TARGET));
         this.npcMap.put("-=[ Obscured M1mes1s ]=-", new NpcParam(650.0, -80, GateNpcFlag.STICK_TO_TARGET));
         this.npcMap.put("-=[ Mirror M1m3si5 ]=-", new NpcParam(650.0, -80, GateNpcFlag.STICK_TO_TARGET));
@@ -39,6 +38,7 @@ public final class MimesisMutinyGate extends GateHandler {
         this.npcMap.put("-=[ Hardy Mime5is ]=-", new NpcParam(600.0, -10, GateNpcFlag.STICK_TO_TARGET));
         this.npcMap.put("-=[ Raider Mimes1s ]=-", new NpcParam(600.0, 0));
         this.npcMap.put("-=[ Assailant M1mesis ]=-", new NpcParam(600.0, 0));
+        this.npcMap.put("-=[ Warhead ]=-", new NpcParam(560.0, 10));
         this.npcMap.put("-=[ Seeker Rocket ]=-", new NpcParam(560.0, 20));
         this.npcMap.put("-=[ Mim3si5 Turret ]=-", new NpcParam(560.0, 50, NpcFlag.NO_CIRCLE));
         this.npcMap.put("-={EM Freighter}=-", new NpcParam(560.0, 100, NpcFlag.NO_CIRCLE, NpcFlag.PASSIVE));
