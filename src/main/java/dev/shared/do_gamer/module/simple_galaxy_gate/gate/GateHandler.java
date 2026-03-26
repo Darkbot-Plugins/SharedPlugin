@@ -243,6 +243,9 @@ public class GateHandler {
      * Return true to stick to current target if it has the corresponding flag
      */
     public boolean isStickToTarget(Npc target) {
+        if (target == null) {
+            return false; // Extra safety check to avoid potential NPEs
+        }
         return target.getInfo().hasExtraFlag(GateNpcFlag.STICK_TO_TARGET);
     }
 
