@@ -182,7 +182,9 @@ public final class CustomLootModule extends LootModule {
      * Skips far target logic when low HP and others are better targets.
      */
     private boolean skipFarTarget(Npc target) {
-        if (!this.gateHandler.isSkipFarTargets() || this.gateHandler.isStickToTarget(target)) {
+        if (!this.gateHandler.isSkipFarTargets()
+                || this.gateHandler.isStickToTarget(target)
+                || target.getInfo().hasExtraFlag(NpcFlag.AGGRESSIVE_FOLLOW)) {
             return false; // Skip disabled
         }
 
