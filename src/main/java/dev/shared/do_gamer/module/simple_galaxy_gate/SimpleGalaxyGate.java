@@ -108,7 +108,7 @@ public final class SimpleGalaxyGate implements Module, Task,
                 "- Roam config: used for moving between far targets.\n" +
                 "- Run config: used at the end of wave / gate when there are no NPCs.\n" +
                 "\nNPC auto populate:\n" +
-                "- Unknown NPCs may be added automatically using built-in gate presets.\n" +
+                "- New NPCs may be automatically configured using built-in gate presets.\n" +
                 "- Auto-populated values: radius, and optionally priority and flags.\n" +
                 "- NPCs with the Kill checkbox enabled are never overridden.\n" +
                 "\nNPC extra flags:\n" +
