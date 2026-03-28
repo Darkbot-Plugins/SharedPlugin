@@ -106,8 +106,11 @@ public final class SimpleGalaxyGate implements Module, Task,
         return "Ship config and formation:\n" +
                 "- Offensive config: used for attacking NPCs in the gate.\n" +
                 "- Roam config: used for moving between far targets.\n" +
-                "- Run config: used at the end of a wave/gate when there are no NPCs.\n\n" +
-                "NPC extra flags:\n" +
+                "- Run config: used at the end of a wave/gate when there are no NPCs.\n" +
+                "\nNPC auto populate:\n" +
+                "- If the gate has no configured NPCs, the module may fill common defaults.\n" +
+                "- Auto-populated values: radius, priority and extra flags.\n" +
+                "\nNPC extra flags:\n" +
                 " - Kamikaze: to use Kamikaze for this NPC (if enabled).\n" +
                 " - Stick to Target: to stick to the current target, don't switch away.\n";
     }
