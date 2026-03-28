@@ -23,6 +23,7 @@ import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.extensions.FeatureInfo;
+import eu.darkbot.api.extensions.InstructionProvider;
 import eu.darkbot.api.extensions.Module;
 import eu.darkbot.api.extensions.Task;
 import eu.darkbot.api.game.entities.Portal;
@@ -42,7 +43,10 @@ import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Galaxy Gate", description = "Automates Galaxy Gate building and farming.")
-public final class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
+public final class SimpleGalaxyGate implements Module, Task,
+        Configurable<SimpleGalaxyGateConfig>,
+        NpcExtraProvider,
+        InstructionProvider {
 
     public final HeroAPI hero;
     public final MovementAPI movement;
@@ -95,6 +99,17 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
         this.botBrowserApi = this.configApi.requireConfig("bot_settings.api_config.browser_api");
         this.lootModule.setCollector(this.collectorModule); // Link collector module
         this.gateBuilder = new GateBuilder(this, api);
+    }
+
+    @Override
+    public String instructions() {
+        return "Ship config and formation:\n" +
+                "- Offensive config: used for attacking NPCs in the gate.\n" +
+                "- Roam config: used for moving between far targets.\n" +
+                "- Run config: used at the end of a wave/gate when there are no NPCs.\n\n" +
+                "NPC extra flags:\n" +
+                " - Kamikaze: to use Kamikaze for this NPC (if enabled).\n" +
+                " - Stick to Target: to stick to the current target, don't switch away.\n";
     }
 
     @Override
