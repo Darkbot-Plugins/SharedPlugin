@@ -1,6 +1,5 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -71,7 +70,7 @@ public class LowGate extends GateHandler {
      * Processes the attack tick logic.
      */
     private boolean processAttackTick() {
-        Collection<? extends Relay> relays = this.getRelays();
+        List<Relay> relays = this.getRelays();
         int npcsCount = this.module.lootModule.getNpcs().size();
         int relaysCount = relays.size();
 
@@ -144,7 +143,7 @@ public class LowGate extends GateHandler {
     /**
      * Handles the attack on relays.
      */
-    private void handleRelayAttack(Collection<? extends Relay> relays) {
+    private void handleRelayAttack(List<Relay> relays) {
         // Get the first available Relay
         Relay targetRelay = relays.iterator().next();
         this.statusDetails = String.format("Attacking Relay %d", this.getNumber(targetRelay));
