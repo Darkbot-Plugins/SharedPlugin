@@ -77,7 +77,7 @@ public class LowGate extends GateHandler {
         this.updateBossStatus(relaysCount);
 
         if (npcsCount == 0 && relaysCount > 0 && this.bossState == BossState.NONE) {
-            this.handleRelayAttack(relays);
+            this.handleRelayAttack(relays.get(0));
             return true;
         }
 
@@ -143,9 +143,7 @@ public class LowGate extends GateHandler {
     /**
      * Handles the attack on relays.
      */
-    private void handleRelayAttack(List<Relay> relays) {
-        // Get the first available Relay
-        Relay targetRelay = relays.get(0);
+    private void handleRelayAttack(Relay targetRelay) {
         this.statusDetails = String.format("Attacking Relay %d", this.getNumber(targetRelay));
         StateStore.request(StateStore.State.ATTACKING);
 
