@@ -145,7 +145,7 @@ public class LowGate extends GateHandler {
      */
     private void handleRelayAttack(List<Relay> relays) {
         // Get the first available Relay
-        Relay targetRelay = relays.iterator().next();
+        Relay targetRelay = relays.get(0);
         this.statusDetails = String.format("Attacking Relay %d", this.getNumber(targetRelay));
         StateStore.request(StateStore.State.ATTACKING);
 
