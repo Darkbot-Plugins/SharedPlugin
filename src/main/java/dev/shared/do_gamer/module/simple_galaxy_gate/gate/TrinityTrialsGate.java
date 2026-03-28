@@ -26,6 +26,7 @@ public class TrinityTrialsGate extends GateHandler {
         this.npcMap.put("..::{ Vinespire }::..", new NpcParam(620.0));
         this.defaultNpcParam = new NpcParam(580.0);
         this.jumpToNextMap = false;
+        this.safeRefreshInGate = false;
         this.fetchServerOffset = true;
     }
 
