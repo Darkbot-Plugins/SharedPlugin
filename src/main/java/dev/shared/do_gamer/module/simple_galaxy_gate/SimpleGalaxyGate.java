@@ -111,8 +111,8 @@ public final class SimpleGalaxyGate implements Module, Task,
                 "- If the gate has no configured NPCs, the module may fill common defaults.\n" +
                 "- Auto-populated values: radius, priority and extra flags.\n" +
                 "\nNPC extra flags:\n" +
-                " - Kamikaze: to use Kamikaze for this NPC (if enabled).\n" +
-                " - Stick to Target: to stick to the current target, don't switch away.\n";
+                "- Kamikaze: to use Kamikaze for this NPC (if enabled).\n" +
+                "- Stick to Target: to stick to the current target, don't switch away.\n";
     }
 
     @Override
