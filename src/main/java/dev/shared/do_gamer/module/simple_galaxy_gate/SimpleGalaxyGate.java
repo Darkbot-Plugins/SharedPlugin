@@ -645,7 +645,12 @@ public final class SimpleGalaxyGate implements Module, Task,
         Set<String> conflicts = Set.of(
                 "eu.darkbot.popcorn.don.GGSpinner",
                 "com.pikapika.behaviour.gateSpinShipChanger.GateSpinShipChanger",
-                "com.pikapika.behaviour.refreshGateComplete.RefreshGateComplete");
+                "com.pikapika.behaviour.refreshGateComplete.RefreshGateComplete",
+                "eu.darkbot.leanon00.botFeatures.TempReturnWindowFix",
+                "eu.darkbot.leanon00.botFeatures.Debug",
+                // old version of LeanPlugin
+                "eu.darkbot.leanon00.Main.Features.TempReturnWindowFix",
+                "eu.darkbot.leanon00.Main.Features.Debug");
 
         for (String featureId : conflicts) {
             FeatureInfo<?> featureInfo = this.extensionsAPI.getFeatureInfo(featureId);
