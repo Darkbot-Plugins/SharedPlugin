@@ -230,7 +230,12 @@ public final class CustomLootModule extends LootModule {
             if (best == null || Objects.equals(target, best)) {
                 return target;
             }
-            // Skip far target if needed and return best
+            // Skip ghost target
+            if (target.getHealth().getHp() == 0) {
+                target.setBlacklisted(5_000); // Temporarily blacklist ghost target
+                return best;
+            }
+            // Skip far target if needed
             if (this.skipFarTarget(target)) {
                 return best;
             }
