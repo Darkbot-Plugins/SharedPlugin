@@ -35,7 +35,7 @@ public final class CustomLootModule extends LootModule {
     protected final ConfigSetting<Integer> collectRadius;
     protected final Collection<? extends Barrier> barriers;
 
-    private static final long GHOST_TARGET_BLACKLIST_MS = 5_000;
+    private static final long GHOST_TARGET_BLACKLIST_MS = 5_000L;
 
     private CustomCollectorModule collector;
     private GateHandler gateHandler;
