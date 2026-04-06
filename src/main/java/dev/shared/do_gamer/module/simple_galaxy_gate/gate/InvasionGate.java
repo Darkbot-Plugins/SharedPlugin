@@ -16,6 +16,7 @@ public class InvasionGate extends GateHandler {
     public InvasionGate() {
         this.defaultNpcParam = new NpcParam(640.0);
         this.jumpToNextMap = false;
+        this.safeRefreshInGate = false;
         this.moveToCenter = false;
         this.approachToCenter = false;
         this.skipFarTargets = false;

@@ -1,9 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
-import eu.darkbot.api.config.types.BoxInfo;
 import eu.darkbot.api.config.types.NpcFlag;
-import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.util.Timer;
@@ -98,8 +96,7 @@ public class DseGate extends GateHandler {
         Npc guardableNpc = this.getGuardableNpc();
         if (guardableNpc != null && this.module.lootModule.getNpcs().size() == 1) {
             StateStore.request(StateStore.State.GUARDING);
-            this.module.lootModule.getAttacker().setTarget(guardableNpc);
-            this.module.lootModule.moveToAnSafePosition();
+            this.module.lootModule.moveToTarget(guardableNpc);
             return true;
         }
         return false; // Allow default logic to take over
@@ -109,9 +106,6 @@ public class DseGate extends GateHandler {
     public boolean collectTickModule() {
         // Check if we're in Command Hall to handle box populate and gate reset logic
         if (this.module.starSystem.getCurrentMap().getId() == COMMAND_HALL_MAP_ID) {
-            // Ensure boxes are marked for collection
-            this.populateBoxes();
-
             // Wait manual selection of ship or reset gate
             if (this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()
                     || this.getVisibleGui(SHIP_WARP_GUI).isPresent()
@@ -130,23 +124,5 @@ public class DseGate extends GateHandler {
         this.reset();
         this.closeGui(MAIN_GUI);
         return false; // Allow default logic to take over
-    }
-
-    /**
-     * Populates the collect boxes in Commad Hall
-     */
-    private void populateBoxes() {
-        if (this.module.collectorModule.count() > 0) {
-            for (Box box : this.module.collectorModule.getBoxes()) {
-                if (!box.getTypeName().endsWith("_ECHO_BOX")) {
-                    continue; // Only handle DSE boxes
-                }
-                BoxInfo boxInfo = box.getInfo();
-                if (!boxInfo.shouldCollect()) {
-                    boxInfo.setShouldCollect(true);
-                    boxInfo.setWaitTime(6500);
-                }
-            }
-        }
     }
 }

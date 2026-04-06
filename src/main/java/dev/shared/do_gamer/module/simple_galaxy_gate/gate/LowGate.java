@@ -1,6 +1,5 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
-import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -16,6 +15,9 @@ import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.api.utils.Version;
 
 public class LowGate extends GateHandler {
+
+    private static final double REPAIR_RADIUS = 900.0;
+    private static final double FAR_TARGET_DISTANCE = 1_200.0;
 
     // List of Relay IDs in specific spawn order
     private static final List<Integer> RELAY_IDS = List.of(
@@ -35,9 +37,16 @@ public class LowGate extends GateHandler {
     public LowGate() {
         this.defaultNpcParam = new NpcParam(540.0, NpcFlag.AGGRESSIVE_FOLLOW);
         this.jumpToNextMap = false;
+        this.safeRefreshInGate = false;
         this.moveToCenter = false;
         this.approachToCenter = false;
         this.skipFarTargets = false;
+        this.repairRadius = REPAIR_RADIUS;
+        this.farTargetDistance = FAR_TARGET_DISTANCE;
+        // Probably will never use Kamikaze in this gate,
+        // but set offset to 0 just in case
+        this.kamikazeOffsetX = 0.0;
+        this.kamikazeOffsetY = 0.0;
     }
 
     @Override
@@ -61,14 +70,14 @@ public class LowGate extends GateHandler {
      * Processes the attack tick logic.
      */
     private boolean processAttackTick() {
-        Collection<? extends Relay> relays = this.getRelays();
+        List<Relay> relays = this.getRelays();
         int npcsCount = this.module.lootModule.getNpcs().size();
         int relaysCount = relays.size();
 
         this.updateBossStatus(relaysCount);
 
         if (npcsCount == 0 && relaysCount > 0 && this.bossState == BossState.NONE) {
-            this.handleRelayAttack(relays);
+            this.handleRelayAttack(relays.get(0));
             return true;
         }
 
@@ -134,17 +143,12 @@ public class LowGate extends GateHandler {
     /**
      * Handles the attack on relays.
      */
-    private void handleRelayAttack(Collection<? extends Relay> relays) {
-        // Get the first available Relay
-        Relay targetRelay = relays.iterator().next();
+    private void handleRelayAttack(Relay targetRelay) {
         this.statusDetails = String.format("Attacking Relay %d", this.getNumber(targetRelay));
         StateStore.request(StateStore.State.ATTACKING);
 
-        // Set target to Relay
-        this.module.lootModule.getAttacker().setTarget(targetRelay);
-        this.module.hero.setLocalTarget(targetRelay);
         // Move closer to Relay
-        this.module.lootModule.moveToAnSafePosition();
+        this.module.lootModule.moveToTarget(targetRelay);
 
         // Relay attack not supported for Tanos API in bot versions older than 1.131.8
         if (this.module.botBrowserApi.getValue().equals(BrowserApi.TANOS_API)

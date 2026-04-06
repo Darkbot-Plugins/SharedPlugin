@@ -13,7 +13,7 @@ import com.github.manolo8.darkbot.config.NpcExtraFlag;
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
 import com.github.manolo8.darkbot.core.itf.NpcExtraProvider;
 
-import dev.shared.do_gamer.module.simple_galaxy_gate.config.KamikazeNpcFlag;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
@@ -23,6 +23,7 @@ import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.extensions.FeatureInfo;
+import eu.darkbot.api.extensions.InstructionProvider;
 import eu.darkbot.api.extensions.Module;
 import eu.darkbot.api.extensions.Task;
 import eu.darkbot.api.game.entities.Portal;
@@ -42,7 +43,10 @@ import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
 @Feature(name = "Simple Galaxy Gate", description = "Automates Galaxy Gate building and farming.")
-public final class SimpleGalaxyGate implements Module, Task, Configurable<SimpleGalaxyGateConfig>, NpcExtraProvider {
+public final class SimpleGalaxyGate implements Module, Task,
+        Configurable<SimpleGalaxyGateConfig>,
+        NpcExtraProvider,
+        InstructionProvider {
 
     public final HeroAPI hero;
     public final MovementAPI movement;
@@ -98,6 +102,21 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
     }
 
     @Override
+    public String instructions() {
+        return "Ship config and formation:\n" +
+                "- Offensive config: used for attacking NPCs in the gate.\n" +
+                "- Roam config: used for moving between far targets.\n" +
+                "- Run config: used at the end of wave / gate when there are no NPCs.\n" +
+                "\nNPC auto populate:\n" +
+                "- NPCs may be automatically configured using built-in gate presets.\n" +
+                "- Auto-populated values: radius, and optionally priority and flags.\n" +
+                "- NPCs with the Kill checkbox enabled are never overridden.\n" +
+                "\nNPC extra flags:\n" +
+                "- Kamikaze: to use Kamikaze for this NPC (if enabled).\n" +
+                "- Stick to Target: to stick to the current target, don't switch away.\n";
+    }
+
+    @Override
     public void setConfig(ConfigSetting<SimpleGalaxyGateConfig> config) {
         this.config = config.getValue();
         // Make sure the modules receive the same configuration instance.
@@ -106,7 +125,7 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
 
     @Override
     public NpcExtraFlag[] values() {
-        return KamikazeNpcFlag.values();
+        return GateNpcFlag.values();
     }
 
     @Override
@@ -626,7 +645,12 @@ public final class SimpleGalaxyGate implements Module, Task, Configurable<Simple
         Set<String> conflicts = Set.of(
                 "eu.darkbot.popcorn.don.GGSpinner",
                 "com.pikapika.behaviour.gateSpinShipChanger.GateSpinShipChanger",
-                "com.pikapika.behaviour.refreshGateComplete.RefreshGateComplete");
+                "com.pikapika.behaviour.refreshGateComplete.RefreshGateComplete",
+                "eu.darkbot.leanon00.botFeatures.TempReturnWindowFix",
+                "eu.darkbot.leanon00.botFeatures.Debug",
+                // old version of LeanPlugin
+                "eu.darkbot.leanon00.Main.Features.TempReturnWindowFix",
+                "eu.darkbot.leanon00.Main.Features.Debug");
 
         for (String featureId : conflicts) {
             FeatureInfo<?> featureInfo = this.extensionsAPI.getFeatureInfo(featureId);

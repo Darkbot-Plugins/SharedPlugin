@@ -35,6 +35,8 @@ public final class CustomLootModule extends LootModule {
     protected final ConfigSetting<Integer> collectRadius;
     protected final Collection<? extends Barrier> barriers;
 
+    private static final long GHOST_TARGET_BLACKLIST_MS = 5_000L;
+
     private CustomCollectorModule collector;
     private GateHandler gateHandler;
     private boolean repair = false;
@@ -182,7 +184,9 @@ public final class CustomLootModule extends LootModule {
      * Skips far target logic when low HP and others are better targets.
      */
     private boolean skipFarTarget(Npc target) {
-        if (!this.gateHandler.isSkipFarTargets()) {
+        if (!this.gateHandler.isSkipFarTargets()
+                || this.gateHandler.isStickToTarget(target)
+                || target.getInfo().hasExtraFlag(NpcFlag.AGGRESSIVE_FOLLOW)) {
             return false; // Skip disabled
         }
 
@@ -228,7 +232,12 @@ public final class CustomLootModule extends LootModule {
             if (best == null || Objects.equals(target, best)) {
                 return target;
             }
-            // Skip far target if needed and return best
+            // Skip ghost target
+            if (target.getHealth().getHp() == 0) {
+                target.setBlacklisted(GHOST_TARGET_BLACKLIST_MS); // Temporarily blacklist ghost target
+                return best;
+            }
+            // Skip far target if needed
             if (this.skipFarTarget(target)) {
                 return best;
             }
@@ -236,8 +245,8 @@ public final class CustomLootModule extends LootModule {
             if (this.shouldKill(target) && this.shouldPreferCurrentTarget(target, best, location)) {
                 return target;
             }
-
         }
+
         return best;
     }
 
@@ -247,7 +256,8 @@ public final class CustomLootModule extends LootModule {
      */
     private boolean shouldPreferCurrentTarget(Npc target, Npc best, Locatable location) {
         // Stick to target if enabled and it has higher or equal priority than best
-        if (this.gateHandler.isStickToTarget() && target.getInfo().getPriority() <= best.getInfo().getPriority()) {
+        if (this.gateHandler.isStickToTarget(target)
+                && target.getInfo().getPriority() <= best.getInfo().getPriority()) {
             return true;
         }
 
@@ -416,10 +426,12 @@ public final class CustomLootModule extends LootModule {
         return base - sum;
     }
 
-    // Make moveToAnSafePosition accessible publicly
-    @Override
-    public void moveToAnSafePosition() {
-        super.moveToAnSafePosition();
+    /**
+     * Moves towards the target NPC while maintaining a safe distance.
+     */
+    public void moveToTarget(Lockable target) {
+        this.attack.setTarget(target);
+        this.moveToAnSafePosition();
     }
 
     // Make searchValidLocation accessible publicly
