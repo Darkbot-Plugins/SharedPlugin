@@ -21,13 +21,13 @@ public final class CustomCollectorModule extends CollectorModule {
 
     private final EntitiesAPI entities;
     private final Map<String, FakeEntity.FakeBox> fakeBoxes = new HashMap<>();
-    private final PetGearHelper petGearHeper;
+    private final PetGearHelper petGearHelper;
     private SimpleGalaxyGateConfig config;
 
     CustomCollectorModule(PluginAPI api) {
         super(api);
         this.entities = api.requireAPI(EntitiesAPI.class);
-        this.petGearHeper = new PetGearHelper(api);
+        this.petGearHelper = new PetGearHelper(api);
     }
 
     public void setModuleConfig(SimpleGalaxyGateConfig config) {
@@ -132,7 +132,7 @@ public final class CustomCollectorModule extends CollectorModule {
      * the current configuration and box conditions.
      */
     public void tryActivatePetCollectGear() {
-        if (this.config == null || !this.petGearHeper.isEnabled() || this.count() <= 1) {
+        if (this.config == null || !this.petGearHelper.isEnabled()) {
             return;
         }
 
@@ -153,7 +153,7 @@ public final class CustomCollectorModule extends CollectorModule {
         }
 
         if (activate) {
-            this.petGearHeper.tryUse(PetGear.LOOTER);
+            this.petGearHelper.tryUse(PetGear.LOOTER);
         }
     }
 }
