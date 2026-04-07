@@ -259,7 +259,8 @@ public final class GateBuilder {
      */
     private boolean isGateBuiltOnMap(GalaxyInfo info, GalaxyGate targetGate) {
         boolean needCompleted = (this.module
-                .getConfig().builder.buildUntil == SimpleGalaxyGateConfig.BuilderSettings.BuildUntil.COMPLETED);
+                .getConfig().builder.buildUntil == SimpleGalaxyGateConfig.BuilderSettings.BuildUntil.COMPLETED
+                && this.state == BuildState.BUILD);
 
         if (targetGate == GalaxyGate.ALPHA) {
             return this.isAbgBuilt(info, needCompleted);
