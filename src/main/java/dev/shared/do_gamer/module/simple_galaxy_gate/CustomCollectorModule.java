@@ -124,20 +124,6 @@ public final class CustomCollectorModule extends CollectorModule {
     @Override
     protected void collectBox() {
         this.tryActivatePetCollectGear();
-        // If PET collect gear is enabled, use PET to collect the box.
-        if (this.petGearHeper.isUsing(PetGear.LOOTER)) {
-            double distance = this.hero.distanceTo(this.currentBox);
-            if (distance < 250.0) {
-                // Try to select to prevent ghost boxes
-                if (this.currentBox.trySelect(false)) {
-                    this.currentBox.setCollected();
-                }
-            } else {
-                // Move towards the box to allow pet to collect it.
-                this.movement.moveTo(this.currentBox);
-            }
-            return;
-        }
         super.collectBox();
     }
 
