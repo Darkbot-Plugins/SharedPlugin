@@ -6,9 +6,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.FakeEntity;
+import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.shared.modules.CollectorModule;
 
@@ -18,10 +21,17 @@ public final class CustomCollectorModule extends CollectorModule {
 
     private final EntitiesAPI entities;
     private final Map<String, FakeEntity.FakeBox> fakeBoxes = new HashMap<>();
+    private final PetGearHelper petGearHelper;
+    private SimpleGalaxyGateConfig config;
 
     CustomCollectorModule(PluginAPI api) {
         super(api);
         this.entities = api.requireAPI(EntitiesAPI.class);
+        this.petGearHelper = new PetGearHelper(api);
+    }
+
+    public void setModuleConfig(SimpleGalaxyGateConfig config) {
+        this.config = config;
     }
 
     @Override
@@ -109,5 +119,41 @@ public final class CustomCollectorModule extends CollectorModule {
      */
     public Collection<FakeEntity.FakeBox> getBoxes() {
         return this.fakeBoxes.values();
+    }
+
+    @Override
+    protected void collectBox() {
+        this.tryActivatePetCollectGear();
+        super.collectBox();
+    }
+
+    /**
+     * Tries to activate PET collect gear based on
+     * the current configuration and box conditions.
+     */
+    public void tryActivatePetCollectGear() {
+        if (this.config == null || !this.petGearHelper.isEnabled() || this.count() < 1) {
+            return;
+        }
+
+        boolean activate;
+        switch (this.config.other.petCollect) {
+            case ANY:
+                activate = true;
+                break;
+
+            case ODD:
+                int priority = this.currentBox.getInfo().getPriority();
+                activate = Math.abs(priority) % 2 == 1; // Activate for odd priorities
+                break;
+
+            default:
+                activate = false;
+                break;
+        }
+
+        if (activate) {
+            this.petGearHelper.tryUse(PetGear.LOOTER);
+        }
     }
 }
