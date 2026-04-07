@@ -132,7 +132,7 @@ public final class CustomCollectorModule extends CollectorModule {
      * the current configuration and box conditions.
      */
     public void tryActivatePetCollectGear() {
-        if (this.config == null || !this.petGearHeper.isEnabled()) {
+        if (this.config == null || !this.petGearHeper.isEnabled() || this.count() <= 1) {
             return;
         }
 
