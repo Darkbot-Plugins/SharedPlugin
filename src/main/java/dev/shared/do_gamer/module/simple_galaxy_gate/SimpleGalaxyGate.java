@@ -121,6 +121,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.config = config.getValue();
         // Make sure the modules receive the same configuration instance.
         this.lootModule.setModuleConfig(this.config);
+        this.collectorModule.setModuleConfig(this.config);
     }
 
     @Override

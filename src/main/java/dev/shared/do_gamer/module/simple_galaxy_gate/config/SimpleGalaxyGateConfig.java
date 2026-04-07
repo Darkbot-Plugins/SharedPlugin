@@ -325,6 +325,10 @@ public class SimpleGalaxyGateConfig {
     }
 
     public static class OtherSettings {
+        @Option("do_gamer.simple_galaxy_gate.other.pet_collect")
+        @Dropdown(options = PetCollectDropdown.class)
+        public PetCollectType petCollect = PetCollectType.NONE;
+
         @Option("do_gamer.simple_galaxy_gate.other.bot_profile")
         @Dropdown(options = ProfileOptions.class)
         public String botProfile = null;
@@ -341,6 +345,36 @@ public class SimpleGalaxyGateConfig {
         @Option("do_gamer.simple_galaxy_gate.other.debug_info")
         @Dropdown(options = DebugInfoDropdown.class)
         public DebugInfoType debugInfo = DebugInfoType.NONE;
+
+        /**
+         * Types of pet collect behavior
+         */
+        public enum PetCollectType {
+            NONE("Disabled"),
+            ANY("Any box exists"),
+            ODD("Odd priority box exists");
+
+            public final String label;
+
+            PetCollectType(String label) {
+                this.label = label;
+            }
+        }
+
+        /**
+         * Dropdown options for selecting pet collect type
+         */
+        public static class PetCollectDropdown implements Dropdown.Options<PetCollectType> {
+            @Override
+            public List<PetCollectType> options() {
+                return List.of(PetCollectType.values());
+            }
+
+            @Override
+            public String getText(PetCollectType option) {
+                return option.label;
+            }
+        }
 
         /**
          * Dropdown options for selecting bot profiles
