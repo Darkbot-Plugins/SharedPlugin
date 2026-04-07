@@ -6,9 +6,12 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.FakeEntity;
+import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.shared.modules.CollectorModule;
 
@@ -18,10 +21,17 @@ public final class CustomCollectorModule extends CollectorModule {
 
     private final EntitiesAPI entities;
     private final Map<String, FakeEntity.FakeBox> fakeBoxes = new HashMap<>();
+    private final PetGearHelper petGearHeper;
+    private SimpleGalaxyGateConfig config;
 
     CustomCollectorModule(PluginAPI api) {
         super(api);
         this.entities = api.requireAPI(EntitiesAPI.class);
+        this.petGearHeper = new PetGearHelper(api);
+    }
+
+    public void setModuleConfig(SimpleGalaxyGateConfig config) {
+        this.config = config;
     }
 
     @Override
@@ -109,5 +119,55 @@ public final class CustomCollectorModule extends CollectorModule {
      */
     public Collection<FakeEntity.FakeBox> getBoxes() {
         return this.fakeBoxes.values();
+    }
+
+    @Override
+    protected void collectBox() {
+        this.tryActivatePetCollectGear();
+        // If PET collect gear is enabled, use PET to collect the box.
+        if (this.petGearHeper.isUsing(PetGear.LOOTER)) {
+            double distance = this.hero.distanceTo(this.currentBox);
+            if (distance < 250.0) {
+                // Try to select to prevent ghost boxes
+                if (this.currentBox.trySelect(false)) {
+                    this.currentBox.setCollected();
+                }
+            } else {
+                // Move towards the box to allow pet to collect it.
+                this.movement.moveTo(this.currentBox);
+            }
+            return;
+        }
+        super.collectBox();
+    }
+
+    /**
+     * Tries to activate PET collect gear based on
+     * the current configuration and box conditions.
+     */
+    public void tryActivatePetCollectGear() {
+        if (this.config == null || !this.petGearHeper.isEnabled()) {
+            return;
+        }
+
+        boolean activate;
+        switch (this.config.other.petCollect) {
+            case ANY:
+                activate = true;
+                break;
+
+            case ODD:
+                int priority = this.currentBox.getInfo().getPriority();
+                activate = Math.abs(priority) % 2 == 1; // Activate for odd priorities
+                break;
+
+            default:
+                activate = false;
+                break;
+        }
+
+        if (activate) {
+            this.petGearHeper.tryUse(PetGear.LOOTER);
+        }
     }
 }
