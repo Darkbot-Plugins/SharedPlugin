@@ -169,7 +169,7 @@ public class SimpleGalaxyGateConfig {
 
         @Option("do_gamer.simple_galaxy_gate.builder.use_multi_at")
         @Dropdown(options = MultiAtDropdown.class)
-        public Integer useMultiAt = 2;
+        public int useMultiAt = 2;
 
         @Option("do_gamer.simple_galaxy_gate.builder.max_spin_cost")
         @Number(min = 55, max = 100)

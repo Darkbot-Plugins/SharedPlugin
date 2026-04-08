@@ -86,7 +86,7 @@ public final class GateBuilder {
             return true;
         }
 
-        Boolean updated = this.galaxyManager.updateGalaxyInfos(10_000);
+        Boolean updated = this.galaxyManager.updateGalaxyInfos(500);
         if (Boolean.FALSE.equals(updated)) {
             this.spinTimer.activate(1_000L);
             this.handleGalaxyInfoFetchFailure();
@@ -135,9 +135,18 @@ public final class GateBuilder {
         double progress = this.getProgress(info, targetGate);
         SpinOption spinOption = this.getSpinOption(progress);
         long waitTime = (spinOption.waitMs * this.module.getConfig().builder.speed.multiplier);
+        int currentMulti = info.getGateInfo(targetGate).getMultiplier();
+        if (currentMulti >= 1 && currentMulti <= 5) {
+            // Adjust known buggy values from the upstream API:
+            // API may return 1..5 instead of the actual multiplier 2..6.
+            currentMulti++;
+        }
+        boolean useMulti = (currentMulti >= this.module.getConfig().builder.useMultiAt);
+
         this.spinTimer.activate(waitTime);
-        this.galaxyManager.spinGate(targetGate, this.module.getConfig().builder.useMultiAt, spinOption.spins, 10)
+        this.galaxyManager.spinGate(targetGate, useMulti, spinOption.spins, 10)
                 .ifPresent(success -> this.globalTimer.disarm()); // Reset global timer on successful spin
+
         this.moveShipPeriodically(); // Move ship to avoid AFK
     }
 
