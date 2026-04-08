@@ -136,9 +136,9 @@ public final class GateBuilder {
         SpinOption spinOption = this.getSpinOption(progress);
         long waitTime = (spinOption.waitMs * this.module.getConfig().builder.speed.multiplier);
         int currentMulti = info.getGateInfo(targetGate).getMultiplier();
-        if (currentMulti > 0) {
-            // Fix the APi bug when returns 1,2,3,4,5
-            // instead of actual multiplier value 2,3,4,5,6
+        if (currentMulti >= 1 && currentMulti <= 5) {
+            // Adjust known buggy values from the upstream API:
+            // API may return 1..5 instead of the actual multiplier 2..6.
             currentMulti++;
         }
         boolean useMulti = (currentMulti >= this.module.getConfig().builder.useMultiAt);
