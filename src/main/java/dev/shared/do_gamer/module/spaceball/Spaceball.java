@@ -160,13 +160,13 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     public String getStatus() {
         StringBuilder status = new StringBuilder("SpaceBall: ");
 
-        if (!ServerTimeHelper.offsetUpdated()) {
-            status.append("Waiting for server time sync...");
+        if (this.stop) {
+            this.buildStoppingStatus(status);
             return status.toString();
         }
 
-        if (this.stop) {
-            this.buildStoppingStatus(status);
+        if (!ServerTimeHelper.offsetUpdated()) {
+            status.append("Waiting for server time sync...");
             return status.toString();
         }
 
@@ -302,13 +302,13 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     }
 
     public void onTickModule() {
-        // Wait for server time sync
-        if (!ServerTimeHelper.offsetUpdated()) {
+        // Handle stop and exit first
+        if (this.handleStopAndExit()) {
             return;
         }
 
-        // Handle stop and exit first
-        if (this.handleStopAndExit()) {
+        // Wait for server time sync
+        if (!ServerTimeHelper.offsetUpdated()) {
             return;
         }
 
