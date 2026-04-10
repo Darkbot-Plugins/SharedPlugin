@@ -37,10 +37,10 @@ public class LowGate extends GateHandler {
     public LowGate() {
         this.defaultNpcParam = new NpcParam(540.0, NpcFlag.AGGRESSIVE_FOLLOW);
         this.jumpToNextMap = false;
-        this.safeRefreshInGate = false;
         this.moveToCenter = false;
         this.approachToCenter = false;
         this.skipFarTargets = false;
+        this.noPortalsInGate = true;
         this.repairRadius = REPAIR_RADIUS;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
         // Probably will never use Kamikaze in this gate,
