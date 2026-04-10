@@ -1,8 +1,8 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.config;
 
+import javax.swing.BorderFactory;
 import javax.swing.JComponent;
 import javax.swing.JEditorPane;
-import javax.swing.JScrollPane;
 
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.config.util.OptionEditor;
@@ -10,12 +10,14 @@ import eu.darkbot.api.config.util.OptionEditor;
 public abstract class HtmlInstructions implements OptionEditor<String> {
     @Override
     public JComponent getEditorComponent(ConfigSetting<String> setting) {
-        String html = "<div style='padding: 5px 2px;'>" + this.getEditorValue() + "</div>";
+        String style = "padding: 5px; background-color: #3b3b3b; border: 1px solid #999;";
+        String html = "<div style='" + style + "'>" + this.getEditorValue() + "</div>";
         JEditorPane editor = new JEditorPane("text/html", html);
         editor.setEditable(false);
         editor.setOpaque(false);
+        editor.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
         editor.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
-        return new JScrollPane(editor);
+        return editor;
     }
 
     protected String buildList(String title, String... items) {
