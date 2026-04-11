@@ -20,6 +20,8 @@ import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.shared.config.ProfileNames;
 
 public class SimpleGalaxyGateConfig {
+    private static final String LINE_BREAK = "<br><br>";
+
     /**
      * Instructions and explanations for the player,
      * displayed at the top of the config.
@@ -32,16 +34,16 @@ public class SimpleGalaxyGateConfig {
                     "Offensive config: used for attacking NPCs in the gate.",
                     "Roam config: used for moving between far targets.",
                     "Run config: used at the <b>end of wave / gate</b> when there are no NPCs."));
-            html.append("<br>");
+            html.append(LINE_BREAK);
             html.append(buildList("NPC auto populate:",
                     "NPCs may be automatically configured using built-in gate presets.",
                     "Auto-populated values: radius, and optionally priority and flags.",
                     "NPCs with the <b>Kill</b> checkbox enabled are never overridden."));
-            html.append("<br>");
+            html.append(LINE_BREAK);
             html.append(buildList("NPC extra flags:",
                     "Kamikaze: allows Kamikaze for this NPC when the feature is enabled.",
                     "Stick to Target: to stick to the current target, don't switch away."));
-            html.append("<br>");
+            html.append(LINE_BREAK);
             html.append(buildList("Gate-specific notes:",
                     "DSE gate requires manual action to select ship and reset waves."));
             return html.toString();

@@ -22,14 +22,19 @@ public abstract class HtmlInstructions implements OptionEditor<String> {
 
     protected String buildList(String title, String... items) {
         StringBuilder html = new StringBuilder();
+        int size = items.length;
         if (title != null) {
             html.append("<b>").append(title).append("</b>");
+            if (size > 0) {
+                html.append("<br>");
+            }
         }
-        html.append("<ul style='margin: 1px 0 0 2px; padding-left: 12px;'>");
-        for (String item : items) {
-            html.append("<li>").append(item).append("</li>");
+        for (int i = 0; i < size; i++) {
+            html.append(" - ").append(items[i]);
+            if (i < size - 1) {
+                html.append("<br>");
+            }
         }
-        html.append("</ul>");
         return html.toString();
     }
 }
