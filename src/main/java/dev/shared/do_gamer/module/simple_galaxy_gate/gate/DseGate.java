@@ -92,6 +92,8 @@ public class DseGate extends GateHandler {
 
     @Override
     public boolean attackTickModule() {
+        this.showBoxCount = false; // Hide box count when in gate
+
         // If we have a guardable NPC and it's the only one left, follow it.
         Npc guardableNpc = this.getGuardableNpc();
         if (guardableNpc != null && this.module.lootModule.getNpcs().size() == 1) {
@@ -106,6 +108,8 @@ public class DseGate extends GateHandler {
     public boolean collectTickModule() {
         // Check if we're in Command Hall to handle box populate and gate reset logic
         if (this.module.starSystem.getCurrentMap().getId() == COMMAND_HALL_MAP_ID) {
+            this.showBoxCount = true; // Show box count in Command Hall
+
             // Wait manual selection of ship or reset gate
             if (this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()
                     || this.getVisibleGui(SHIP_WARP_GUI).isPresent()
@@ -121,6 +125,7 @@ public class DseGate extends GateHandler {
             return false;
         }
 
+        this.showBoxCount = false; // Hide box count when in gate
         this.reset();
         this.closeGui(MAIN_GUI);
         return false; // Allow default logic to take over
