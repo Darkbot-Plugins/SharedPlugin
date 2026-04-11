@@ -36,6 +36,7 @@ import eu.darkbot.api.managers.GameScreenAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.api.managers.PetAPI;
+import eu.darkbot.api.managers.RepairAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.shared.utils.PortalJumper;
@@ -60,6 +61,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private final ExtensionsAPI extensionsAPI;
     private final ConfigAPI configApi;
     public final GameScreenAPI gameScreenApi;
+    private final RepairAPI repairAPI;
 
     public final ConfigSetting<BrowserApi> botBrowserApi;
 
@@ -95,6 +97,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.extensionsAPI = api.requireAPI(ExtensionsAPI.class);
         this.configApi = api.requireAPI(ConfigAPI.class);
         this.gameScreenApi = api.requireAPI(GameScreenAPI.class);
+        this.repairAPI = api.requireAPI(RepairAPI.class);
 
         this.botBrowserApi = this.configApi.requireConfig("bot_settings.api_config.browser_api");
         this.lootModule.setCollector(this.collectorModule); // Link collector module
@@ -249,7 +252,10 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     @Override
     public void onTickTask() {
-        // logic implemented in onBackgroundTick
+        // Reset visited state on death
+        if (this.repairAPI.isDestroyed()) {
+            this.gateVisited = false;
+        }
     }
 
     @Override
