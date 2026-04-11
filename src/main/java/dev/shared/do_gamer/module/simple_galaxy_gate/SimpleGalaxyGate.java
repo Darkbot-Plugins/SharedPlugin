@@ -253,9 +253,10 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     @Override
     public void onTickTask() {
-        // Reset gate visited state on death
+        // Reset gate visited and stuck timer if ship is destroyed
         if (this.repairAPI.isDestroyed()) {
             this.gateVisited = false;
+            this.deactivateStuckInGateTimer();
         }
     }
 
