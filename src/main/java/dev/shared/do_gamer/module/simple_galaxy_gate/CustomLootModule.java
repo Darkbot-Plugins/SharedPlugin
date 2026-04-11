@@ -407,7 +407,7 @@ public final class CustomLootModule extends LootModule {
     @Override
     protected Location getBestDir(Locatable targetLoc, double angle, double angleDiff, double distance) {
         Npc target = this.attack.getTargetAs(Npc.class);
-        if (this.approachToCenter(target) || this.repair) {
+        if (this.approachToCenter(target)) {
             return Location.of(targetLoc, angle + angleDiff * (double) (this.backwards ? -1 : 1), distance);
         }
         return super.getBestDir(targetLoc, angle, angleDiff, distance);

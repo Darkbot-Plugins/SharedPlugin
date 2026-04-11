@@ -16,7 +16,6 @@ import eu.darkbot.api.utils.Version;
 
 public class LowGate extends GateHandler {
 
-    private static final double REPAIR_RADIUS = 900.0;
     private static final double FAR_TARGET_DISTANCE = 1_200.0;
 
     // List of Relay IDs in specific spawn order
@@ -42,7 +41,6 @@ public class LowGate extends GateHandler {
         this.skipFarTargets = false;
         this.showBoxCount = false;
         this.noPortalsInGate = true;
-        this.repairRadius = REPAIR_RADIUS;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
         // Probably will never use Kamikaze in this gate,
         // but set offset to 0 just in case
