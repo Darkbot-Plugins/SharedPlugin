@@ -72,6 +72,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private boolean gateVisited = false;
     private boolean fetchServerOffset = false;
     private boolean safeRefreshInGate = false;
+    private boolean showBoxCount = true;
 
     private final GateBuilder gateBuilder;
 
@@ -128,7 +129,7 @@ public final class SimpleGalaxyGate implements Module, Task,
             case COLLECTING:
             case KAMIKAZE:
             case GUARDING:
-                this.appendNpcStatus(status);
+                this.appendGateStatus(status);
                 break;
             case WAITING:
                 this.appendWaitingStatus(status);
@@ -159,14 +160,15 @@ public final class SimpleGalaxyGate implements Module, Task,
         }
     }
 
-    private void appendNpcStatus(StringBuilder status) {
+    private void appendGateStatus(StringBuilder status) {
         status.append(String.format(" | NPC: %d", this.lootModule.getNpcs().size()));
-        if (this.statusDetails != null) {
-            if (!this.statusDetails.isEmpty()) {
-                status.append(String.format(" | %s", this.statusDetails));
-            }
-        } else {
+        // Show box count if enabled in gate handler
+        if (this.showBoxCount) {
             status.append(String.format(" | Box: %d", this.collectorModule.count()));
+        }
+        // Show additional status details if provided by gate handler
+        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
+            status.append(String.format(" | %s", this.statusDetails));
         }
     }
 
@@ -353,6 +355,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         Maps.setToleranceDistance(handler.getToleranceDistance());
         this.fetchServerOffset = handler.isFetchServerOffset();
         this.safeRefreshInGate = handler.canSafeRefreshInGate();
+        this.showBoxCount = handler.isShowBoxCount();
         this.statusDetails = handler.getStatusDetails();
         return handler;
     }

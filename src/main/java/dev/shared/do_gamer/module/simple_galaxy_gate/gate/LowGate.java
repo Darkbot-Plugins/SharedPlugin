@@ -40,6 +40,7 @@ public class LowGate extends GateHandler {
         this.moveToCenter = false;
         this.approachToCenter = false;
         this.skipFarTargets = false;
+        this.showBoxCount = false;
         this.noPortalsInGate = true;
         this.repairRadius = REPAIR_RADIUS;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
@@ -89,7 +90,7 @@ public class LowGate extends GateHandler {
                 this.statusDetails = "Boss destroyed!";
                 break;
             default:
-                this.statusDetails = "";
+                this.statusDetails = null;
                 break;
         }
         return false;
