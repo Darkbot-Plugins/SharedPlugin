@@ -23,6 +23,8 @@ public class KuiperGate extends GateHandler {
         this.npcMap.put("..::{ Boss Saimon }::..", new NpcParam(590.0));
         this.npcMap.put("( UberStreuneR )", new NpcParam(590.0));
         this.npcMap.put("( UberSibelon )", new NpcParam(600.0));
+
+        this.jumpToNextMap = false;
     }
 
     private boolean isSpecialist(Npc npc) {
