@@ -69,6 +69,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private final Timer stuckInGateTimer = Timer.get();
     private final Timer switchProfileTimer = Timer.get(120_000L);
     private boolean triedReloadOnStuck = false;
+    private boolean isStuckInGate = false;
     private boolean shouldMoveToRefinery = false;
     private boolean updateHangarData = true;
     private boolean gateVisited = false;
@@ -252,7 +253,7 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     @Override
     public void onTickTask() {
-        // Reset visited state on death
+        // Reset gate visited state on death
         if (this.repairAPI.isDestroyed()) {
             this.gateVisited = false;
         }
@@ -435,10 +436,12 @@ public final class SimpleGalaxyGate implements Module, Task,
      * Moves the hero to the specified position
      * if far enough and movement is possible.
      */
-    public void moveToPosition(double x, double y, double gap) {
+    public boolean moveToPosition(double x, double y, double gap) {
         if (this.hero.distanceTo(x, y) > gap && this.movement.canMove(x, y)) {
             this.movement.moveTo(x, y);
+            return true;
         }
+        return false; // Already close enough or cannot move, do nothing
     }
 
     /**
@@ -447,22 +450,27 @@ public final class SimpleGalaxyGate implements Module, Task,
     private boolean handleStuckInGate() {
         if (!this.stuckInGateTimer.isArmed()) {
             if (StateStore.current() == StateStore.State.WAITING_IN_GATE && !this.movement.isMoving()) {
-                this.activateStuckInGateTimer(); // Activate stuck timer
+                this.activateStuckInGateTimer(false); // Activate stuck timer
             }
             return false;
         }
 
         if (this.stuckInGateTimer.isInactive()) {
+            this.isStuckInGate = true; // Mark as stuck when timer expires
             if (!this.triedReloadOnStuck) {
                 // First try to reload the game
                 this.triedReloadOnStuck = true;
                 System.out.println("Ship seems stuck in gate, refreshing the game...");
                 this.bot.handleRefresh();
-                this.activateStuckInGateTimer();
+                this.activateStuckInGateTimer(false);
                 return true;
             } else {
                 // Else move to radiation to destroy the ship
-                this.moveToPosition(Maps.getMapCenterX(), 0, 50.0);
+                if (!this.moveToPosition(Maps.getMapCenterX(), 0, 50.0)) {
+                    // Reset flag to try refreshing again if still stuck after moving to radiation
+                    this.triedReloadOnStuck = false;
+                    this.activateStuckInGateTimer(true); // Activate extended timer
+                }
                 return true;
             }
         }
@@ -472,15 +480,22 @@ public final class SimpleGalaxyGate implements Module, Task,
             this.deactivateStuckInGateTimer();
         }
 
-        return false;
+        // Return whether we are currently considered stuck in gate
+        return this.isStuckInGate;
     }
 
     /**
      * Activates the stuck in gate timer if configured.
+     *
+     * @param extended if true, the timer duration is doubled
      */
-    private void activateStuckInGateTimer() {
+    private void activateStuckInGateTimer(boolean extended) {
         if (this.config.other.stuckInGateTimerMinutes > 0) {
-            this.stuckInGateTimer.activate(this.config.other.stuckInGateTimerMinutes * 60_000L);
+            long timeout = this.config.other.stuckInGateTimerMinutes * 60_000L;
+            if (extended) {
+                timeout *= 2;
+            }
+            this.stuckInGateTimer.activate(timeout);
         }
     }
 
@@ -490,6 +505,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private void deactivateStuckInGateTimer() {
         this.stuckInGateTimer.disarm();
         this.triedReloadOnStuck = false;
+        this.isStuckInGate = false;
     }
 
     /**
