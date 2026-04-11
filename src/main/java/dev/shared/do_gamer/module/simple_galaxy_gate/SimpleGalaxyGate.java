@@ -185,7 +185,7 @@ public final class SimpleGalaxyGate implements Module, Task,
      */
     private void appendCompletedGatesStatus(StringBuilder status) {
         if (this.completedGates > 0) {
-            status.append(String.format("%nCompleted Gates: %d", this.completedGates));
+            status.append(String.format("%nCompleted: %d", this.completedGates));
         }
     }
 
