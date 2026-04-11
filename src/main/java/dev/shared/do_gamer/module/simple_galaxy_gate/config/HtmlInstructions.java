@@ -10,7 +10,7 @@ import eu.darkbot.api.config.util.OptionEditor;
 public abstract class HtmlInstructions implements OptionEditor<String> {
     @Override
     public JComponent getEditorComponent(ConfigSetting<String> setting) {
-        String style = "padding: 5px; background-color: #3b3b3b; border: 1px solid #999;";
+        String style = "padding: 5px; background-color: #3b3b3b; border: 1px solid #999999;";
         String html = "<div style='" + style + "'>" + this.getEditorValue() + "</div>";
         JEditorPane editor = new JEditorPane("text/html", html);
         editor.setEditable(false);
