@@ -248,6 +248,11 @@ public class GateHandler {
         if (target == null) {
             return false; // Extra safety check to avoid potential NPEs
         }
+        // If stick to any target is enabled, ignore individual NPC flags
+        if (this.module.getConfig() != null && this.module.getConfig().other.stickToAnyTarget) {
+            return true;
+        }
+        // Check if the target NPC has the stick to target flag
         return target.getInfo().hasExtraFlag(GateNpcFlag.STICK_TO_TARGET);
     }
 

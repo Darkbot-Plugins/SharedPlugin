@@ -389,6 +389,24 @@ public class SimpleGalaxyGateConfig {
     }
 
     public static class OtherSettings {
+        public static class Instructions extends HtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return this.buildList(null,
+                        "These settings affect general features, not specific gates.",
+                        "Stick to any target: Don't switch away from any gate target.",
+                        "Switch profile: after the gate ends or when no resources remain.");
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
+        @Option("do_gamer.simple_galaxy_gate.other.stick_to_any_target")
+        public boolean stickToAnyTarget = false;
+
         @Option("do_gamer.simple_galaxy_gate.other.pet_collect")
         @Dropdown(options = PetCollectDropdown.class)
         public PetCollectType petCollect = PetCollectType.NONE;
