@@ -15,7 +15,7 @@ public abstract class HtmlInstructions implements OptionEditor<String> {
         JEditorPane editor = new JEditorPane("text/html", html);
         editor.setEditable(false);
         editor.setOpaque(false);
-        editor.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        editor.setBorder(BorderFactory.createEmptyBorder(5, 0, 10, 0));
         editor.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
         return editor;
     }
