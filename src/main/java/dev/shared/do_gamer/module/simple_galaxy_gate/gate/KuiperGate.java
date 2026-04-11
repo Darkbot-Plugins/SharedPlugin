@@ -24,7 +24,7 @@ public class KuiperGate extends GateHandler {
         this.npcMap.put("( UberStreuneR )", new NpcParam(590.0));
         this.npcMap.put("( UberSibelon )", new NpcParam(600.0));
 
-        this.jumpToNextMap = false;
+        this.jumpToNextMap = false; // Prevent default jump behavior, it will be handled in collectTickModule.
     }
 
     private boolean isSpecialist(Npc npc) {
@@ -44,7 +44,7 @@ public class KuiperGate extends GateHandler {
 
     @Override
     public boolean collectTickModule() {
-        // Travel to next map using Type ID to prevent bug with extra portals appearing.
+        // Jump to next map using Type ID to prevent bug with extra portals appearing.
         if (this.module.collectorModule.hasNoBox() && this.handleTravelToGate(PORTAL_TYPE_ID)) {
             StateStore.request(StateStore.State.TRAVELING_TO_GATE);
             return true;
