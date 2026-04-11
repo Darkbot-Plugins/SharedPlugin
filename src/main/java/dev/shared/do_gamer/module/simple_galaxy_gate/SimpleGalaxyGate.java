@@ -467,11 +467,13 @@ public final class SimpleGalaxyGate implements Module, Task,
                 return true;
             } else {
                 // Else move to radiation to destroy the ship
-                if (!this.moveToPosition(Maps.getMapCenterX(), 0, 50.0)) {
-                    // Reset flag to try refreshing again if still stuck after moving to radiation
+                if (!this.moveToPosition(Maps.getMapCenterX(), 0, 50.0) && !this.movement.isMoving()) {
+                    // Remain stuck after moving to radiation,
+                    // try refreshing again on next timer expiration
                     this.triedReloadOnStuck = false;
                     this.activateStuckInGateTimer(true); // Activate extended timer
                 }
+
                 return true;
             }
         }
