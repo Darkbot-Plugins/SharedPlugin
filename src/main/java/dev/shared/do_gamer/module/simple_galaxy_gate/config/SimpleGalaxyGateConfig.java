@@ -394,7 +394,7 @@ public class SimpleGalaxyGateConfig {
             public String getEditorValue() {
                 return this.buildList(null,
                         "These settings affect general features, not specific gates.",
-                        "Stick to any target: Don't switch away from any gate target.",
+                        "Stick to any target: don't switch away from any gate target.",
                         "Switch profile: after the gate ends or when no resources remain.");
             }
         }
