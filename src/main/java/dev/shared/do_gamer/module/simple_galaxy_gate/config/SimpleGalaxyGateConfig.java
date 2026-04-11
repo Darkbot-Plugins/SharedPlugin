@@ -240,7 +240,7 @@ public class SimpleGalaxyGateConfig {
         public int maxSpinCost = 100;
 
         @Option("do_gamer.simple_galaxy_gate.builder.min_uri")
-        @Number(min = 1_000, max = 10_000_000, step = 10_000)
+        @Number(min = 1_000, max = 100_000_000, step = 10_000)
         public int minUriBalance = 1_000;
 
         @Option("do_gamer.simple_galaxy_gate.builder.spins_5")
