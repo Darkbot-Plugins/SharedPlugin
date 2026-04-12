@@ -44,7 +44,7 @@ public class TrinityTrialsGate extends GateHandler {
             if (!this.setFlags) {
                 this.setFlags = true; // Ensure flags are only set once
                 this.module.setShouldMoveToRefinery(true);
-                this.module.setGateVisited(true);
+                this.module.setCanSwitchProfile(true);
             }
             this.closeGui(DIFFICULTY_SELECT_GUI);
             return false; // Allow default logic to take over

@@ -73,6 +73,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private boolean shouldMoveToRefinery = false;
     private boolean updateHangarData = true;
     private boolean gateVisited = false;
+    private boolean canSwitchProfile = false;
     private boolean fetchServerOffset = false;
     private boolean safeRefreshInGate = false;
     private boolean showBoxCount = true;
@@ -239,12 +240,8 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.updateHangarData = updateHangarData;
     }
 
-    public void setGateVisited(boolean gateVisited) {
-        // Increment completed gates count when leaving a gate map
-        if (this.gateVisited && !gateVisited) {
-            this.completedGates++;
-        }
-        this.gateVisited = gateVisited;
+    public void setCanSwitchProfile(boolean canSwitchProfile) {
+        this.canSwitchProfile = canSwitchProfile;
     }
 
     public SimpleGalaxyGateConfig getConfig() {
@@ -327,13 +324,20 @@ public final class SimpleGalaxyGate implements Module, Task,
         if (this.isMapGG()) {
             this.setShouldMoveToRefinery(true);
             this.gateBuilder.reset(); // Reset build state
-            this.setGateVisited(true); // Mark gate as visited
+            this.gateVisited = true; // Mark gate as visited
+            this.setCanSwitchProfile(true); // Allow profile switching after visiting gate
             this.handleGalaxyGate(gateHandler);
             return;
         }
 
         // Reset stuck timer when not in gate map
         this.deactivateStuckInGateTimer();
+
+        // Reset gate visited when leaving gate map
+        if (this.gateVisited) {
+            this.completedGates++; // Increment completed gates count
+            this.gateVisited = false; // Reset for next gate
+        }
 
         // Handle profile switching
         if (this.switchProfile()) {
@@ -691,7 +695,7 @@ public final class SimpleGalaxyGate implements Module, Task,
      * Checks if the gate was visited then switches to the specified profile.
      */
     private boolean switchProfile() {
-        if (!this.gateVisited) {
+        if (!this.canSwitchProfile) {
             return false;
         }
 
@@ -711,7 +715,7 @@ public final class SimpleGalaxyGate implements Module, Task,
             }
         }
 
-        this.setGateVisited(false); // Reset for next time
+        this.setCanSwitchProfile(false); // Reset for next time
         this.switchProfileTimer.disarm(); // Reset timer
         if (this.config.other.botProfile != null) {
             // Switch to the specified profile
