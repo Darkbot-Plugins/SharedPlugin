@@ -36,7 +36,7 @@ public class SimpleGalaxyGateConfig {
                     "Run config: used at the <b>end of wave / gate</b> when there are no NPCs."));
             html.append(LINE_BREAK);
             html.append(buildList("NPC auto populate:",
-                    "NPCs may be automatically configured using built-in gate presets.",
+                    "NPCs may be <b>automatically</b> configured using built-in gate presets.",
                     "Auto-populated values: radius, and optionally priority and flags.",
                     "NPCs with the <b>Kill</b> checkbox enabled are never overridden."));
             html.append(LINE_BREAK);
@@ -45,7 +45,7 @@ public class SimpleGalaxyGateConfig {
                     "Stick to Target: to stick to the current target, don't switch away."));
             html.append(LINE_BREAK);
             html.append(buildList("Gate-specific notes:",
-                    "DSE gate requires manual action to select ship and reset waves."));
+                    "DSE gate requires <b>manual</b> action to select ship and reset waves."));
             return html.toString();
         }
     }
@@ -118,7 +118,7 @@ public class SimpleGalaxyGateConfig {
         public static class Instructions extends HtmlInstructions {
             @Override
             public String getEditorValue() {
-                return "NPC radius overrides any attack radius. Set to 0 to use custom radius.";
+                return "NPC radius <b>overrides</b> any attack radius. Set to 0 to use custom radius.";
             }
         }
 
@@ -151,8 +151,9 @@ public class SimpleGalaxyGateConfig {
             public String getEditorValue() {
                 return this.buildList(null,
                         "Kamikaze is only used for NPCs marked with the <b>Kamikaze</b> flag.",
-                        "PET must have equipped <b>Kamikaze</b> gear in both configs.",
-                        "Kamikaze will only trigger if PET HP is below <b>20%</b>.");
+                        "PET <b>must</b> have equipped Kamikaze gear in <b>both</b> configs.",
+                        "Kamikaze will only trigger if PET HP is below <b>20%</b>.",
+                        "Cooldown depends on Kamikaze gear <b>level</b>. Set the equipped one.");
             }
         }
 
