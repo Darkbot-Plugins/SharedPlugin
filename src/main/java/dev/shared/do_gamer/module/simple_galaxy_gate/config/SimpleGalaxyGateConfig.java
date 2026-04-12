@@ -118,9 +118,7 @@ public class SimpleGalaxyGateConfig {
         public static class Instructions extends HtmlInstructions {
             @Override
             public String getEditorValue() {
-                return this.buildList(null,
-                        "This setting is used for any Galaxy Gate if no specific gate is selected.",
-                        "NPC radius overrides any attack radius. Set to 0 to use custom radius.");
+                return "NPC radius overrides any attack radius. Set to 0 to use custom radius.";
             }
         }
 
