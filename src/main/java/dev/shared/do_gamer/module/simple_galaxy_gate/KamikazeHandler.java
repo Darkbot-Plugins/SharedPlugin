@@ -1,5 +1,6 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
@@ -291,7 +292,22 @@ public final class KamikazeHandler {
             }
         }
 
+        this.lockClosestTarget(validTargets);
         return false;
+    }
+
+    /**
+     * Lock the closest NPC to the hero
+     */
+    private void lockClosestTarget(List<Npc> validTargets) {
+        Npc closest = validTargets.stream()
+                .min(Comparator.comparingDouble(n -> n.distanceTo(this.hero)))
+                .orElse(null);
+
+        if (closest != null) {
+            this.lootModule.getAttacker().setTarget(closest);
+            this.lootModule.getAttacker().tryLockTarget();
+        }
     }
 
     /**
