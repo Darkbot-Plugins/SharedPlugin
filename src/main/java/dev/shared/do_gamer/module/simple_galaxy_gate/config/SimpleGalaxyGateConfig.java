@@ -151,7 +151,7 @@ public class SimpleGalaxyGateConfig {
             public String getEditorValue() {
                 return this.buildList(null,
                         "Kamikaze is only used for NPCs marked with the <b>Kamikaze</b> flag.",
-                        "PET must have equipped <b>Kamikaze</b> gear.",
+                        "PET must have equipped <b>Kamikaze</b> gear in both configs.",
                         "Kamikaze will only trigger if PET HP is below <b>20%</b>.");
             }
         }
