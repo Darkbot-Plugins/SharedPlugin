@@ -8,9 +8,11 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import eu.darkbot.api.config.annotations.Dropdown;
+import eu.darkbot.api.config.annotations.Editor;
 import eu.darkbot.api.config.annotations.Number;
 import eu.darkbot.api.config.annotations.Option;
 import eu.darkbot.api.config.annotations.Percentage;
+import eu.darkbot.api.config.annotations.Readonly;
 import eu.darkbot.api.config.types.PercentRange;
 import eu.darkbot.api.config.types.ShipMode;
 import eu.darkbot.api.managers.ConfigAPI;
@@ -18,6 +20,41 @@ import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.shared.config.ProfileNames;
 
 public class SimpleGalaxyGateConfig {
+    private static final String LINE_BREAK = "<br><br>";
+
+    /**
+     * Instructions and explanations for the player,
+     * displayed at the top of the config.
+     */
+    public static class Instructions extends HtmlInstructions {
+        @Override
+        public String getEditorValue() {
+            StringBuilder html = new StringBuilder();
+            html.append(buildList("Ship config and formation:",
+                    "Offensive config: used for attacking NPCs in the gate.",
+                    "Roam config: used for moving between far targets.",
+                    "Run config: used at the <b>end of wave / gate</b> when there are no NPCs."));
+            html.append(LINE_BREAK);
+            html.append(buildList("NPC auto populate:",
+                    "NPCs may be <b>automatically</b> configured using built-in gate presets.",
+                    "Auto-populated values: radius, and optionally priority and flags.",
+                    "NPCs with the <b>Kill</b> checkbox enabled are never overridden."));
+            html.append(LINE_BREAK);
+            html.append(buildList("NPC extra flags:",
+                    "Kamikaze: allows Kamikaze for this NPC when the feature is enabled.",
+                    "Stick to Target: to stick to the current target, don't switch away."));
+            html.append(LINE_BREAK);
+            html.append(buildList("Gate-specific notes:",
+                    "DSE gate requires <b>manual</b> action to select ship and reset waves."));
+            return html.toString();
+        }
+    }
+
+    @Option("")
+    @Readonly
+    @Editor(Instructions.class)
+    public String instructions = null;
+
     @Option("do_gamer.simple_galaxy_gate.gate")
     @Dropdown(options = GalaxyGateDropdown.class)
     public Integer gateId = null;
@@ -78,6 +115,18 @@ public class SimpleGalaxyGateConfig {
      * Settings applied when "-any-" gate is selected
      */
     public static class AnyGateSettings {
+        public static class Instructions extends HtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return "NPC radius <b>overrides</b> any attack radius. Set to 0 to use custom radius.";
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
         @Option("do_gamer.simple_galaxy_gate.any_gate.npc_radius")
         @Number.Disabled(value = 0)
         @Number(min = 0, max = 1000, step = 10)
@@ -97,6 +146,22 @@ public class SimpleGalaxyGateConfig {
      * Settings for kamikaze behavior in the gate
      */
     public static class KamikazeSettings {
+        public static class Instructions extends HtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return this.buildList(null,
+                        "Kamikaze is only used for NPCs marked with the <b>Kamikaze</b> flag.",
+                        "PET <b>must</b> have equipped Kamikaze gear in <b>both</b> configs.",
+                        "Kamikaze will only trigger if PET HP is below <b>20%</b>.",
+                        "Cooldown depends on Kamikaze gear <b>level</b>. Set the equipped one.");
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
         @Option("general.enabled")
         public boolean enabled = false;
 
@@ -169,14 +234,14 @@ public class SimpleGalaxyGateConfig {
 
         @Option("do_gamer.simple_galaxy_gate.builder.use_multi_at")
         @Dropdown(options = MultiAtDropdown.class)
-        public Integer useMultiAt = 2;
+        public int useMultiAt = 2;
 
         @Option("do_gamer.simple_galaxy_gate.builder.max_spin_cost")
         @Number(min = 55, max = 100)
         public int maxSpinCost = 100;
 
         @Option("do_gamer.simple_galaxy_gate.builder.min_uri")
-        @Number(min = 1_000, max = 10_000_000, step = 10_000)
+        @Number(min = 1_000, max = 100_000_000, step = 10_000)
         public int minUriBalance = 1_000;
 
         @Option("do_gamer.simple_galaxy_gate.builder.spins_5")
@@ -325,6 +390,24 @@ public class SimpleGalaxyGateConfig {
     }
 
     public static class OtherSettings {
+        public static class Instructions extends HtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return this.buildList(null,
+                        "These settings affect general features, not specific gates.",
+                        "Stick to any target: don't switch away from any gate target.",
+                        "Switch profile: after the gate ends or when no resources remain.");
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
+        @Option("do_gamer.simple_galaxy_gate.other.stick_to_any_target")
+        public boolean stickToAnyTarget = false;
+
         @Option("do_gamer.simple_galaxy_gate.other.pet_collect")
         @Dropdown(options = PetCollectDropdown.class)
         public PetCollectType petCollect = PetCollectType.NONE;

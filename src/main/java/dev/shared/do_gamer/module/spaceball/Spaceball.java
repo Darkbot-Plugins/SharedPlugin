@@ -165,6 +165,11 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
             return status.toString();
         }
 
+        if (!ServerTimeHelper.offsetUpdated()) {
+            status.append("Waiting for server time sync...");
+            return status.toString();
+        }
+
         this.buildRunningStatus(status);
         this.appendCountersAndDelay(status);
         this.appendAdditionalStatus(status);
@@ -299,6 +304,11 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     public void onTickModule() {
         // Handle stop and exit first
         if (this.handleStopAndExit()) {
+            return;
+        }
+
+        // Wait for server time sync
+        if (!ServerTimeHelper.offsetUpdated()) {
             return;
         }
 

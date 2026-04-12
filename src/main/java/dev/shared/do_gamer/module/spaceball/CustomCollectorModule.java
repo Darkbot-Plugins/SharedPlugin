@@ -3,12 +3,13 @@ package dev.shared.do_gamer.module.spaceball;
 import java.util.Random;
 
 import eu.darkbot.api.PluginAPI;
+import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.shared.modules.CollectorModule;
 
 public class CustomCollectorModule extends CollectorModule {
 
-    private static final double GATE_RADIUS = 800;
+    private static final double GATE_RADIUS = 800.0;
     private static final int MAX_MOVES_AROUND_GATE = 30;
     private static final int DIRECTION_SWITCH_MOVES = 16;
     private static final double[] OFFSETS_X = new double[8];
@@ -41,17 +42,22 @@ public class CustomCollectorModule extends CollectorModule {
 
     @Override
     public void onTickModule() {
-        if (this.isNotWaiting() && this.checkDangerousAndCurrentMap()) {
+        if (this.isNotWaiting() && this.checkMap()) {
             this.hero.setRoamMode();
             this.pet.setEnabled(true);
-            this.checkInvisibility();
-            this.checkDangerous();
             this.findBox();
             if (!this.tryCollectNearestBox()
                     && (this.hero.distanceTo(this.movement.getDestination()) < 20.0 || this.movement.isOutOfMap())) {
                 this.moveAroundGate();
             }
         }
+    }
+
+    @Override
+    protected boolean canCollect(Box box) {
+        return box.getInfo().shouldCollect() && !box.isCollected()
+                && this.movement.getClosestDistance(box) < GATE_RADIUS
+                && !this.isContested(box);
     }
 
     private boolean skipMoving() {

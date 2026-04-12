@@ -2,9 +2,13 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.util.List;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.game.entities.Npc;
+import eu.darkbot.api.game.enums.PortalType;
 
 public class KuiperGate extends GateHandler {
+    // Use the Portal type ID to prevent bug with extra portals appearing.
+    private static final int PORTAL_TYPE_ID = PortalType.KUIPER.getId();
 
     public KuiperGate() {
         this.npcMap.put("-=[ Streuner Specialist ]=-", new NpcParam(610.0));
@@ -19,6 +23,8 @@ public class KuiperGate extends GateHandler {
         this.npcMap.put("..::{ Boss Saimon }::..", new NpcParam(590.0));
         this.npcMap.put("( UberStreuneR )", new NpcParam(590.0));
         this.npcMap.put("( UberSibelon )", new NpcParam(600.0));
+
+        this.jumpToNextMap = false; // Prevent default jump behavior, it will be handled in collectTickModule.
     }
 
     private boolean isSpecialist(Npc npc) {
@@ -34,5 +40,15 @@ public class KuiperGate extends GateHandler {
             return KillDecision.NO;
         }
         return super.shouldKillNpc(npc);
+    }
+
+    @Override
+    public boolean collectTickModule() {
+        // Jump to next map using Type ID to prevent bug with extra portals appearing.
+        if (this.module.collectorModule.hasNoBox() && this.handleTravelToGate(PORTAL_TYPE_ID)) {
+            StateStore.request(StateStore.State.TRAVELING_TO_GATE);
+            return true;
+        }
+        return false;
     }
 }
