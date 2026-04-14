@@ -347,6 +347,10 @@ public final class CustomLootModule extends LootModule {
         } else if (!this.repair && this.needsRepairing()) {
             this.repair = true;
         }
+
+        if (this.repair) {
+            StateStore.request(StateStore.State.REPAIRING);
+        }
     }
 
     /**

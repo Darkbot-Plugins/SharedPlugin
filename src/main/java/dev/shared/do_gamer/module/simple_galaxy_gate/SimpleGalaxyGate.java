@@ -136,6 +136,7 @@ public final class SimpleGalaxyGate implements Module, Task,
             case COLLECTING:
             case KAMIKAZE:
             case GUARDING:
+            case REPAIRING:
                 this.appendGateStatus(status);
                 break;
             case WAITING:
