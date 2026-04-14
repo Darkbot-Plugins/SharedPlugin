@@ -36,7 +36,6 @@ import eu.darkbot.api.managers.ExtensionsAPI;
 import eu.darkbot.api.managers.GameScreenAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
-import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.managers.RepairAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.shared.utils.MapTraveler;
@@ -50,7 +49,6 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     public final HeroAPI hero;
     public final MovementAPI movement;
-    public final PetAPI pet;
     public final EntitiesAPI entities;
     public final CustomLootModule lootModule;
     public final CustomCollectorModule collectorModule;
@@ -90,7 +88,6 @@ public final class SimpleGalaxyGate implements Module, Task,
     public SimpleGalaxyGate(PluginAPI api) {
         this.hero = api.requireAPI(HeroAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
-        this.pet = api.requireAPI(PetAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.lootModule = new CustomLootModule(api);
         this.collectorModule = new CustomCollectorModule(api);
@@ -373,7 +370,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         if (this.gateBuilder.tick()) {
             StateStore.request(StateStore.State.BUILDING);
             this.moveToRefinery(); // Stay near refinery while building
-            this.pet.setEnabled(false); // Disable pet while building
+            this.petGearHelper.disable(); // Disable pet while building
             return;
         }
 

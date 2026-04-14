@@ -133,12 +133,12 @@ public class PetGearHelper {
      * Try to reset the PET if it's bugged
      */
     public boolean reset() {
-        if (this.isEnabled() && this.resetTimer.isInactive()) {
-            // Attempt to reset the PET by pressing the "active" keybind
-            this.settingsProxy.pressKeybind(SettingsProxy.KeyBind.ACTIVE_PET);
+        if (this.isEnabled() && this.resetTimer.isInactive()
+                && this.settingsProxy.pressKeybind(SettingsProxy.KeyBind.ACTIVE_PET)) {
             this.resetTimer.activate();
             return true;
         }
+
         return false;
     }
 
