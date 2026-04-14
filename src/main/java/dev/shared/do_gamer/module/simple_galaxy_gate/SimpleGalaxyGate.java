@@ -191,11 +191,7 @@ public final class SimpleGalaxyGate implements Module, Task,
      * Appends the number of completed gates.
      */
     private void appendCompletedGatesStatus(StringBuilder status) {
-        if (this.completedGates > 0) {
-            if (!this.showCompletedGates) {
-                this.completedGates = 0; // Reset if not showing
-                return;
-            }
+        if (this.completedGates > 0 && this.showCompletedGates) {
             status.append(String.format("%nCompleted: %d", this.completedGates));
         }
     }
@@ -343,6 +339,8 @@ public final class SimpleGalaxyGate implements Module, Task,
         if (this.gateVisited) {
             if (this.showCompletedGates) {
                 this.completedGates++; // Increment completed gates count
+            } else {
+                this.completedGates = 0; // Reset if not showing
             }
             this.gateVisited = false; // Reset for next gate
         }
