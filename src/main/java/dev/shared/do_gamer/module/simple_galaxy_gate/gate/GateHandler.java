@@ -41,6 +41,7 @@ public class GateHandler {
     protected boolean safeRefreshInGate = true;
     protected boolean noPortalsInGate = false;
     protected boolean showBoxCount = true;
+    protected boolean showCompletedGates = true;
     protected String statusDetails = null;
     protected boolean useGuardableNpcAsSearchLocation = false;
     private Npc cachedGuardableNpc = null;
@@ -261,6 +262,13 @@ public class GateHandler {
      */
     public final boolean isShowBoxCount() {
         return this.showBoxCount;
+    }
+
+    /**
+     * Return true to show completed gates in module status
+     */
+    public final boolean isShowCompletedGates() {
+        return this.showCompletedGates;
     }
 
     /**

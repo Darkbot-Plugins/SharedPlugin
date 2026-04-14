@@ -27,6 +27,7 @@ public class DseGate extends GateHandler {
         this.repairRadius = REPAIR_RADIUS;
         this.approachToCenter = false;
         this.useGuardableNpcAsSearchLocation = true;
+        this.showCompletedGates = false;
     }
 
     @Override

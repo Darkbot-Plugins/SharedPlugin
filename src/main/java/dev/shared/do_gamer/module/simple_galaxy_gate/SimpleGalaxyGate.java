@@ -77,6 +77,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private boolean fetchServerOffset = false;
     private boolean safeRefreshInGate = false;
     private boolean showBoxCount = true;
+    private boolean showCompletedGates = true;
     private int completedGates = 0;
 
     private final GateBuilder gateBuilder;
@@ -190,6 +191,10 @@ public final class SimpleGalaxyGate implements Module, Task,
      */
     private void appendCompletedGatesStatus(StringBuilder status) {
         if (this.completedGates > 0) {
+            if (!this.showCompletedGates) {
+                this.completedGates = 0; // Reset if not showing
+                return;
+            }
             status.append(String.format("%nCompleted: %d", this.completedGates));
         }
     }
@@ -335,7 +340,9 @@ public final class SimpleGalaxyGate implements Module, Task,
 
         // Reset gate visited when leaving gate map
         if (this.gateVisited) {
-            this.completedGates++; // Increment completed gates count
+            if (this.showCompletedGates) {
+                this.completedGates++; // Increment completed gates count
+            }
             this.gateVisited = false; // Reset for next gate
         }
 
@@ -383,6 +390,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.fetchServerOffset = handler.isFetchServerOffset();
         this.safeRefreshInGate = handler.canSafeRefreshInGate();
         this.showBoxCount = handler.isShowBoxCount();
+        this.showCompletedGates = handler.isShowCompletedGates();
         this.statusDetails = handler.getStatusDetails();
         return handler;
     }
