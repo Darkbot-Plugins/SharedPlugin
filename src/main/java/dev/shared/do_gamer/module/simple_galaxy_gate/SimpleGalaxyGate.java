@@ -49,7 +49,7 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     public final HeroAPI hero;
     public final MovementAPI movement;
-    private final PetAPI pet;
+    public final PetAPI pet;
     public final EntitiesAPI entities;
     public final CustomLootModule lootModule;
     public final CustomCollectorModule collectorModule;

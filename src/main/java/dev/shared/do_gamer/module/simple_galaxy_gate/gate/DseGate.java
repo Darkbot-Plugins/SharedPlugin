@@ -14,6 +14,7 @@ public class DseGate extends GateHandler {
     private static final int COMMAND_HALL_MAP_ID = 473; // Map ID for Command Center
     private static final double REPAIR_RADIUS = 3_000.0;
     private Timer jumpTimer = Timer.get(20_000L);
+    private Timer delay = Timer.get(3_000L);
 
     public DseGate() {
         this.npcMap.put("-={ Gygerim Overlord }=-", new NpcParam(590.0, -95));
@@ -26,6 +27,7 @@ public class DseGate extends GateHandler {
         this.defaultNpcParam = new NpcParam(580.0);
         this.repairRadius = REPAIR_RADIUS;
         this.approachToCenter = false;
+        this.jumpToNextMap = false;
         this.useGuardableNpcAsSearchLocation = true;
         this.showCompletedGates = false;
     }
@@ -44,6 +46,7 @@ public class DseGate extends GateHandler {
     @Override
     public void reset() {
         this.jumpTimer.disarm();
+        this.delay.disarm();
         this.resetCachedGuardableNpc();
     }
 
@@ -110,11 +113,18 @@ public class DseGate extends GateHandler {
         // Check if we're in Command Hall to handle box populate and gate reset logic
         if (this.module.starSystem.getCurrentMap().getId() == COMMAND_HALL_MAP_ID) {
             this.showBoxCount = true; // Show box count in Command Hall
+            this.module.pet.setEnabled(false); // Disable pet in Command Hall
+
+            // Activate small delay for preload Command Hall
+            if (!this.delay.isArmed()) {
+                this.delay.activate();
+            }
 
             // Wait manual selection of ship or reset gate
             if (this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()
                     || this.getVisibleGui(SHIP_WARP_GUI).isPresent()
-                    || (this.jumpTimer.isArmed() && this.jumpTimer.isInactive())) {
+                    || (this.jumpTimer.isArmed() && this.jumpTimer.isInactive())
+                    || this.delay.isActive()) {
                 StateStore.request(StateStore.State.WAITING_IN_GATE);
                 return true;
             }
@@ -123,7 +133,16 @@ public class DseGate extends GateHandler {
             if (StateStore.current() == StateStore.State.JUMPING && !this.jumpTimer.isArmed()) {
                 this.jumpTimer.activate();
             }
-            return false;
+
+            // Collect boxes if available, otherwise wait for jump or timeout
+            if (!this.module.collectorModule.hasNoBox()) {
+                StateStore.request(StateStore.State.COLLECTING);
+                this.module.collectorModule.collectIfAvailable();
+                return true;
+            }
+
+            this.module.jumpToNextMap();
+            return true;
         }
 
         this.showBoxCount = false; // Hide box count when in gate
