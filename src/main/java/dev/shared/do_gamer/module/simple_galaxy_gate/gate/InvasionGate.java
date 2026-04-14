@@ -20,6 +20,7 @@ public class InvasionGate extends GateHandler {
         this.approachToCenter = false;
         this.skipFarTargets = false;
         this.noPortalsInGate = true;
+        this.showCompletedGates = false;
     }
 
     @Override
