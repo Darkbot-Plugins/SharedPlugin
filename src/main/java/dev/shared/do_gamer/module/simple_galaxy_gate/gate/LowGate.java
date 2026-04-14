@@ -34,7 +34,7 @@ public class LowGate extends GateHandler {
     private BossState bossState = BossState.NONE;
 
     public LowGate() {
-        this.npcMap.put("-=[ Century Falcon ]=-", new NpcParam(600.0, 50));
+        this.npcMap.put("-=[ Century Falcon ]=-", new NpcParam(580.0, 50, NpcFlag.NO_CIRCLE));
         this.npcMap.put("-=[ Vagrant ]=-", new NpcParam(540.0, 100, NpcFlag.AGGRESSIVE_FOLLOW));
 
         this.defaultNpcParam = new NpcParam(540.0, NpcFlag.AGGRESSIVE_FOLLOW);
