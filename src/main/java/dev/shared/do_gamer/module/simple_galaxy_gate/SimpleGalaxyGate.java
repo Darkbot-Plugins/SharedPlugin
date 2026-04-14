@@ -17,6 +17,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
@@ -81,6 +82,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private int completedGates = 0;
 
     private final GateBuilder gateBuilder;
+    public final PetGearHelper petGearHelper;
 
     private SimpleGalaxyGateConfig config;
     private String statusDetails = null;
@@ -105,6 +107,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.botBrowserApi = this.configApi.requireConfig("bot_settings.api_config.browser_api");
         this.lootModule.setCollector(this.collectorModule); // Link collector module
         this.gateBuilder = new GateBuilder(this, api);
+        this.petGearHelper = new PetGearHelper(api);
     }
 
     @Override

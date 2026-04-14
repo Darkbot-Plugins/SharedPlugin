@@ -113,7 +113,8 @@ public class DseGate extends GateHandler {
         // Check if we're in Command Hall to handle box populate and gate reset logic
         if (this.module.starSystem.getCurrentMap().getId() == COMMAND_HALL_MAP_ID) {
             this.showBoxCount = true; // Show box count in Command Hall
-            this.module.pet.setEnabled(false); // Disable pet in Command Hall
+            // Try deactivate PET to prevent became bugged
+            this.module.petGearHelper.disable();
 
             // Activate small delay for preload Command Hall
             if (!this.delay.isArmed()) {

@@ -6,9 +6,6 @@ import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
 
-import com.github.manolo8.darkbot.Main;
-import com.github.manolo8.darkbot.core.objects.facades.SettingsProxy;
-
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
@@ -32,7 +29,6 @@ public final class KamikazeHandler {
     private final MovementAPI movement;
     private final PetAPI pet;
     private final GroupAPI group;
-    private final SettingsProxy settingsProxy;
     private final PetGearHelper petGearHelper;
 
     private SimpleGalaxyGateConfig config;
@@ -60,7 +56,6 @@ public final class KamikazeHandler {
         this.movement = api.requireAPI(MovementAPI.class);
         this.pet = api.requireAPI(PetAPI.class);
         this.group = api.requireAPI(GroupAPI.class);
-        this.settingsProxy = Main.INSTANCE.facadeManager.settings;
         this.petGearHelper = new PetGearHelper(api);
     }
 
@@ -163,9 +158,8 @@ public final class KamikazeHandler {
             if (!this.stuckTimer.isArmed()) {
                 // Arm the timer to detect if PET HP is stuck at 0 after respawn
                 this.stuckTimer.activate();
-            } else if (this.stuckTimer.isInactive()) {
-                // Timer expired, try to reactivate PET
-                this.settingsProxy.pressKeybind(SettingsProxy.KeyBind.ACTIVE_PET);
+            } else if (this.stuckTimer.isInactive() && this.petGearHelper.reset()) {
+                // If reset was successful, disarm the stuck timer
                 this.stuckTimer.disarm();
             }
         }
