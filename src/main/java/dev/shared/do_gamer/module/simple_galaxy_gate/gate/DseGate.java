@@ -83,7 +83,24 @@ public class DseGate extends GateHandler {
         if (this.isGuardableNpc(npc)) {
             return KillDecision.NO;
         }
+
+        // If a guardable NPC is under attack by another NPC, don't kill this NPC
+        if (this.isGuardableNpcAttackedByOtherNpc(npc)) {
+            return KillDecision.NO;
+        }
+
         return super.shouldKillNpc(npc);
+    }
+
+    /**
+     * Checks whether a guardable NPC is currently under attack by another NPC.
+     */
+    private boolean isGuardableNpcAttackedByOtherNpc(Npc npc) {
+        Npc guardableNpc = this.getGuardableNpc();
+        return guardableNpc != null
+                && !npc.isAttacking(guardableNpc)
+                && this.module.lootModule.getNpcs().stream()
+                        .anyMatch(n -> !this.isGuardableNpc(n) && n.isAttacking(guardableNpc));
     }
 
     /**
