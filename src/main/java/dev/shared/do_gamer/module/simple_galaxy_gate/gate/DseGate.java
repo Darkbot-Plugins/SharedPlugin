@@ -4,6 +4,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.other.GameMap;
+import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.util.Timer;
 
 public class DseGate extends GateHandler {
@@ -109,6 +110,18 @@ public class DseGate extends GateHandler {
     private boolean hasNearbyMissileStorm(Npc npc) {
         return !this.npcHasMissileStormName(npc) && this.module.lootModule.getNpcs().stream()
                 .anyMatch(n -> this.npcHasMissileStormName(n) && n.distanceTo(this.getNpcSearchLocation()) < 2_000.0);
+    }
+
+    @Override
+    public double getTargetRadius(Lockable target) {
+        double radius = super.getTargetRadius(target);
+
+        Npc guardableNpc = this.getGuardableNpc();
+        if (guardableNpc != null && !this.isGuardableNpc((Npc) target)
+                && target.distanceTo(guardableNpc) >= this.getFarTargetDistance()) {
+            return radius * 0.5; // Reduce radius for target far from the guardable NPC
+        }
+        return radius;
     }
 
     @Override
