@@ -167,9 +167,8 @@ public class DseGate extends GateHandler {
             }
 
             // Collect boxes if available, otherwise wait for jump or timeout
-            if (!this.module.collectorModule.hasNoBox()) {
+            if (this.module.collectorModule.collectIfAvailable()) {
                 StateStore.request(StateStore.State.COLLECTING);
-                this.module.collectorModule.collectIfAvailable();
                 return true;
             }
 
