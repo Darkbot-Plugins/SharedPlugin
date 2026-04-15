@@ -115,11 +115,12 @@ public class DseGate extends GateHandler {
     @Override
     public double getTargetRadius(Lockable target) {
         double radius = super.getTargetRadius(target);
-
-        Npc guardableNpc = this.getGuardableNpc();
-        if (guardableNpc != null && !this.isGuardableNpc((Npc) target)
-                && target.distanceTo(guardableNpc) >= this.getFarTargetDistance()) {
-            return radius * 0.5; // Reduce radius for target far from the guardable NPC
+        if (target != null && this.getGuardableNpc() != null) {
+            Npc npc = (Npc) target;
+            if (!this.isGuardableNpc(npc) && !npc.isAttacking(this.module.hero)) {
+                // Reduce radius for target not attacking hero when have guardable NPC
+                return radius * 0.75;
+            }
         }
         return radius;
     }
