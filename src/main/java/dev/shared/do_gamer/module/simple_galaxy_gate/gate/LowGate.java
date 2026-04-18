@@ -14,7 +14,7 @@ import eu.darkbot.api.game.entities.Relay;
 import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.api.utils.Version;
 
-public class LowGate extends GateHandler {
+public final class LowGate extends GateHandler {
 
     private static final double FAR_TARGET_DISTANCE = 1_200.0;
 

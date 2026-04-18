@@ -5,7 +5,7 @@ import com.github.manolo8.darkbot.core.entities.Npc;
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.config.types.NpcFlag;
 
-public class ZetaGate extends GateHandler {
+public final class ZetaGate extends GateHandler {
 
     public ZetaGate() {
         this.npcMap.put("( UberKristallin )", new NpcParam(590.0));

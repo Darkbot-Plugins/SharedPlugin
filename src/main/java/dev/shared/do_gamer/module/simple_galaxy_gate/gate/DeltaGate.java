@@ -1,6 +1,6 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
-public class DeltaGate extends GateHandler {
+public final class DeltaGate extends GateHandler {
 
     public DeltaGate() {
         this.npcMap.put("-=[ Kristallin ]=-", new NpcParam(550.0));

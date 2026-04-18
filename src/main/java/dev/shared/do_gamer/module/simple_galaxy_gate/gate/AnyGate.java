@@ -3,7 +3,7 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.other.Lockable;
 
-public class AnyGate extends GateHandler {
+public final class AnyGate extends GateHandler {
     public AnyGate() {
         this.approachToCenter = false;
         this.skipFarTargets = false;

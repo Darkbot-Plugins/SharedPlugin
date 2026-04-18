@@ -10,7 +10,7 @@ import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
 import eu.darkbot.util.Timer;
 
-public class TrinityTrialsGate extends GateHandler {
+public final class TrinityTrialsGate extends GateHandler {
     private static final String DIFFICULTY_SELECT_GUI = "trinitytrials_difficultyselect";
     private static final int PORTAL_TYPE_ID = 304; // Portal type ID for Trinity Trials
     private static final Pattern MAP_PATTERN = Pattern.compile("^[1-5]-[1-4]$");

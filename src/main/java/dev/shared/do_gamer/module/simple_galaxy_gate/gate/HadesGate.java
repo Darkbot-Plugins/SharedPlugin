@@ -3,7 +3,7 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 
-public class HadesGate extends GateHandler {
+public final class HadesGate extends GateHandler {
 
     // The Hades map is twice smaller than the other gates.
     private static final double MAP_CENTER_X = 5_240.0;
