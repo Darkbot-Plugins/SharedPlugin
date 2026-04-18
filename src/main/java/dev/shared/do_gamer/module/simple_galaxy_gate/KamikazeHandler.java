@@ -274,6 +274,9 @@ public final class KamikazeHandler {
         if (!this.hasCooldown() && this.petReadyForKamikaze()
                 && this.hero.getHealth().hpPercent() >= this.config.kamikaze.hpRange.getMax()
                 && this.hero.getHealth().shieldPercent() >= this.config.kamikaze.shieldRange.getMax()) {
+            // Lock the closest target
+            this.lockClosestTarget(validTargets);
+            // Check if NPCs are close enough to each other
             if (this.isNpcsCloseEnough(validTargets)) {
                 if (this.delay.isInactive()) {
                     this.setActive();
@@ -286,7 +289,6 @@ public final class KamikazeHandler {
             }
         }
 
-        this.lockClosestTarget(validTargets);
         return false;
     }
 
