@@ -119,7 +119,7 @@ public class PetGearHelper {
      * Checks if the PET is active.
      */
     public boolean isActive() {
-        return this.pet.isActive() && this.getHealth().getHp() > 0;
+        return this.pet.isActive();
     }
 
     /**
