@@ -7,7 +7,7 @@ import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.util.Timer;
 
-public class DseGate extends GateHandler {
+public final class DseGate extends GateHandler {
     private static final String MAIN_GUI = "expedition";
     private static final String SHIP_HANGAR_GUI = "expedition_shiphangar";
     private static final String SHIP_WARP_GUI = "expedition_shipwarp";
@@ -15,7 +15,8 @@ public class DseGate extends GateHandler {
     private static final int COMMAND_HALL_MAP_ID = 473; // Map ID for Command Center
     private static final double REPAIR_RADIUS = 3_000.0;
     private Timer jumpTimer = Timer.get(20_000L);
-    private Timer delay = Timer.get(3_000L);
+    private Timer loadDelay = Timer.get(3_000L);
+    private Timer petDisableDelay = Timer.get(7_000L);
 
     public DseGate() {
         this.npcMap.put("-={ Gygerim Overlord }=-", new NpcParam(590.0, -95));
@@ -47,7 +48,8 @@ public class DseGate extends GateHandler {
     @Override
     public void reset() {
         this.jumpTimer.disarm();
-        this.delay.disarm();
+        this.loadDelay.disarm();
+        this.petDisableDelay.disarm();
         this.resetCachedGuardableNpc();
     }
 
@@ -144,19 +146,16 @@ public class DseGate extends GateHandler {
         // Check if we're in Command Hall to handle box populate and gate reset logic
         if (this.module.starSystem.getCurrentMap().getId() == COMMAND_HALL_MAP_ID) {
             this.showBoxCount = true; // Show box count in Command Hall
-            // Try deactivate PET to prevent became bugged
-            this.module.petGearHelper.disable();
-
-            // Activate small delay for preload Command Hall
-            if (!this.delay.isArmed()) {
-                this.delay.activate();
+            if (!this.loadDelay.isArmed()) {
+                this.loadDelay.activate(); // Activate load delay timer when entering Command Hall
             }
 
             // Wait manual selection of ship or reset gate
             if (this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()
                     || this.getVisibleGui(SHIP_WARP_GUI).isPresent()
-                    || (this.jumpTimer.isArmed() && this.jumpTimer.isInactive())
-                    || this.delay.isActive()) {
+                    || this.loadDelay.isActive()
+                    || this.ensurePetDeactivated()
+                    || (this.jumpTimer.isArmed() && this.jumpTimer.isInactive())) {
                 StateStore.request(StateStore.State.WAITING_IN_GATE);
                 return true;
             }
@@ -180,5 +179,21 @@ public class DseGate extends GateHandler {
         this.reset();
         this.closeGui(MAIN_GUI);
         return false; // Allow default logic to take over
+    }
+
+    /**
+     * Ensures the PET is deactivated to prevent it from becoming bugged
+     */
+    private boolean ensurePetDeactivated() {
+        // Disable PET to prevent it from becoming bugged
+        this.module.petGearHelper.disable();
+
+        // Activate delay timer to wait for PET to be disabled
+        if (!this.petDisableDelay.isArmed()) {
+            this.petDisableDelay.activate();
+        }
+
+        // Wait until PET is deactivated and the delay has elapsed
+        return this.module.petGearHelper.isActive() && this.petDisableDelay.isActive();
     }
 }
