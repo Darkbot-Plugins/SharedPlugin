@@ -182,7 +182,7 @@ public final class DseGate extends GateHandler {
     }
 
     /**
-     * Ensures the PET is deactivated to prevent it from becoming bugged
+     * Keep waiting while PET is still active or timer hasn't finished
      */
     private boolean ensurePetDeactivated() {
         // Disable PET to prevent it from becoming bugged
