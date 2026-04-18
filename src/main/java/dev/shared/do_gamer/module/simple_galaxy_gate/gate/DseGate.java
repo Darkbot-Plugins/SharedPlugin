@@ -150,7 +150,7 @@ public final class DseGate extends GateHandler {
                 this.loadDelay.activate(); // Activate load delay timer when entering Command Hall
             }
 
-            // Wait manual selection of ship or reset gate
+            // Waiting conditions
             if (this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()
                     || this.getVisibleGui(SHIP_WARP_GUI).isPresent()
                     || this.loadDelay.isActive()
