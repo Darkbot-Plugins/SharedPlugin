@@ -21,7 +21,7 @@ import eu.darkbot.api.extensions.Task;
 import eu.darkbot.api.managers.StatsAPI;
 import eu.darkbot.util.Timer;
 
-@Feature(name = "Autobuy Shop Items", description = "Automatically buys items from the shop")
+@Feature(name = "Autobuy", description = "Automatically buys boosters and special items from the shop at a configured interval")
 public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
     private enum State {
