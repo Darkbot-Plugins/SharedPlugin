@@ -35,8 +35,6 @@ public final class CustomLootModule extends LootModule {
     protected final ConfigSetting<Integer> collectRadius;
     protected final Collection<? extends Barrier> barriers;
 
-    private static final long GHOST_TARGET_BLACKLIST_MS = 300_000L;
-
     private CustomCollectorModule collector;
     private GateHandler gateHandler;
     private boolean repair = false;
@@ -133,8 +131,16 @@ public final class CustomLootModule extends LootModule {
                     this.moveToAnSafePosition();
                 }
             }
-            // Attack target
+            this.ignoreInvalidTarget();
             this.attack.tryLockAndAttack();
+        }
+    }
+
+    @Override
+    protected void ignoreInvalidTarget() {
+        if (this.attack.isBugged()) {
+            this.attack.setBlacklisted(5000L);
+            this.hero.setLocalTarget((Lockable) null);
         }
     }
 
@@ -228,11 +234,6 @@ public final class CustomLootModule extends LootModule {
                 .orElse(null);
 
         if (target != null && target.isValid()) {
-            // Skip ghost target
-            if (target.getHealth().getHp() == 0) {
-                target.setBlacklisted(GHOST_TARGET_BLACKLIST_MS); // Blacklist ghost target
-                return Objects.equals(target, best) ? null : best;
-            }
             // If current target is still the best, keep it
             if (best == null || Objects.equals(target, best)) {
                 return target;
@@ -345,6 +346,10 @@ public final class CustomLootModule extends LootModule {
             this.repair = false;
         } else if (!this.repair && this.needsRepairing()) {
             this.repair = true;
+        }
+
+        if (this.repair) {
+            StateStore.request(StateStore.State.REPAIRING);
         }
     }
 

@@ -6,7 +6,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.game.enums.PortalType;
 import eu.darkbot.api.game.other.GameMap;
 
-public class InvasionGate extends GateHandler {
+public final class InvasionGate extends GateHandler {
     // Portal type IDs for Invasion (one of the three possible portals can appear)
     private static final List<Integer> PORTAL_TYPE_IDS = List.of(
             PortalType.INVASION_1.getId(),
@@ -20,6 +20,7 @@ public class InvasionGate extends GateHandler {
         this.approachToCenter = false;
         this.skipFarTargets = false;
         this.noPortalsInGate = true;
+        this.showCompletedGates = false;
     }
 
     @Override

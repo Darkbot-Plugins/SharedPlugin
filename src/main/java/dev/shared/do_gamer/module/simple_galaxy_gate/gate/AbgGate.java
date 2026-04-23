@@ -2,7 +2,7 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 
-public class AbgGate extends GateHandler {
+public final class AbgGate extends GateHandler {
 
     public AbgGate() {
         this.npcMap.put("-=[ Devolarium ]=-", new NpcParam(560.0));

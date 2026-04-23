@@ -4,9 +4,10 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.other.GameMap;
+import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.util.Timer;
 
-public class DseGate extends GateHandler {
+public final class DseGate extends GateHandler {
     private static final String MAIN_GUI = "expedition";
     private static final String SHIP_HANGAR_GUI = "expedition_shiphangar";
     private static final String SHIP_WARP_GUI = "expedition_shipwarp";
@@ -14,6 +15,8 @@ public class DseGate extends GateHandler {
     private static final int COMMAND_HALL_MAP_ID = 473; // Map ID for Command Center
     private static final double REPAIR_RADIUS = 3_000.0;
     private Timer jumpTimer = Timer.get(20_000L);
+    private Timer loadDelay = Timer.get(3_000L);
+    private Timer petDisableDelay = Timer.get(7_000L);
 
     public DseGate() {
         this.npcMap.put("-={ Gygerim Overlord }=-", new NpcParam(590.0, -95));
@@ -26,7 +29,9 @@ public class DseGate extends GateHandler {
         this.defaultNpcParam = new NpcParam(580.0);
         this.repairRadius = REPAIR_RADIUS;
         this.approachToCenter = false;
+        this.jumpToNextMap = false;
         this.useGuardableNpcAsSearchLocation = true;
+        this.showCompletedGates = false;
     }
 
     @Override
@@ -43,6 +48,8 @@ public class DseGate extends GateHandler {
     @Override
     public void reset() {
         this.jumpTimer.disarm();
+        this.loadDelay.disarm();
+        this.petDisableDelay.disarm();
         this.resetCachedGuardableNpc();
     }
 
@@ -79,7 +86,24 @@ public class DseGate extends GateHandler {
         if (this.isGuardableNpc(npc)) {
             return KillDecision.NO;
         }
+
+        // If a guardable NPC is under attack by another NPC, don't kill this NPC
+        if (this.isGuardableNpcAttackedByOtherNpc(npc)) {
+            return KillDecision.NO;
+        }
+
         return super.shouldKillNpc(npc);
+    }
+
+    /**
+     * Checks whether a guardable NPC is currently under attack by another NPC.
+     */
+    private boolean isGuardableNpcAttackedByOtherNpc(Npc npc) {
+        Npc guardableNpc = this.getGuardableNpc();
+        return guardableNpc != null
+                && !npc.isAttacking(guardableNpc)
+                && this.module.lootModule.getNpcs().stream()
+                        .anyMatch(n -> !this.isGuardableNpc(n) && n.isAttacking(guardableNpc));
     }
 
     /**
@@ -88,6 +112,19 @@ public class DseGate extends GateHandler {
     private boolean hasNearbyMissileStorm(Npc npc) {
         return !this.npcHasMissileStormName(npc) && this.module.lootModule.getNpcs().stream()
                 .anyMatch(n -> this.npcHasMissileStormName(n) && n.distanceTo(this.getNpcSearchLocation()) < 2_000.0);
+    }
+
+    @Override
+    public double getTargetRadius(Lockable target) {
+        double radius = super.getTargetRadius(target);
+        if (target != null && this.getGuardableNpc() != null) {
+            Npc npc = (Npc) target;
+            if (!this.isGuardableNpc(npc) && !npc.isAttacking(this.module.hero)) {
+                // Reduce radius for target not attacking hero when have guardable NPC
+                return radius * 0.75;
+            }
+        }
+        return radius;
     }
 
     @Override
@@ -109,10 +146,15 @@ public class DseGate extends GateHandler {
         // Check if we're in Command Hall to handle box populate and gate reset logic
         if (this.module.starSystem.getCurrentMap().getId() == COMMAND_HALL_MAP_ID) {
             this.showBoxCount = true; // Show box count in Command Hall
+            if (!this.loadDelay.isArmed()) {
+                this.loadDelay.activate(); // Activate load delay timer when entering Command Hall
+            }
 
-            // Wait manual selection of ship or reset gate
+            // Waiting conditions
             if (this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()
                     || this.getVisibleGui(SHIP_WARP_GUI).isPresent()
+                    || this.loadDelay.isActive()
+                    || this.ensurePetDeactivated()
                     || (this.jumpTimer.isArmed() && this.jumpTimer.isInactive())) {
                 StateStore.request(StateStore.State.WAITING_IN_GATE);
                 return true;
@@ -122,12 +164,36 @@ public class DseGate extends GateHandler {
             if (StateStore.current() == StateStore.State.JUMPING && !this.jumpTimer.isArmed()) {
                 this.jumpTimer.activate();
             }
-            return false;
+
+            // Collect boxes if available, otherwise wait for jump or timeout
+            if (this.module.collectorModule.collectIfAvailable()) {
+                StateStore.request(StateStore.State.COLLECTING);
+                return true;
+            }
+
+            this.module.jumpToNextMap();
+            return true;
         }
 
         this.showBoxCount = false; // Hide box count when in gate
         this.reset();
         this.closeGui(MAIN_GUI);
         return false; // Allow default logic to take over
+    }
+
+    /**
+     * Keep waiting while PET is still active or timer hasn't finished
+     */
+    private boolean ensurePetDeactivated() {
+        // Disable PET to prevent it from becoming bugged
+        this.module.petGearHelper.disable();
+
+        // Activate delay timer to wait for PET to be disabled
+        if (!this.petDisableDelay.isArmed()) {
+            this.petDisableDelay.activate();
+        }
+
+        // Wait until PET is deactivated and the delay has elapsed
+        return this.module.petGearHelper.isActive() && this.petDisableDelay.isActive();
     }
 }

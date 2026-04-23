@@ -1,12 +1,10 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.stream.Collectors;
-
-import com.github.manolo8.darkbot.Main;
-import com.github.manolo8.darkbot.core.objects.facades.SettingsProxy;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
@@ -31,7 +29,6 @@ public final class KamikazeHandler {
     private final MovementAPI movement;
     private final PetAPI pet;
     private final GroupAPI group;
-    private final SettingsProxy settingsProxy;
     private final PetGearHelper petGearHelper;
 
     private SimpleGalaxyGateConfig config;
@@ -59,7 +56,6 @@ public final class KamikazeHandler {
         this.movement = api.requireAPI(MovementAPI.class);
         this.pet = api.requireAPI(PetAPI.class);
         this.group = api.requireAPI(GroupAPI.class);
-        this.settingsProxy = Main.INSTANCE.facadeManager.settings;
         this.petGearHelper = new PetGearHelper(api);
     }
 
@@ -162,9 +158,8 @@ public final class KamikazeHandler {
             if (!this.stuckTimer.isArmed()) {
                 // Arm the timer to detect if PET HP is stuck at 0 after respawn
                 this.stuckTimer.activate();
-            } else if (this.stuckTimer.isInactive()) {
-                // Timer expired, try to reactivate PET
-                this.settingsProxy.pressKeybind(SettingsProxy.KeyBind.ACTIVE_PET);
+            } else if (this.stuckTimer.isInactive() && this.petGearHelper.reset()) {
+                // If reset was successful, disarm the stuck timer
                 this.stuckTimer.disarm();
             }
         }
@@ -279,6 +274,9 @@ public final class KamikazeHandler {
         if (!this.hasCooldown() && this.petReadyForKamikaze()
                 && this.hero.getHealth().hpPercent() >= this.config.kamikaze.hpRange.getMax()
                 && this.hero.getHealth().shieldPercent() >= this.config.kamikaze.shieldRange.getMax()) {
+            // Lock the closest target
+            this.lockClosestTarget(validTargets);
+            // Check if NPCs are close enough to each other
             if (this.isNpcsCloseEnough(validTargets)) {
                 if (this.delay.isInactive()) {
                     this.setActive();
@@ -292,6 +290,20 @@ public final class KamikazeHandler {
         }
 
         return false;
+    }
+
+    /**
+     * Lock the closest NPC to the hero
+     */
+    private void lockClosestTarget(List<Npc> validTargets) {
+        Npc closest = validTargets.stream()
+                .min(Comparator.comparingDouble(n -> n.distanceTo(this.hero)))
+                .orElse(null);
+
+        if (closest != null) {
+            this.lootModule.getAttacker().setTarget(closest);
+            this.lootModule.getAttacker().tryLockTarget();
+        }
     }
 
     /**

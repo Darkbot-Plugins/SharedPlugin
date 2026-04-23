@@ -17,6 +17,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
@@ -35,7 +36,6 @@ import eu.darkbot.api.managers.ExtensionsAPI;
 import eu.darkbot.api.managers.GameScreenAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
-import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.managers.RepairAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.shared.utils.MapTraveler;
@@ -49,7 +49,6 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     public final HeroAPI hero;
     public final MovementAPI movement;
-    private final PetAPI pet;
     public final EntitiesAPI entities;
     public final CustomLootModule lootModule;
     public final CustomCollectorModule collectorModule;
@@ -77,9 +76,11 @@ public final class SimpleGalaxyGate implements Module, Task,
     private boolean fetchServerOffset = false;
     private boolean safeRefreshInGate = false;
     private boolean showBoxCount = true;
+    private boolean showCompletedGates = true;
     private int completedGates = 0;
 
     private final GateBuilder gateBuilder;
+    public final PetGearHelper petGearHelper;
 
     private SimpleGalaxyGateConfig config;
     private String statusDetails = null;
@@ -87,7 +88,6 @@ public final class SimpleGalaxyGate implements Module, Task,
     public SimpleGalaxyGate(PluginAPI api) {
         this.hero = api.requireAPI(HeroAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
-        this.pet = api.requireAPI(PetAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
         this.lootModule = new CustomLootModule(api);
         this.collectorModule = new CustomCollectorModule(api);
@@ -104,6 +104,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.botBrowserApi = this.configApi.requireConfig("bot_settings.api_config.browser_api");
         this.lootModule.setCollector(this.collectorModule); // Link collector module
         this.gateBuilder = new GateBuilder(this, api);
+        this.petGearHelper = new PetGearHelper(api);
     }
 
     @Override
@@ -135,6 +136,7 @@ public final class SimpleGalaxyGate implements Module, Task,
             case COLLECTING:
             case KAMIKAZE:
             case GUARDING:
+            case REPAIRING:
                 this.appendGateStatus(status);
                 break;
             case WAITING:
@@ -189,7 +191,7 @@ public final class SimpleGalaxyGate implements Module, Task,
      * Appends the number of completed gates.
      */
     private void appendCompletedGatesStatus(StringBuilder status) {
-        if (this.completedGates > 0) {
+        if (this.completedGates > 0 && this.showCompletedGates) {
             status.append(String.format("%nCompleted: %d", this.completedGates));
         }
     }
@@ -335,7 +337,11 @@ public final class SimpleGalaxyGate implements Module, Task,
 
         // Reset gate visited when leaving gate map
         if (this.gateVisited) {
-            this.completedGates++; // Increment completed gates count
+            if (this.showCompletedGates) {
+                this.completedGates++; // Increment completed gates count
+            } else {
+                this.completedGates = 0; // Reset if not showing
+            }
             this.gateVisited = false; // Reset for next gate
         }
 
@@ -364,7 +370,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         if (this.gateBuilder.tick()) {
             StateStore.request(StateStore.State.BUILDING);
             this.moveToRefinery(); // Stay near refinery while building
-            this.pet.setEnabled(false); // Disable pet while building
+            this.petGearHelper.disable(); // Disable pet while building
             return;
         }
 
@@ -383,6 +389,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.fetchServerOffset = handler.isFetchServerOffset();
         this.safeRefreshInGate = handler.canSafeRefreshInGate();
         this.showBoxCount = handler.isShowBoxCount();
+        this.showCompletedGates = handler.isShowCompletedGates();
         this.statusDetails = handler.getStatusDetails();
         return handler;
     }

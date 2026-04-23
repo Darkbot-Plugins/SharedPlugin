@@ -15,6 +15,7 @@ public final class StateStore {
         COLLECTING("Collecting"),
         KAMIKAZE("Kamikaze"),
         GUARDING("Guarding"),
+        REPAIRING("Repairing"),
         JUMPING("Jumping to next map"),
         MOVE_TO_SAFE_POSITION("Moving to safe position");
 

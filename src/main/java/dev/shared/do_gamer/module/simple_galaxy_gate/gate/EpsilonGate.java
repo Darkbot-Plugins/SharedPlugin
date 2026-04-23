@@ -1,6 +1,6 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
-public class EpsilonGate extends GateHandler {
+public final class EpsilonGate extends GateHandler {
 
     public EpsilonGate() {
         this.npcMap.put("-=[ Convict ]=-", new NpcParam(590.0));

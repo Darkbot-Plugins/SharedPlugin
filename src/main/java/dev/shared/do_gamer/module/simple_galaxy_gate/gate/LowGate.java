@@ -14,7 +14,7 @@ import eu.darkbot.api.game.entities.Relay;
 import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.api.utils.Version;
 
-public class LowGate extends GateHandler {
+public final class LowGate extends GateHandler {
 
     private static final double FAR_TARGET_DISTANCE = 1_200.0;
 
@@ -34,6 +34,9 @@ public class LowGate extends GateHandler {
     private BossState bossState = BossState.NONE;
 
     public LowGate() {
+        this.npcMap.put("-=[ Century Falcon ]=-", new NpcParam(580.0, 50, NpcFlag.NO_CIRCLE));
+        this.npcMap.put("-=[ Vagrant ]=-", new NpcParam(540.0, 100, NpcFlag.AGGRESSIVE_FOLLOW));
+
         this.defaultNpcParam = new NpcParam(540.0, NpcFlag.AGGRESSIVE_FOLLOW);
         this.jumpToNextMap = false;
         this.moveToCenter = false;
@@ -133,13 +136,6 @@ public class LowGate extends GateHandler {
     }
 
     /**
-     * Checks if the given NPC is a Vagrant.
-     */
-    private boolean isVagrant(Npc npc) {
-        return this.nameEquals(npc, "-=[ Vagrant ]=-");
-    }
-
-    /**
      * Handles the attack on relays.
      */
     private void handleRelayAttack(Relay targetRelay) {
@@ -196,11 +192,6 @@ public class LowGate extends GateHandler {
 
     @Override
     public KillDecision shouldKillNpc(Npc npc) {
-        // Do not kill Vagrant when boss has arrived
-        if (this.bossState == BossState.ARRIVED && this.isVagrant(npc)) {
-            return KillDecision.NO;
-        }
-
         // Skip Relays if NPCs present
         if (npc instanceof Relay && !this.module.lootModule.getNpcs().isEmpty()) {
             return KillDecision.NO;

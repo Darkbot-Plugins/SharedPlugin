@@ -6,7 +6,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.enums.PortalType;
 
-public class KuiperGate extends GateHandler {
+public final class KuiperGate extends GateHandler {
     // Use the Portal type ID to prevent bug with extra portals appearing.
     private static final int PORTAL_TYPE_ID = PortalType.KUIPER.getId();
 

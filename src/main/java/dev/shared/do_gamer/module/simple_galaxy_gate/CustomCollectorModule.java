@@ -51,11 +51,11 @@ public final class CustomCollectorModule extends CollectorModule {
             this.findBox();
             Box box = this.currentBox;
             if (box != null && box.isValid()) {
-                this.tryCollectNearestBox();
+                this.collectBox();
                 return true;
             }
         }
-        return false;
+        return !this.hasNoBox();
     }
 
     @Override

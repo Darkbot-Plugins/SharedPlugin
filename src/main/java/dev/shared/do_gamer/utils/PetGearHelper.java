@@ -2,12 +2,16 @@ package dev.shared.do_gamer.utils;
 
 import java.util.List;
 
+import com.github.manolo8.darkbot.Main;
+import com.github.manolo8.darkbot.core.objects.facades.SettingsProxy;
+
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.game.other.Health;
 import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.utils.ItemNotEquippedException;
+import eu.darkbot.util.Timer;
 
 /**
  * Helper for safely managing PET gear usage.
@@ -16,6 +20,8 @@ public class PetGearHelper {
 
     private final PetAPI pet;
     private final ConfigAPI configApi;
+    private final SettingsProxy settingsProxy;
+    private final Timer resetTimer = Timer.get(2_000L);
 
     // List of gears that restrict the use of other gears when active
     private static final List<PetGear> RESTRICTED_GEARS = List.of(
@@ -31,6 +37,7 @@ public class PetGearHelper {
     public PetGearHelper(PluginAPI api) {
         this.pet = api.requireAPI(PetAPI.class);
         this.configApi = api.requireAPI(ConfigAPI.class);
+        this.settingsProxy = Main.INSTANCE.facadeManager.settings;
     }
 
     /**
@@ -120,5 +127,26 @@ public class PetGearHelper {
      */
     public Health getHealth() {
         return this.pet.getHealth();
+    }
+
+    /**
+     * Try to reset the PET if it's bugged by pressing the active PET keybind.
+     */
+    public boolean reset() {
+        if (this.isEnabled() && this.resetTimer.isInactive()
+                && this.settingsProxy.pressKeybind(SettingsProxy.KeyBind.ACTIVE_PET)) {
+            this.resetTimer.activate();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Disables the PET and attempts to reset it to prevent bugs.
+     */
+    public void disable() {
+        if (!this.reset()) {
+            this.setEnabled(false);
+        }
     }
 }
