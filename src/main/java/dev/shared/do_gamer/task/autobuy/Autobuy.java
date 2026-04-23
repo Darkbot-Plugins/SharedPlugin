@@ -174,6 +174,11 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                     .setRawParam("imgUrl", "")
                     .getContent();
             int count = this.extractLogFileCount(html);
+            if (count < 0) {
+                System.out.println("Autobuy: Failed to parse log file count from response, skipping cycle");
+                this.handleError();
+                return;
+            }
             this.resource.put(AutobuyConfig.SpecialConfig.LOG_FILE, count);
             this.state = State.FETCH_BOOSTERS;
         } catch (IOException e) {
@@ -403,26 +408,27 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Extracts the log file count from HTML code.
+     * Returns the log file count parsed from the span,
+     * or -1 if the markup is absent or malformed.
      */
     private int extractLogFileCount(String html) {
         if (html == null) {
-            return 0;
+            return -1;
         }
         String marker = "<span id=\\\"logFileUpdated\\\">";
         int start = html.indexOf(marker);
         if (start < 0) {
-            return 0;
+            return -1;
         }
         int valueStart = start + marker.length();
         int end = html.indexOf("<\\/span>", valueStart);
         if (end < 0) {
-            return 0;
+            return -1;
         }
         try {
             return Integer.parseInt(html.substring(valueStart, end).trim());
         } catch (NumberFormatException e) {
-            return 0;
+            return -1;
         }
     }
 
