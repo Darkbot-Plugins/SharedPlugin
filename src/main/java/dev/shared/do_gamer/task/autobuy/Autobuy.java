@@ -28,6 +28,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         IDLE,
         REQUEST_INVENTORY,
         UPDATE_INVENTORY,
+        FETCH_LOG_FILE,
         FETCH_BOOSTERS,
         FETCH_SPECIALS,
         PREPARE_QUEUE,
@@ -90,6 +91,9 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             case UPDATE_INVENTORY:
                 this.tickUpdateInventory();
                 break;
+            case FETCH_LOG_FILE:
+                this.tickFetchLogFile();
+                break;
             case FETCH_BOOSTERS:
                 this.tickFetchBoosters();
                 break;
@@ -134,9 +138,13 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
     /**
      * Reads current hangar quantities for tracked special items.
+     * LOG_FILE is skipped here; its count is fetched separately in FETCH_LOG_FILE.
      */
     private void tickUpdateInventory() {
         for (String key : this.resource.keySet()) {
+            if (AutobuyConfig.SpecialConfig.LOG_FILE.equals(key)) {
+                continue;
+            }
             int index = this.backpageManager.legacyHangarManager.getLootIds().indexOf(key);
             if (index != -1) {
                 int quantity = this.backpageManager.legacyHangarManager.getItems().stream()
@@ -147,7 +155,32 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                 this.resource.put(key, quantity);
             }
         }
-        this.state = State.FETCH_BOOSTERS;
+        this.state = State.FETCH_LOG_FILE;
+    }
+
+    /**
+     * Fetches the log file count from the pilot profile skill tree page.
+     * Skipped if log file purchasing is not configured.
+     */
+    private void tickFetchLogFile() {
+        if (this.config.special.logFile.amount == 0) {
+            this.state = State.FETCH_BOOSTERS;
+            return;
+        }
+        try {
+            String html = this.backpageManager.postHttp("ajax/pilotprofil.php")
+                    .setRawParam("command", "getInternalProfilPage")
+                    .setRawParam("type", "showSkilltree")
+                    .setRawParam("imgUrl", "")
+                    .getContent();
+            int count = this.extractLogFileCount(html);
+            this.resource.put(AutobuyConfig.SpecialConfig.LOG_FILE, count);
+            this.state = State.FETCH_BOOSTERS;
+            System.out.println(String.format("Autobuy: Current log file count: %d", count));
+        } catch (IOException e) {
+            System.out.println(String.format("Autobuy: Failed to fetch log file count: %s", e.getMessage()));
+            this.handleError();
+        }
     }
 
     /**
@@ -368,6 +401,30 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             return null;
         }
         return itemDataElement.getAsJsonObject();
+    }
+
+    /**
+     * Extracts the log file count from HTML code.
+     */
+    private int extractLogFileCount(String html) {
+        if (html == null) {
+            return 0;
+        }
+        String marker = "<span id=\\\"logFileUpdated\\\">";
+        int start = html.indexOf(marker);
+        if (start < 0) {
+            return 0;
+        }
+        int valueStart = start + marker.length();
+        int end = html.indexOf("<\\/span>", valueStart);
+        if (end < 0) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(html.substring(valueStart, end).trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 
     /**
