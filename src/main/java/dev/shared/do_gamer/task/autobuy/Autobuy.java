@@ -176,7 +176,6 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             int count = this.extractLogFileCount(html);
             this.resource.put(AutobuyConfig.SpecialConfig.LOG_FILE, count);
             this.state = State.FETCH_BOOSTERS;
-            System.out.println(String.format("Autobuy: Current log file count: %d", count));
         } catch (IOException e) {
             System.out.println(String.format("Autobuy: Failed to fetch log file count: %s", e.getMessage()));
             this.handleError();
