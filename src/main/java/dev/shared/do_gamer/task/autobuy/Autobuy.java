@@ -105,7 +105,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
 
         // Activate delay after each state transition to prevent rapid actions
-        if (this.state != State.IDLE) {
+        if (this.state != State.IDLE && this.delay.isInactive()) {
             this.delay.activate();
         }
     }
@@ -428,9 +428,13 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         if ("real".equals(shopItem.currency)) {
             hasEnough = this.stats.getTotalUridium() >= required;
             currencyName = "uridium";
-        } else {
+        } else if ("virtual".equals(shopItem.currency)) {
             hasEnough = this.stats.getTotalCredits() >= required;
             currencyName = "credits";
+        } else {
+            System.out.println(String.format("Autobuy: Unknown currency '%s' for item %s, skipping",
+                    shopItem.currency, shopItem.code));
+            return false;
         }
 
         if (!hasEnough) {
