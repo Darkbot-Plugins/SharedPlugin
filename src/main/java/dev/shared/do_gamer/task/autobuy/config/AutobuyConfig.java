@@ -33,7 +33,9 @@ public class AutobuyConfig {
         public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
-                return "Checks every X minutes and buys if expired.";
+                return this.buildList(null,
+                        "Checks boosters every X minutes.",
+                        "Buys selected boosters if expired.");
             }
         }
 
@@ -124,7 +126,9 @@ public class AutobuyConfig {
         public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
-                return "Checks every X minutes and buys if available.";
+                return this.buildList(null,
+                        "Checks special items every X minutes.",
+                        "Buys special items when available.");
             }
         }
 
@@ -229,7 +233,9 @@ public class AutobuyConfig {
         public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
-                return "Checks every X minutes and buys if available.";
+                return this.buildList(null,
+                        "Checks ammo every X minutes.",
+                        "Buys ammo when inventory is low.");
             }
         }
 
@@ -253,7 +259,7 @@ public class AutobuyConfig {
         public static final String SLUG_ELS_D01 = "ammunition_slug_els-d01";
 
         @Option("do_gamer.autobuy.ammo.lcb10")
-        public PurchaseConfig lcb10 = new PurchaseConfig(50_000);
+        public PurchaseConfig lcb10 = new PurchaseConfig(100_000);
 
         @Option("do_gamer.autobuy.ammo.mcb25")
         public PurchaseConfig mcb25 = new PurchaseConfig(50_000);
@@ -383,11 +389,11 @@ public class AutobuyConfig {
         }
 
         @Option("do_gamer.autobuy.purchase.amount")
-        @Number(max = 100_000_000, step = 100)
+        @Number(max = 10_000_000, step = 100)
         public int amount = 0;
 
         @Option("do_gamer.autobuy.purchase.min")
-        @Number(max = 1_000_000, step = 10)
+        @Number(max = 500_000, step = 10)
         public int min = 0;
     }
 }
