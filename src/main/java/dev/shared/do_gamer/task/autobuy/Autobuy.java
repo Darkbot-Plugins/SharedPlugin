@@ -330,11 +330,11 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                     .setRawParam("selectedName", "")
                     .getContent();
             System.out.println(String.format("Autobuy: Bought %s item %s x%d",
-                    task.shopItem.category, task.shopItem.code, task.batch));
+                    task.category, task.shopItem.code, task.batch));
             this.delay.activate(5_000L); // Extra delay after purchase
         } catch (Exception e) {
             System.out.println(String.format("Autobuy: Failed to buy %s item %s x%d: %s",
-                    task.shopItem.category, task.shopItem.code, task.batch, e.getMessage()));
+                    task.category, task.shopItem.code, task.batch, e.getMessage()));
         }
     }
 
@@ -357,7 +357,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             if (!hasBooster) {
                 System.out.println(String.format("Autobuy: Booster %s is enabled but not active, queuing purchase",
                         shopItem.code));
-                this.enqueuePurchase(shopItem, 1);
+                this.enqueuePurchase(shopItem, 1, BOOSTER_KEY);
             }
         }
     }
@@ -374,9 +374,9 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             int amount = this.resolveAmmoPurchaseAmount(shopItem);
             if (amount > 0) {
-                System.out.println(String.format("Autobuy: Ammo %s item %s enabled, queuing purchase x%d",
-                        shopItem.category, shopItem.code, amount));
-                this.enqueuePurchase(shopItem, amount);
+                System.out.println(String.format("Autobuy: Ammo item %s enabled, queuing purchase x%d",
+                        shopItem.code, amount));
+                this.enqueuePurchase(shopItem, amount, AMMO_KEY);
             }
         }
     }
@@ -416,7 +416,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             if (amount > 0) {
                 System.out.println(String.format("Autobuy: Special item %s enabled, queuing purchase x%d",
                         shopItem.code, amount));
-                this.enqueuePurchase(shopItem, amount);
+                this.enqueuePurchase(shopItem, amount, SPECIAL_KEY);
             }
         }
     }
@@ -467,7 +467,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     /**
      * Validates funds and splits the total amount into max-batch sized tasks.
      */
-    private void enqueuePurchase(ShopItem shopItem, int amount) {
+    private void enqueuePurchase(ShopItem shopItem, int amount, String category) {
         if (!this.validateFunds(shopItem, amount))
             return;
 
@@ -478,7 +478,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
         while (remaining > 0) {
             int batch = shopItem.maxAmount > 0 ? Math.min(remaining, shopItem.maxAmount) : remaining;
-            this.purchaseQueue.add(new PurchaseTask(shopItem, batch));
+            this.purchaseQueue.add(new PurchaseTask(shopItem, batch, category));
             remaining -= batch;
         }
     }
@@ -694,10 +694,12 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private static class PurchaseTask {
         final ShopItem shopItem;
         final int batch;
+        final String category; // For logging purposes only, not same as shopItem.category
 
-        PurchaseTask(ShopItem shopItem, int batch) {
+        PurchaseTask(ShopItem shopItem, int batch, String category) {
             this.shopItem = shopItem;
             this.batch = batch;
+            this.category = category;
         }
     }
 
