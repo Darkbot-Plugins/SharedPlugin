@@ -151,10 +151,10 @@ public final class DseGate extends GateHandler {
             }
 
             // Waiting conditions
-            if (this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()
-                    || this.getVisibleGui(SHIP_WARP_GUI).isPresent()
-                    || this.loadDelay.isActive()
+            if (this.loadDelay.isActive()
                     || this.ensurePetDeactivated()
+                    || this.getVisibleGui(SHIP_HANGAR_GUI).isPresent()
+                    || this.getVisibleGui(SHIP_WARP_GUI).isPresent()
                     || (this.jumpTimer.isArmed() && this.jumpTimer.isInactive())) {
                 StateStore.request(StateStore.State.WAITING_IN_GATE);
                 return true;
