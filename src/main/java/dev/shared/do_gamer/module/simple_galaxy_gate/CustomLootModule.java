@@ -196,8 +196,9 @@ public final class CustomLootModule extends LootModule {
             return false; // Skip disabled
         }
 
-        double targetDist = target.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
-        double heroDist = this.hero.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
+        Location center = Location.of(Maps.getMapCenterX(), Maps.getMapCenterY());
+        double targetDist = this.movement.getDistanceBetween(target, center);
+        double heroDist = this.movement.getDistanceBetween(this.hero, center);
         return targetDist > Maps.getToleranceDistance()
                 && targetDist > heroDist
                 && target.getHealth().hpPercent() <= 0.25
@@ -209,9 +210,10 @@ public final class CustomLootModule extends LootModule {
      * based on HP, distance to center, and position.
      */
     private boolean isBetterTarget(Npc npc, double distance, Npc target) {
+        Location center = Location.of(Maps.getMapCenterX(), Maps.getMapCenterY());
         return npc.getHealth().hpPercent() > 0.3
                 && this.shouldKill(npc)
-                && npc.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY()) < (distance - 800.0)
+                && this.movement.getDistanceBetween(npc, center) < (distance - 800.0)
                 && Math.signum(npc.getX() - Maps.getMapCenterX()) == Math.signum(target.getX() - Maps.getMapCenterX())
                 && Math.signum(npc.getY() - Maps.getMapCenterY()) == Math.signum(target.getY() - Maps.getMapCenterY());
     }
@@ -221,7 +223,7 @@ public final class CustomLootModule extends LootModule {
      */
     public Comparator<Npc> getNpcComparator(Locatable location) {
         return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority())
-                .thenComparingDouble(n -> n.distanceTo(location))
+                .thenComparingDouble(n -> this.movement.getDistanceBetween(n, location))
                 .thenComparingDouble(n -> n.getHealth().hpPercent());
     }
 
@@ -266,8 +268,8 @@ public final class CustomLootModule extends LootModule {
         // better in terms of distance to location
         if (this.hero.isAttacking(target)) {
             double offset = 100.0;
-            double targetDist = target.distanceTo(location);
-            double bestDist = best.distanceTo(location);
+            double targetDist = this.movement.getDistanceBetween(target, location);
+            double bestDist = this.movement.getDistanceBetween(best, location);
             if (targetDist < (bestDist + offset)) {
                 return true;
             }
@@ -288,7 +290,8 @@ public final class CustomLootModule extends LootModule {
         // Ignore in specials cases
         if (npc.getInfo().hasExtraFlag(NpcFlag.PASSIVE)
                 || (this.hasIshEffect(npc) && this.getNpcs().stream().anyMatch(n -> !this.hasIshEffect(n)))
-                || (npc.isBlacklisted() && this.getNpcs().stream().anyMatch(n -> !n.isBlacklisted()))) {
+                || (npc.isBlacklisted() && this.getNpcs().stream().anyMatch(n -> !n.isBlacklisted()))
+                || (!this.movement.canMove(npc) && this.getNpcs().stream().anyMatch(this.movement::canMove))) {
             return false;
         }
         // Use gate handler logic
