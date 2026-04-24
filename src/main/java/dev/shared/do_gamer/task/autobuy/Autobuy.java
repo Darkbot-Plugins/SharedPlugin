@@ -132,11 +132,10 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Triggers an inventory refresh; the built-in delay gives data time to arrive
-     * before reading.
+     * Triggers an inventory refresh.
      */
     private void tickRequestInventory() {
-        if (this.getTrackedSpecialResourceKeys().stream().noneMatch(this.config.special::isEnabled)) {
+        if (this.getTrackedResourceKeys().stream().noneMatch(this.config.special::isEnabled)) {
             // If no tracked special items are enabled, skip inventory fetching
             this.skipDelay = true;
             this.state = State.FETCH_LOG_FILE;
@@ -151,7 +150,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      * LOG_FILE is skipped here; its count is fetched separately in FETCH_LOG_FILE.
      */
     private void tickUpdateInventory() {
-        for (String key : this.getTrackedSpecialResourceKeys()) {
+        for (String key : this.getTrackedResourceKeys()) {
             int index = this.backpageManager.legacyHangarManager.getLootIds().indexOf(key);
             if (index != -1) {
                 int quantity = this.backpageManager.legacyHangarManager.getItems().stream()
@@ -392,9 +391,9 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Returns tracked special resource keys excluding log-file resource tracking.
+     * Returns tracked resource keys excluding log-file.
      */
-    private Set<String> getTrackedSpecialResourceKeys() {
+    private Set<String> getTrackedResourceKeys() {
         return this.resource.keySet().stream()
                 .filter(key -> !AutobuyConfig.SpecialConfig.LOG_FILE.equals(key))
                 .collect(Collectors.toSet());
