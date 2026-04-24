@@ -305,7 +305,8 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             boolean hasBooster = shopItem.shopObj.get("userHasBoosterPackage").getAsBoolean();
             if (!hasBooster) {
-                System.out.println(String.format("Autobuy: Booster %s not active, queuing purchase", shopItem.code));
+                System.out.println(String.format("Autobuy: Booster %s is enabled but not active, queuing purchase",
+                        shopItem.code));
                 this.enqueuePurchase(shopItem, 1);
             }
         }
