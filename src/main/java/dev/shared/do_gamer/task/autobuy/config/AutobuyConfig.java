@@ -128,8 +128,8 @@ public class AutobuyConfig {
 
         public boolean anyEnabled() {
             return this.luminafluxAlloy > 0 || this.dseKeyAccess.amount > 0 || this.dseKeyGreen > 0
-                    || this.dseKeyBlue > 0
-                    || this.dseKeyPurple > 0 || this.logFile.amount > 0 || this.pirateKeyGreen.amount > 0;
+                    || this.dseKeyBlue > 0 || this.dseKeyPurple > 0 || this.logFile.amount > 0
+                    || this.pirateKeyGreen.amount > 0;
         }
 
         public boolean isEnabled(String itemId) {
@@ -176,11 +176,11 @@ public class AutobuyConfig {
      */
     public static class PurchaseCondition {
         @Option("do_gamer.autobuy.purchaseCondition.amount")
-        @Number(max = 10_000, step = 1)
+        @Number(max = 10_000_000, step = 1)
         public int amount = 0;
 
         @Option("do_gamer.autobuy.purchaseCondition.min")
-        @Number(max = 1_000, step = 1, min = -1)
+        @Number(max = 100_000, step = 1, min = -1)
         public int min = 0;
     }
 }

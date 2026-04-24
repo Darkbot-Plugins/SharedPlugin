@@ -268,18 +268,18 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         try {
             this.backpageManager.postHttp("ajax/shop.php")
                     .setRawParam("action", "purchase")
-                    .setRawParam("category", task.category)
+                    .setRawParam("category", task.shopItem.category)
                     .setRawParam("itemId", task.shopItem.itemId)
                     .setRawParam("amount", task.batch)
                     .setRawParam("level", "")
                     .setRawParam("selectedName", "")
                     .getContent();
             System.out.println(String.format("Autobuy: Bought %s item %s x%d",
-                    task.category, task.shopItem.code, task.batch));
+                    task.shopItem.category, task.shopItem.code, task.batch));
             this.delay.activate(5_000L); // Extra delay after purchase
         } catch (Exception e) {
             System.out.println(String.format("Autobuy: Failed to buy %s item %s x%d: %s",
-                    task.category, task.shopItem.code, task.batch, e.getMessage()));
+                    task.shopItem.category, task.shopItem.code, task.batch, e.getMessage()));
         }
     }
 
@@ -301,7 +301,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             boolean hasBooster = shopItem.shopObj.get("userHasBoosterPackage").getAsBoolean();
             if (!hasBooster) {
                 System.out.println(String.format("Autobuy: Booster %s not active, queuing purchase", shopItem.code));
-                this.enqueuePurchase(shopItem, "booster", 1);
+                this.enqueuePurchase(shopItem, 1);
             }
         }
     }
@@ -320,7 +320,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             if (amount > 0) {
                 System.out.println(String.format("Autobuy: Special item %s enabled, queuing purchase x%d",
                         shopItem.code, amount));
-                this.enqueuePurchase(shopItem, "special", amount);
+                this.enqueuePurchase(shopItem, amount);
             }
         }
     }
@@ -354,7 +354,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     /**
      * Validates funds and splits the total amount into max-batch sized tasks.
      */
-    private void enqueuePurchase(ShopItem shopItem, String category, int amount) {
+    private void enqueuePurchase(ShopItem shopItem, int amount) {
         if (!this.validateFunds(shopItem, amount))
             return;
 
@@ -365,7 +365,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
         while (remaining > 0) {
             int batch = shopItem.maxAmount > 0 ? Math.min(remaining, shopItem.maxAmount) : remaining;
-            this.purchaseQueue.add(new PurchaseTask(shopItem, category, batch));
+            this.purchaseQueue.add(new PurchaseTask(shopItem, batch));
             remaining -= batch;
         }
     }
@@ -486,11 +486,12 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             return null;
         }
         String itemId = entry.getKey();
+        String category = shopObj.get("category").getAsString();
         String code = shopObj.get("code").getAsString();
         double price = shopObj.get("price").getAsDouble();
         String currency = shopObj.get("currency").getAsString();
         int maxAmount = shopObj.get("maxAmount").getAsInt();
-        return new ShopItem(itemId, code, price, currency, maxAmount, shopObj);
+        return new ShopItem(itemId, category, code, price, currency, maxAmount, shopObj);
     }
 
     /**
@@ -526,14 +527,17 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
     private static class ShopItem {
         final String itemId;
+        final String category;
         final String code;
         final double price;
         final String currency;
         final int maxAmount;
         final JsonObject shopObj;
 
-        ShopItem(String itemId, String code, double price, String currency, int maxAmount, JsonObject shopObj) {
+        ShopItem(String itemId, String category, String code, double price,
+                String currency, int maxAmount, JsonObject shopObj) {
             this.itemId = itemId;
+            this.category = category;
             this.code = code;
             this.price = price;
             this.currency = currency;
@@ -544,12 +548,10 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
     private static class PurchaseTask {
         final ShopItem shopItem;
-        final String category;
         final int batch;
 
-        PurchaseTask(ShopItem shopItem, String category, int batch) {
+        PurchaseTask(ShopItem shopItem, int batch) {
             this.shopItem = shopItem;
-            this.category = category;
             this.batch = batch;
         }
     }
