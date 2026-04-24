@@ -46,6 +46,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private final BackpageManager backpageManager;
     private long nextShopCheck = 0;
     private Timer delay = Timer.getRandom(2_000L, 5_000L);
+    private boolean skipDelay = false;
 
     private State state = State.IDLE;
     private String boostersHtml;
@@ -110,10 +111,11 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                 break;
         }
 
-        // Activate delay after each state transition to prevent rapid actions
-        if (this.state != State.IDLE && this.delay.isInactive()) {
+        // Activate delay to prevent rapid actions, unless skipped
+        if (!this.skipDelay && this.state != State.IDLE && this.delay.isInactive()) {
             this.delay.activate();
         }
+        this.skipDelay = false;
     }
 
     // -------------------------------------------------------------------------
@@ -136,6 +138,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private void tickRequestInventory() {
         if (this.getTrackedSpecialResourceKeys().stream().noneMatch(this.config.special::isEnabled)) {
             // If no tracked special items are enabled, skip inventory fetching
+            this.skipDelay = true;
             this.state = State.FETCH_LOG_FILE;
             return;
         }
@@ -169,6 +172,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private void tickFetchLogFile() {
         if (this.config.special.logFile.amount == 0) {
             // If log file is not enabled, skip fetching its count
+            this.skipDelay = true;
             this.state = State.FETCH_BOOSTERS;
             return;
         }
@@ -197,6 +201,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      */
     private void tickFetchBoosters() {
         if (!this.config.booster.anyEnabled()) {
+            this.skipDelay = true;
             this.boostersHtml = null;
             this.state = State.FETCH_SPECIALS;
             return;
@@ -215,6 +220,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      */
     private void tickFetchSpecials() {
         if (!this.config.special.anyEnabled()) {
+            this.skipDelay = true;
             this.specialsHtml = null;
             this.state = State.PREPARE_QUEUE;
             return;
