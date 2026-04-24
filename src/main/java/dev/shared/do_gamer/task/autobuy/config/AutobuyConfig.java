@@ -112,7 +112,7 @@ public class AutobuyConfig {
     public static class SpecialConfig {
         @Option("do_gamer.autobuy.checkInterval")
         @Number(min = 5, max = 1440, step = 5)
-        public int checkInterval = 30;
+        public int checkInterval = 60;
 
         public static class Instructions extends ConfigHtmlInstructions {
             @Override

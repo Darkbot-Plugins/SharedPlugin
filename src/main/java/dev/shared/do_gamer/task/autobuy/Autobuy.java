@@ -148,6 +148,8 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
 
         this.categories.values().forEach(CategoryState::reset);
+        boosterState.pending = !boosterDue;
+        specialState.pending = !specialDue;
         this.state = specialDue ? State.REQUEST_INVENTORY : State.FETCH_BOOSTERS;
     }
 
@@ -221,7 +223,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      */
     private void tickFetchBoosters() {
         CategoryState boosterState = this.categories.get(BOOSTER_KEY);
-        if (!boosterState.isEnabled() || !boosterState.shouldFetch(System.currentTimeMillis())) {
+        if (!boosterState.isEnabled() || boosterState.pending) {
             this.skipDelay = true;
             boosterState.html = null;
             this.state = State.FETCH_SPECIALS;
@@ -243,7 +245,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      */
     private void tickFetchSpecials() {
         CategoryState specialState = this.categories.get(SPECIAL_KEY);
-        if (!specialState.isEnabled() || !specialState.shouldFetch(System.currentTimeMillis())) {
+        if (!specialState.isEnabled() || specialState.pending) {
             this.skipDelay = true;
             specialState.html = null;
             this.state = State.PREPARE_QUEUE;
@@ -428,6 +430,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             categoryState.nextCheck = retryTime;
             categoryState.html = null;
             categoryState.fetched = false;
+            categoryState.pending = false;
         });
         this.purchaseQueue.clear();
         this.state = State.IDLE;
@@ -579,6 +582,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         long nextCheck = 0;
         String html;
         boolean fetched = false;
+        boolean pending = false;
 
         CategoryState(Supplier<Boolean> enabled, IntSupplier interval) {
             this.enabled = enabled;
@@ -596,10 +600,12 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         void reset() {
             this.html = null;
             this.fetched = false;
+            this.pending = false;
         }
 
         void markFetched() {
             this.fetched = true;
+            this.pending = false;
         }
 
         void updateNextCheck(long currentTime) {
