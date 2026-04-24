@@ -7,10 +7,6 @@ import eu.darkbot.api.config.annotations.Option;
 @Configuration("autobuy")
 public class AutobuyConfig {
 
-    @Option("do_gamer.autobuy.checkInterval")
-    @Number(min = 5, max = 1440, step = 5)
-    public int checkInterval = 30;
-
     @Option("do_gamer.autobuy.booster")
     public BoostersConfig booster = new BoostersConfig();
 
@@ -21,6 +17,10 @@ public class AutobuyConfig {
      * Subclass for Booster configuration
      */
     public static class BoostersConfig {
+        @Option("do_gamer.autobuy.checkInterval")
+        @Number(min = 5, max = 1440, step = 5)
+        public int checkInterval = 30;
+
         public static final String CD_B01 = "CD-B01";
         public static final String CD_B02 = "CD-B02";
         public static final String DMG_B01 = "DMG-B01";
@@ -93,6 +93,10 @@ public class AutobuyConfig {
      * Subclass for Special configuration
      */
     public static class SpecialConfig {
+        @Option("do_gamer.autobuy.checkInterval")
+        @Number(min = 5, max = 1440, step = 5)
+        public int checkInterval = 30;
+
         public static final String LUMINAFLUX_ALLOY = "resource_collectable_luminaflux-alloy";
         public static final String DSE_KEY_ACCESS = "resource_key_access-dse";
         public static final String DSE_KEY_GREEN = "resource_echo-key-green";

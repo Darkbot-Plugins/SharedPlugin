@@ -6,6 +6,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
 import java.util.Set;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import com.github.manolo8.darkbot.backpage.BackpageManager;
@@ -41,16 +43,17 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private static final JsonParser JSON_PARSER = new JsonParser();
     private static final long SHOP_RETRY_DELAY_MS = 30_000L;
 
+    private static final String BOOSTER_KEY = "booster";
+    private static final String SPECIAL_KEY = "special";
+
     private AutobuyConfig config;
     private final StatsAPI stats;
     private final BackpageManager backpageManager;
-    private long nextShopCheck = 0;
+    private final Map<String, CategoryState> categories = new HashMap<>();
     private Timer delay = Timer.getRandom(2_000L, 5_000L);
     private boolean skipDelay = false;
 
     private State state = State.IDLE;
-    private String boostersHtml;
-    private String specialsHtml;
     private final Queue<PurchaseTask> purchaseQueue = new LinkedList<>();
 
     private final Map<String, Integer> resource = new HashMap<>(Map.of(
@@ -61,6 +64,12 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     public Autobuy(PluginAPI api) {
         this.stats = api.requireAPI(StatsAPI.class);
         this.backpageManager = api.requireInstance(BackpageManager.class);
+        this.categories.put(BOOSTER_KEY, new CategoryState(
+                () -> this.config != null && this.config.booster.anyEnabled(),
+                () -> this.config != null ? this.config.booster.checkInterval : 30));
+        this.categories.put(SPECIAL_KEY, new CategoryState(
+                () -> this.config != null && this.config.special.anyEnabled(),
+                () -> this.config != null ? this.config.special.checkInterval : 30));
     }
 
     @Override
@@ -126,9 +135,20 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Waits until the check interval elapses, then starts the cycle.
      */
     private void tickIdle() {
-        if (System.currentTimeMillis() >= this.nextShopCheck) {
-            this.state = State.REQUEST_INVENTORY;
+        long currentTime = System.currentTimeMillis();
+
+        CategoryState boosterState = this.categories.get(BOOSTER_KEY);
+        CategoryState specialState = this.categories.get(SPECIAL_KEY);
+
+        boolean boosterDue = boosterState.shouldFetch(currentTime);
+        boolean specialDue = specialState.shouldFetch(currentTime);
+
+        if (!boosterDue && !specialDue) {
+            return;
         }
+
+        this.categories.values().forEach(CategoryState::reset);
+        this.state = specialDue ? State.REQUEST_INVENTORY : State.FETCH_BOOSTERS;
     }
 
     /**
@@ -196,17 +216,20 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Fetches the booster shop page HTML; skips if no boosters are enabled.
+     * Fetches the booster shop page HTML; skips if no boosters are enabled or timer
+     * not expired.
      */
     private void tickFetchBoosters() {
-        if (!this.config.booster.anyEnabled()) {
+        CategoryState boosterState = this.categories.get(BOOSTER_KEY);
+        if (!boosterState.isEnabled() || !boosterState.shouldFetch(System.currentTimeMillis())) {
             this.skipDelay = true;
-            this.boostersHtml = null;
+            boosterState.html = null;
             this.state = State.FETCH_SPECIALS;
             return;
         }
         try {
-            this.boostersHtml = this.fetchShopPage("internalDockBooster");
+            boosterState.html = this.fetchShopPage("internalDockBooster");
+            boosterState.markFetched();
             this.state = State.FETCH_SPECIALS;
         } catch (IOException e) {
             System.out.println(String.format("Autobuy: Failed to fetch boosters page: %s", e.getMessage()));
@@ -215,17 +238,20 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Fetches the specials shop page HTML; skips if no specials are enabled.
+     * Fetches the specials shop page HTML; skips if no specials are enabled or
+     * timer not expired.
      */
     private void tickFetchSpecials() {
-        if (!this.config.special.anyEnabled()) {
+        CategoryState specialState = this.categories.get(SPECIAL_KEY);
+        if (!specialState.isEnabled() || !specialState.shouldFetch(System.currentTimeMillis())) {
             this.skipDelay = true;
-            this.specialsHtml = null;
+            specialState.html = null;
             this.state = State.PREPARE_QUEUE;
             return;
         }
         try {
-            this.specialsHtml = this.fetchShopPage("internalDockSpecials");
+            specialState.html = this.fetchShopPage("internalDockSpecials");
+            specialState.markFetched();
             this.state = State.PREPARE_QUEUE;
         } catch (IOException e) {
             System.out.println(String.format("Autobuy: Failed to fetch specials page: %s", e.getMessage()));
@@ -239,18 +265,26 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private void tickPrepareQueue() {
         this.purchaseQueue.clear();
         try {
-            if (this.boostersHtml != null) {
-                JsonObject itemData = this.parseShopItemData(this.boostersHtml);
-                if (itemData != null) {
-                    this.enqueueBoosterItems(itemData);
+            this.categories.forEach((key, categoryState) -> {
+                if (categoryState.html == null) {
+                    return;
                 }
-            }
-            if (this.specialsHtml != null) {
-                JsonObject itemData = this.parseShopItemData(this.specialsHtml);
-                if (itemData != null) {
-                    this.enqueueSpecialItems(itemData);
+                JsonObject itemData = this.parseShopItemData(categoryState.html);
+                if (itemData == null) {
+                    return;
                 }
-            }
+
+                switch (key) {
+                    case BOOSTER_KEY:
+                        this.enqueueBoosterItems(itemData);
+                        break;
+                    case SPECIAL_KEY:
+                        this.enqueueSpecialItems(itemData);
+                        break;
+                    default:
+                        break;
+                }
+            });
         } catch (Exception e) {
             System.out.println(String.format("Autobuy: Failed to parse shop data: %s", e.getMessage()));
             this.handleError();
@@ -265,7 +299,12 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private void tickPurchasing() {
         PurchaseTask task = this.purchaseQueue.poll();
         if (task == null) {
-            this.nextShopCheck = System.currentTimeMillis() + (long) this.config.checkInterval * 60 * 1000L;
+            long currentTime = System.currentTimeMillis();
+            this.categories.values().forEach(categoryState -> {
+                if (categoryState.fetched) {
+                    categoryState.updateNextCheck(currentTime);
+                }
+            });
             this.state = State.IDLE;
             return;
         }
@@ -384,10 +423,13 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Resets all transient state and schedules a retry after the error delay.
      */
     private void handleError() {
-        this.nextShopCheck = System.currentTimeMillis() + SHOP_RETRY_DELAY_MS;
+        long retryTime = System.currentTimeMillis() + SHOP_RETRY_DELAY_MS;
+        this.categories.values().forEach(categoryState -> {
+            categoryState.nextCheck = retryTime;
+            categoryState.html = null;
+            categoryState.fetched = false;
+        });
         this.purchaseQueue.clear();
-        this.boostersHtml = null;
-        this.specialsHtml = null;
         this.state = State.IDLE;
     }
 
@@ -530,6 +572,40 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     // -------------------------------------------------------------------------
     // Inner classes
     // -------------------------------------------------------------------------
+
+    private static class CategoryState {
+        final Supplier<Boolean> enabled;
+        final IntSupplier interval;
+        long nextCheck = 0;
+        String html;
+        boolean fetched = false;
+
+        CategoryState(Supplier<Boolean> enabled, IntSupplier interval) {
+            this.enabled = enabled;
+            this.interval = interval;
+        }
+
+        boolean isEnabled() {
+            return this.enabled.get();
+        }
+
+        boolean shouldFetch(long currentTime) {
+            return this.isEnabled() && currentTime >= this.nextCheck;
+        }
+
+        void reset() {
+            this.html = null;
+            this.fetched = false;
+        }
+
+        void markFetched() {
+            this.fetched = true;
+        }
+
+        void updateNextCheck(long currentTime) {
+            this.nextCheck = currentTime + (long) this.interval.getAsInt() * 60 * 1000L;
+        }
+    }
 
     private static class ShopItem {
         final String itemId;
