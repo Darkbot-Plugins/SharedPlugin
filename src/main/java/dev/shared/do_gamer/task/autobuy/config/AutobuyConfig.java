@@ -126,7 +126,7 @@ public class AutobuyConfig {
         public int luminafluxAlloy = 0;
 
         @Option("do_gamer.autobuy.special.dseKeyAccess")
-        public PurchaseConfig dseKeyAccess = new PurchaseConfig();
+        public PurchaseConfig dseKeyAccess = new PurchaseConfig(10);
 
         @Option("do_gamer.autobuy.special.dseKeyGreen")
         @Number(max = 5, step = 1)
@@ -141,10 +141,10 @@ public class AutobuyConfig {
         public int dseKeyPurple = 0;
 
         @Option("do_gamer.autobuy.special.logFile")
-        public PurchaseConfig logFile = new PurchaseConfig();
+        public PurchaseConfig logFile = new PurchaseConfig(500);
 
         @Option("do_gamer.autobuy.special.pirateKeyGreen")
-        public PurchaseConfig pirateKeyGreen = new PurchaseConfig();
+        public PurchaseConfig pirateKeyGreen = new PurchaseConfig(500);
 
         public boolean anyEnabled() {
             return this.luminafluxAlloy > 0 || this.dseKeyAccess.amount > 0 || this.dseKeyGreen > 0
@@ -220,34 +220,34 @@ public class AutobuyConfig {
         public static final String ECO_10 = "ammunition_rocketlauncher_eco-10";
 
         @Option("do_gamer.autobuy.ammo.lcb10")
-        public PurchaseConfig lcb10 = new PurchaseConfig();
+        public PurchaseConfig lcb10 = new PurchaseConfig(50_000);
 
         @Option("do_gamer.autobuy.ammo.mcb25")
-        public PurchaseConfig mcb25 = new PurchaseConfig();
+        public PurchaseConfig mcb25 = new PurchaseConfig(50_000);
 
         @Option("do_gamer.autobuy.ammo.mcb50")
-        public PurchaseConfig mcb50 = new PurchaseConfig();
+        public PurchaseConfig mcb50 = new PurchaseConfig(50_000);
 
         @Option("do_gamer.autobuy.ammo.sab50")
-        public PurchaseConfig sab50 = new PurchaseConfig();
+        public PurchaseConfig sab50 = new PurchaseConfig(50_000);
 
         @Option("do_gamer.autobuy.ammo.rsb75")
-        public PurchaseConfig rsb75 = new PurchaseConfig();
+        public PurchaseConfig rsb75 = new PurchaseConfig(50_000);
 
         @Option("do_gamer.autobuy.ammo.job100")
-        public PurchaseConfig job100 = new PurchaseConfig();
+        public PurchaseConfig job100 = new PurchaseConfig(50_000);
 
         @Option("do_gamer.autobuy.ammo.plt2026")
-        public PurchaseConfig plt2026 = new PurchaseConfig();
+        public PurchaseConfig plt2026 = new PurchaseConfig(1_000);
 
         @Option("do_gamer.autobuy.ammo.plt2021")
-        public PurchaseConfig plt2021 = new PurchaseConfig();
+        public PurchaseConfig plt2021 = new PurchaseConfig(1_000);
 
         @Option("do_gamer.autobuy.ammo.emp01")
-        public PurchaseConfig emp01 = new PurchaseConfig();
+        public PurchaseConfig emp01 = new PurchaseConfig(500);
 
         @Option("do_gamer.autobuy.ammo.eco10")
-        public PurchaseConfig eco10 = new PurchaseConfig();
+        public PurchaseConfig eco10 = new PurchaseConfig(5_000);
 
         public boolean anyEnabled() {
             return this.lcb10.amount > 0 || this.mcb25.amount > 0 || this.mcb50.amount > 0
@@ -323,8 +323,12 @@ public class AutobuyConfig {
      * Subclass for purchase configuration
      */
     public static class PurchaseConfig {
+        PurchaseConfig(int min) {
+            this.min = min;
+        }
+
         @Option("do_gamer.autobuy.purchase.amount")
-        @Number(max = 10_000_000, step = 1)
+        @Number(max = 10_000_000, step = 100)
         public int amount = 0;
 
         @Option("do_gamer.autobuy.purchase.min")
