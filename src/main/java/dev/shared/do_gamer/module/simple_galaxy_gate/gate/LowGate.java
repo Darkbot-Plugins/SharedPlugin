@@ -43,7 +43,7 @@ public final class LowGate extends GateHandler {
         this.approachToCenter = false;
         this.skipFarTargets = false;
         this.showBoxCount = false;
-        this.noPortalsInGate = true;
+        this.safeRefreshInGate = false;
         this.farTargetDistance = FAR_TARGET_DISTANCE;
         // Probably will never use Kamikaze in this gate,
         // but set offset to 0 just in case

@@ -39,7 +39,6 @@ public class GateHandler {
     protected boolean skipFarTargets = true;
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
-    protected boolean noPortalsInGate = false;
     protected boolean showBoxCount = true;
     protected boolean showCompletedGates = true;
     protected String statusDetails = null;
@@ -344,8 +343,8 @@ public class GateHandler {
             return this.module.isMapGG()
                     && this.module.lootModule.getNpcs().isEmpty()
                     && this.module.collectorModule.hasNoBox()
-                    && (this.noPortalsInGate || this.module.entities.getPortals().stream()
-                            .anyMatch(p -> p.distanceTo(this.module.hero) < 1_000.0));
+                    && this.module.entities.getPortals().stream()
+                            .anyMatch(p -> p.distanceTo(this.module.hero) < 1_000.0);
         }
         return false;
     }

@@ -67,6 +67,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private static final Pattern GENERAL_MAP_PATTERN = Pattern.compile("^([1-5]-[1-8]|[1-3]BL)$");
     private final Timer stuckInGateTimer = Timer.get();
     private final Timer switchProfileTimer = Timer.get(120_000L);
+    private final Timer gateCompletionDelayTimer = Timer.get(3_000L);
     private boolean triedReloadOnStuck = false;
     private boolean isStuckInGate = false;
     private boolean shouldMoveToRefinery = false;
@@ -256,6 +257,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         if (this.repairAPI.isDestroyed()) {
             this.gateVisited = false;
             this.deactivateStuckInGateTimer();
+            this.gateCompletionDelayTimer.disarm();
         }
     }
 
@@ -301,6 +303,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         }
         this.stuckInGateTimer.disarm();
         this.switchProfileTimer.disarm();
+        this.gateCompletionDelayTimer.disarm();
         this.gateBuilder.reset();
         // Call stopped tick logic for the current gate
         GateHandler gateHandler = this.createGateHandler();
@@ -335,14 +338,9 @@ public final class SimpleGalaxyGate implements Module, Task,
         // Reset stuck timer when not in gate map
         this.deactivateStuckInGateTimer();
 
-        // Reset gate visited when leaving gate map
-        if (this.gateVisited) {
-            if (this.showCompletedGates) {
-                this.completedGates++; // Increment completed gates count
-            } else {
-                this.completedGates = 0; // Reset if not showing
-            }
-            this.gateVisited = false; // Reset for next gate
+        // Handle gate completion if we have visited a gate
+        if (this.handleGateCompletion()) {
+            return;
         }
 
         // Handle profile switching
@@ -696,6 +694,30 @@ public final class SimpleGalaxyGate implements Module, Task,
                 featureInfo.setEnabled(false); // Disable conflicting feature
             }
         }
+    }
+
+    /**
+     * Handles the logic for when a gate has been visited.
+     */
+    private boolean handleGateCompletion() {
+        if (this.gateVisited) {
+            // Activate completion delay timer
+            if (!this.gateCompletionDelayTimer.isArmed()) {
+                this.gateCompletionDelayTimer.activate();
+            }
+            if (this.gateCompletionDelayTimer.isInactive()) {
+                if (this.showCompletedGates) {
+                    this.completedGates++; // Increment completed gates count
+                } else {
+                    this.completedGates = 0; // Reset if not showing
+                }
+                this.gateVisited = false; // Reset for next gate
+                this.gateCompletionDelayTimer.disarm();
+            }
+            StateStore.request(StateStore.State.WAITING);
+            return true; // In completion delay
+        }
+        return false;
     }
 
     /**
