@@ -27,6 +27,16 @@ public class AutobuyConfig {
         @Number(min = 5, max = 1440, step = 5)
         public int checkInterval = 30;
 
+        /**
+         * Subclass for instructions of each section
+         */
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return "Checks every X minutes and buys if expired.";
+            }
+        }
+
         @Option("")
         @Readonly
         @Editor(Instructions.class)
@@ -107,6 +117,16 @@ public class AutobuyConfig {
         @Option("do_gamer.autobuy.checkInterval")
         @Number(min = 5, max = 1440, step = 5)
         public int checkInterval = 60;
+
+        /**
+         * Subclass for instructions of each section
+         */
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return "Checks every X minutes and buys if available.";
+            }
+        }
 
         @Option("")
         @Readonly
@@ -203,6 +223,16 @@ public class AutobuyConfig {
         @Number(min = 5, max = 1440, step = 5)
         public int checkInterval = 15;
 
+        /**
+         * Subclass for instructions of each section
+         */
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return "Checks every X minutes and buys if available.";
+            }
+        }
+
         @Option("")
         @Readonly
         @Editor(Instructions.class)
@@ -218,6 +248,9 @@ public class AutobuyConfig {
         public static final String PLT_2021 = "ammunition_rocket_plt-2021";
         public static final String EMP_01 = "ammunition_specialammo_emp-01";
         public static final String ECO_10 = "ammunition_rocketlauncher_eco-10";
+        public static final String SLUG_THS_D01 = "ammunition_slug_ths-d01";
+        public static final String SLUG_COS_D01 = "ammunition_slug_cos-d01";
+        public static final String SLUG_ELS_D01 = "ammunition_slug_els-d01";
 
         @Option("do_gamer.autobuy.ammo.lcb10")
         public PurchaseConfig lcb10 = new PurchaseConfig(50_000);
@@ -249,11 +282,21 @@ public class AutobuyConfig {
         @Option("do_gamer.autobuy.ammo.eco10")
         public PurchaseConfig eco10 = new PurchaseConfig(5_000);
 
+        @Option("do_gamer.autobuy.ammo.slugThsD01")
+        public PurchaseConfig slugThsD01 = new PurchaseConfig(1_000);
+
+        @Option("do_gamer.autobuy.ammo.slugCosD01")
+        public PurchaseConfig slugCosD01 = new PurchaseConfig(1_000);
+
+        @Option("do_gamer.autobuy.ammo.slugElsD01")
+        public PurchaseConfig slugElsD01 = new PurchaseConfig(1_000);
+
         public boolean anyEnabled() {
             return this.lcb10.amount > 0 || this.mcb25.amount > 0 || this.mcb50.amount > 0
                     || this.sab50.amount > 0 || this.rsb75.amount > 0 || this.job100.amount > 0
-                    || this.plt2026.amount > 0 || this.plt2021.amount > 0
-                    || this.emp01.amount > 0 || this.eco10.amount > 0;
+                    || this.plt2026.amount > 0 || this.plt2021.amount > 0 || this.emp01.amount > 0
+                    || this.eco10.amount > 0 || this.slugThsD01.amount > 0 || this.slugCosD01.amount > 0
+                    || this.slugElsD01.amount > 0;
         }
 
         public boolean isEnabled(String itemId) {
@@ -286,6 +329,12 @@ public class AutobuyConfig {
                     return this.emp01.amount;
                 case ECO_10:
                     return this.eco10.amount;
+                case SLUG_THS_D01:
+                    return this.slugThsD01.amount;
+                case SLUG_COS_D01:
+                    return this.slugCosD01.amount;
+                case SLUG_ELS_D01:
+                    return this.slugElsD01.amount;
                 default:
                     return 0;
             }
@@ -313,6 +362,12 @@ public class AutobuyConfig {
                     return this.emp01.min;
                 case ECO_10:
                     return this.eco10.min;
+                case SLUG_THS_D01:
+                    return this.slugThsD01.min;
+                case SLUG_COS_D01:
+                    return this.slugCosD01.min;
+                case SLUG_ELS_D01:
+                    return this.slugElsD01.min;
                 default:
                     return -1;
             }
@@ -328,21 +383,11 @@ public class AutobuyConfig {
         }
 
         @Option("do_gamer.autobuy.purchase.amount")
-        @Number(max = 10_000_000, step = 100)
+        @Number(max = 100_000_000, step = 100)
         public int amount = 0;
 
         @Option("do_gamer.autobuy.purchase.min")
-        @Number(max = 100_000, step = 1, min = -1)
+        @Number(max = 1_000_000, step = 10)
         public int min = 0;
-    }
-
-    /**
-     * Subclass for instructions of each section
-     */
-    public static class Instructions extends ConfigHtmlInstructions {
-        @Override
-        public String getEditorValue() {
-            return "Checks <b>every</b> configured interval in minutes.";
-        }
     }
 }
