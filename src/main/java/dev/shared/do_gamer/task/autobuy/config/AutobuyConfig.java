@@ -59,29 +59,30 @@ public class AutobuyConfig {
         public boolean shdb02 = false;
 
         public boolean anyEnabled() {
-            return cdb01 || cdb02 || dmgb01 || dmgb02 || dmgh01 || hpb01 || hpb02 || shdb01 || shdb02;
+            return this.cdb01 || this.cdb02 || this.dmgb01 || this.dmgb02 || this.dmgh01
+                    || this.hpb01 || this.hpb02 || this.shdb01 || this.shdb02;
         }
 
         public boolean isEnabled(String code) {
             switch (code) {
                 case CD_B01:
-                    return cdb01;
+                    return this.cdb01;
                 case CD_B02:
-                    return cdb02;
+                    return this.cdb02;
                 case DMG_B01:
-                    return dmgb01;
+                    return this.dmgb01;
                 case DMG_B02:
-                    return dmgb02;
+                    return this.dmgb02;
                 case DMG_H01:
-                    return dmgh01;
+                    return this.dmgh01;
                 case HP_B01:
-                    return hpb01;
+                    return this.hpb01;
                 case HP_B02:
-                    return hpb02;
+                    return this.hpb02;
                 case SHD_B01:
-                    return shdb01;
+                    return this.shdb01;
                 case SHD_B02:
-                    return shdb02;
+                    return this.shdb02;
                 default:
                     return false;
             }
@@ -126,26 +127,31 @@ public class AutobuyConfig {
         public PurchaseCondition pirateKeyGreen = new PurchaseCondition();
 
         public boolean anyEnabled() {
-            return luminafluxAlloy > 0 || dseKeyAccess.amount > 0 || dseKeyGreen > 0 || dseKeyBlue > 0
-                    || dseKeyPurple > 0 || logFile.amount > 0 || pirateKeyGreen.amount > 0;
+            return this.luminafluxAlloy > 0 || this.dseKeyAccess.amount > 0 || this.dseKeyGreen > 0
+                    || this.dseKeyBlue > 0
+                    || this.dseKeyPurple > 0 || this.logFile.amount > 0 || this.pirateKeyGreen.amount > 0;
+        }
+
+        public boolean isEnabled(String itemId) {
+            return this.getAmountOfItem(itemId) > 0;
         }
 
         public int getAmountOfItem(String itemId) {
             switch (itemId) {
                 case LUMINAFLUX_ALLOY:
-                    return luminafluxAlloy;
+                    return this.luminafluxAlloy;
                 case DSE_KEY_ACCESS:
-                    return dseKeyAccess.amount;
+                    return this.dseKeyAccess.amount;
                 case DSE_KEY_GREEN:
-                    return dseKeyGreen;
+                    return this.dseKeyGreen;
                 case DSE_KEY_BLUE:
-                    return dseKeyBlue;
+                    return this.dseKeyBlue;
                 case DSE_KEY_PURPLE:
-                    return dseKeyPurple;
+                    return this.dseKeyPurple;
                 case LOG_FILE:
-                    return logFile.amount;
+                    return this.logFile.amount;
                 case PIRATE_KEY_GREEN:
-                    return pirateKeyGreen.amount;
+                    return this.pirateKeyGreen.amount;
                 default:
                     return 0;
             }
@@ -154,11 +160,11 @@ public class AutobuyConfig {
         public int getMinConditionForItem(String itemId) {
             switch (itemId) {
                 case DSE_KEY_ACCESS:
-                    return dseKeyAccess.min;
+                    return this.dseKeyAccess.min;
                 case LOG_FILE:
-                    return logFile.min;
+                    return this.logFile.min;
                 case PIRATE_KEY_GREEN:
-                    return pirateKeyGreen.min;
+                    return this.pirateKeyGreen.min;
                 default:
                     return -1; // No condition for this item
             }

@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.github.manolo8.darkbot.backpage.BackpageManager;
 import com.github.manolo8.darkbot.backpage.entities.Item;
@@ -132,6 +134,11 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      * before reading.
      */
     private void tickRequestInventory() {
+        if (this.getTrackedSpecialResourceKeys().stream().noneMatch(this.config.special::isEnabled)) {
+            // If no tracked special items are enabled, skip inventory fetching
+            this.state = State.FETCH_LOG_FILE;
+            return;
+        }
         this.backpageManager.legacyHangarManager.updateHangarData(500);
         this.state = State.UPDATE_INVENTORY;
     }
@@ -141,10 +148,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      * LOG_FILE is skipped here; its count is fetched separately in FETCH_LOG_FILE.
      */
     private void tickUpdateInventory() {
-        for (String key : this.resource.keySet()) {
-            if (AutobuyConfig.SpecialConfig.LOG_FILE.equals(key)) {
-                continue;
-            }
+        for (String key : this.getTrackedSpecialResourceKeys()) {
             int index = this.backpageManager.legacyHangarManager.getLootIds().indexOf(key);
             if (index != -1) {
                 int quantity = this.backpageManager.legacyHangarManager.getItems().stream()
@@ -164,6 +168,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      */
     private void tickFetchLogFile() {
         if (this.config.special.logFile.amount == 0) {
+            // If log file is not enabled, skip fetching its count
             this.state = State.FETCH_BOOSTERS;
             return;
         }
@@ -175,14 +180,14 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                     .getContent();
             int count = this.extractLogFileCount(html);
             if (count < 0) {
-                System.out.println("Autobuy: Failed to parse log file count from response, skipping cycle");
+                System.out.println("Autobuy: Failed to parse Log Disks count from response, skipping cycle");
                 this.handleError();
                 return;
             }
             this.resource.put(AutobuyConfig.SpecialConfig.LOG_FILE, count);
             this.state = State.FETCH_BOOSTERS;
         } catch (IOException e) {
-            System.out.println(String.format("Autobuy: Failed to fetch log file count: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Failed to fetch Log Disks count: %s", e.getMessage()));
             this.handleError();
         }
     }
@@ -378,6 +383,15 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         this.boostersHtml = null;
         this.specialsHtml = null;
         this.state = State.IDLE;
+    }
+
+    /**
+     * Returns tracked special resource keys excluding log-file resource tracking.
+     */
+    private Set<String> getTrackedSpecialResourceKeys() {
+        return this.resource.keySet().stream()
+                .filter(key -> !AutobuyConfig.SpecialConfig.LOG_FILE.equals(key))
+                .collect(Collectors.toSet());
     }
 
     /**
