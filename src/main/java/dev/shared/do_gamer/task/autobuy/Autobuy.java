@@ -65,10 +65,10 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                 () -> this.config != null ? this.config.booster.checkInterval : 30));
         this.categories.put(SPECIAL_KEY, new CategoryState(
                 () -> this.config != null && this.config.special.anyEnabled(),
-                () -> this.config != null ? this.config.special.checkInterval : 30));
+                () -> this.config != null ? this.config.special.checkInterval : 60));
         this.categories.put(AMMO_KEY, new CategoryState(
                 () -> this.config != null && this.config.ammo.anyEnabled(),
-                () -> this.config != null ? this.config.ammo.checkInterval : 60));
+                () -> this.config != null ? this.config.ammo.checkInterval : 15));
     }
 
     @Override
