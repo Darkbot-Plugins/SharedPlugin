@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import dev.shared.do_gamer.utils.ConfigHtmlInstructions;
 import eu.darkbot.api.config.annotations.Dropdown;
 import eu.darkbot.api.config.annotations.Editor;
 import eu.darkbot.api.config.annotations.Number;
@@ -26,7 +27,7 @@ public class SimpleGalaxyGateConfig {
      * Instructions and explanations for the player,
      * displayed at the top of the config.
      */
-    public static class Instructions extends HtmlInstructions {
+    public static class Instructions extends ConfigHtmlInstructions {
         @Override
         public String getEditorValue() {
             StringBuilder html = new StringBuilder();
@@ -115,7 +116,7 @@ public class SimpleGalaxyGateConfig {
      * Settings applied when "-any-" gate is selected
      */
     public static class AnyGateSettings {
-        public static class Instructions extends HtmlInstructions {
+        public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
                 return "NPC radius <b>overrides</b> any attack radius. Set to 0 to use custom radius.";
@@ -146,7 +147,7 @@ public class SimpleGalaxyGateConfig {
      * Settings for kamikaze behavior in the gate
      */
     public static class KamikazeSettings {
-        public static class Instructions extends HtmlInstructions {
+        public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
                 return this.buildList(null,
@@ -390,7 +391,7 @@ public class SimpleGalaxyGateConfig {
     }
 
     public static class OtherSettings {
-        public static class Instructions extends HtmlInstructions {
+        public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
                 return this.buildList(null,

@@ -1,8 +1,11 @@
 package dev.shared.do_gamer.task.autobuy.config;
 
+import dev.shared.do_gamer.utils.ConfigHtmlInstructions;
 import eu.darkbot.api.config.annotations.Configuration;
+import eu.darkbot.api.config.annotations.Editor;
 import eu.darkbot.api.config.annotations.Number;
 import eu.darkbot.api.config.annotations.Option;
+import eu.darkbot.api.config.annotations.Readonly;
 
 @Configuration("autobuy")
 public class AutobuyConfig {
@@ -20,6 +23,20 @@ public class AutobuyConfig {
         @Option("do_gamer.autobuy.checkInterval")
         @Number(min = 5, max = 1440, step = 5)
         public int checkInterval = 30;
+
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return this.buildList(null,
+                        "Checks <b>every</b> configured interval in minutes.",
+                        "If <b>enabled</b> and <b>expired</b>, it will be purchased.");
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
 
         public static final String CD_B01 = "CD-B01";
         public static final String CD_B02 = "CD-B02";
@@ -96,6 +113,22 @@ public class AutobuyConfig {
         @Option("do_gamer.autobuy.checkInterval")
         @Number(min = 5, max = 1440, step = 5)
         public int checkInterval = 30;
+
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return this.buildList(null,
+                        "Checks <b>every</b> configured interval in minutes.",
+                        "If amount is above <b>0</b>, it will be purchased.",
+                        "Skips when minimum in inventory is not met.",
+                        "Set minimum value to <b>-1</b> to ignore condition.");
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
 
         public static final String LUMINAFLUX_ALLOY = "resource_collectable_luminaflux-alloy";
         public static final String DSE_KEY_ACCESS = "resource_key_access-dse";
