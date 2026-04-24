@@ -106,7 +106,7 @@ public class AutobuyConfig {
         public int luminafluxAlloy = 0;
 
         @Option("do_gamer.autobuy.special.dseKeyAccess")
-        public PurchaseCondition dseKeyAccess = new PurchaseCondition();
+        public PurchaseConfig dseKeyAccess = new PurchaseConfig();
 
         @Option("do_gamer.autobuy.special.dseKeyGreen")
         @Number(max = 5, step = 1)
@@ -121,10 +121,10 @@ public class AutobuyConfig {
         public int dseKeyPurple = 0;
 
         @Option("do_gamer.autobuy.special.logFile")
-        public PurchaseCondition logFile = new PurchaseCondition();
+        public PurchaseConfig logFile = new PurchaseConfig();
 
         @Option("do_gamer.autobuy.special.pirateKeyGreen")
-        public PurchaseCondition pirateKeyGreen = new PurchaseCondition();
+        public PurchaseConfig pirateKeyGreen = new PurchaseConfig();
 
         public boolean anyEnabled() {
             return this.luminafluxAlloy > 0 || this.dseKeyAccess.amount > 0 || this.dseKeyGreen > 0
@@ -172,14 +172,14 @@ public class AutobuyConfig {
     }
 
     /**
-     * Subclass for purchase condition configuration
+     * Subclass for purchase configuration
      */
-    public static class PurchaseCondition {
-        @Option("do_gamer.autobuy.purchaseCondition.amount")
+    public static class PurchaseConfig {
+        @Option("do_gamer.autobuy.purchase.amount")
         @Number(max = 10_000_000, step = 1)
         public int amount = 0;
 
-        @Option("do_gamer.autobuy.purchaseCondition.min")
+        @Option("do_gamer.autobuy.purchase.min")
         @Number(max = 100_000, step = 1, min = -1)
         public int min = 0;
     }
