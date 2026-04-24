@@ -16,6 +16,9 @@ public class AutobuyConfig {
     @Option("do_gamer.autobuy.special")
     public SpecialConfig special = new SpecialConfig();
 
+    @Option("do_gamer.autobuy.ammo")
+    public AmmoConfig ammo = new AmmoConfig();
+
     /**
      * Subclass for Booster configuration
      */
@@ -23,15 +26,6 @@ public class AutobuyConfig {
         @Option("do_gamer.autobuy.checkInterval")
         @Number(min = 5, max = 1440, step = 5)
         public int checkInterval = 30;
-
-        public static class Instructions extends ConfigHtmlInstructions {
-            @Override
-            public String getEditorValue() {
-                return this.buildList(null,
-                        "Checks <b>every</b> configured interval in minutes.",
-                        "If <b>enabled</b> and <b>expired</b>, it will be purchased.");
-            }
-        }
 
         @Option("")
         @Readonly
@@ -114,17 +108,6 @@ public class AutobuyConfig {
         @Number(min = 5, max = 1440, step = 5)
         public int checkInterval = 60;
 
-        public static class Instructions extends ConfigHtmlInstructions {
-            @Override
-            public String getEditorValue() {
-                return this.buildList(null,
-                        "Checks <b>every</b> configured interval in minutes.",
-                        "If amount is above <b>0</b>, it will be purchased.",
-                        "Skips when minimum in inventory is not met.",
-                        "Set minimum value to <b>-1</b> to ignore condition.");
-            }
-        }
-
         @Option("")
         @Readonly
         @Editor(Instructions.class)
@@ -173,6 +156,10 @@ public class AutobuyConfig {
             return this.getAmountOfItem(itemId) > 0;
         }
 
+        public boolean isUpdateHangar() {
+            return this.dseKeyAccess.amount > 0 || this.pirateKeyGreen.amount > 0;
+        }
+
         public int getAmountOfItem(String itemId) {
             switch (itemId) {
                 case LUMINAFLUX_ALLOY:
@@ -209,6 +196,130 @@ public class AutobuyConfig {
     }
 
     /**
+     * Subclass for Ammo configuration
+     */
+    public static class AmmoConfig {
+        @Option("do_gamer.autobuy.checkInterval")
+        @Number(min = 5, max = 1440, step = 5)
+        public int checkInterval = 15;
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
+        public static final String LCB_10 = "ammunition_laser_lcb-10";
+        public static final String MCB_25 = "ammunition_laser_mcb-25";
+        public static final String MCB_50 = "ammunition_laser_mcb-50";
+        public static final String SAB_50 = "ammunition_laser_sab-50";
+        public static final String RSB_75 = "ammunition_laser_rsb-75";
+        public static final String JOB_100 = "ammunition_laser_job-100";
+        public static final String PLT_2026 = "ammunition_rocket_plt-2026";
+        public static final String PLT_2021 = "ammunition_rocket_plt-2021";
+        public static final String EMP_01 = "ammunition_specialammo_emp-01";
+        public static final String ECO_10 = "ammunition_rocketlauncher_eco-10";
+
+        @Option("do_gamer.autobuy.ammo.lcb10")
+        public PurchaseConfig lcb10 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.mcb25")
+        public PurchaseConfig mcb25 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.mcb50")
+        public PurchaseConfig mcb50 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.sab50")
+        public PurchaseConfig sab50 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.rsb75")
+        public PurchaseConfig rsb75 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.job100")
+        public PurchaseConfig job100 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.plt2026")
+        public PurchaseConfig plt2026 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.plt2021")
+        public PurchaseConfig plt2021 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.emp01")
+        public PurchaseConfig emp01 = new PurchaseConfig();
+
+        @Option("do_gamer.autobuy.ammo.eco10")
+        public PurchaseConfig eco10 = new PurchaseConfig();
+
+        public boolean anyEnabled() {
+            return this.lcb10.amount > 0 || this.mcb25.amount > 0 || this.mcb50.amount > 0
+                    || this.sab50.amount > 0 || this.rsb75.amount > 0 || this.job100.amount > 0
+                    || this.plt2026.amount > 0 || this.plt2021.amount > 0
+                    || this.emp01.amount > 0 || this.eco10.amount > 0;
+        }
+
+        public boolean isEnabled(String itemId) {
+            return this.getAmountOfItem(itemId) > 0;
+        }
+
+        public boolean isUpdateHangar() {
+            return this.anyEnabled();
+        }
+
+        public int getAmountOfItem(String itemId) {
+            switch (itemId) {
+                case LCB_10:
+                    return this.lcb10.amount;
+                case MCB_25:
+                    return this.mcb25.amount;
+                case MCB_50:
+                    return this.mcb50.amount;
+                case SAB_50:
+                    return this.sab50.amount;
+                case RSB_75:
+                    return this.rsb75.amount;
+                case JOB_100:
+                    return this.job100.amount;
+                case PLT_2026:
+                    return this.plt2026.amount;
+                case PLT_2021:
+                    return this.plt2021.amount;
+                case EMP_01:
+                    return this.emp01.amount;
+                case ECO_10:
+                    return this.eco10.amount;
+                default:
+                    return 0;
+            }
+        }
+
+        public int getMinConditionForItem(String itemId) {
+            switch (itemId) {
+                case LCB_10:
+                    return this.lcb10.min;
+                case MCB_25:
+                    return this.mcb25.min;
+                case MCB_50:
+                    return this.mcb50.min;
+                case SAB_50:
+                    return this.sab50.min;
+                case RSB_75:
+                    return this.rsb75.min;
+                case JOB_100:
+                    return this.job100.min;
+                case PLT_2026:
+                    return this.plt2026.min;
+                case PLT_2021:
+                    return this.plt2021.min;
+                case EMP_01:
+                    return this.emp01.min;
+                case ECO_10:
+                    return this.eco10.min;
+                default:
+                    return -1;
+            }
+        }
+    }
+
+    /**
      * Subclass for purchase configuration
      */
     public static class PurchaseConfig {
@@ -219,5 +330,15 @@ public class AutobuyConfig {
         @Option("do_gamer.autobuy.purchase.min")
         @Number(max = 100_000, step = 1, min = -1)
         public int min = 0;
+    }
+
+    /**
+     * Subclass for instructions of each section
+     */
+    public static class Instructions extends ConfigHtmlInstructions {
+        @Override
+        public String getEditorValue() {
+            return "Checks <b>every</b> configured interval in minutes.";
+        }
     }
 }
