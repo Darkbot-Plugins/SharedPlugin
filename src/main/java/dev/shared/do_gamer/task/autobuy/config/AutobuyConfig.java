@@ -12,7 +12,7 @@ import eu.darkbot.api.config.annotations.Option;
 import eu.darkbot.api.config.annotations.Readonly;
 
 @Configuration("autobuy")
-public class AutobuyConfig {
+public final class AutobuyConfig {
 
     @Option("do_gamer.autobuy.booster")
     public BoostersConfig booster = new BoostersConfig();
@@ -108,6 +108,11 @@ public class AutobuyConfig {
 
         public boolean isEnabled(String code) {
             return ENABLED_GETTERS.getOrDefault(code, config -> false).test(this);
+        }
+
+        @Override
+        public int getCheckInterval() {
+            return this.checkInterval;
         }
     }
 
@@ -210,6 +215,11 @@ public class AutobuyConfig {
 
         public int getMinConditionForItem(String itemId) {
             return MIN_GETTERS.getOrDefault(itemId, config -> -1).applyAsInt(this);
+        }
+
+        @Override
+        public int getCheckInterval() {
+            return this.checkInterval;
         }
     }
 
@@ -350,6 +360,11 @@ public class AutobuyConfig {
         public int getMinConditionForItem(String itemId) {
             return MIN_GETTERS.getOrDefault(itemId, config -> -1).applyAsInt(this);
         }
+
+        @Override
+        public int getCheckInterval() {
+            return this.checkInterval;
+        }
     }
 
     /**
@@ -397,6 +412,10 @@ public class AutobuyConfig {
         protected AbstractItemConfig() {
         }
 
+        public String[] getItemIds() {
+            return this.itemIds;
+        }
+
         public boolean anyEnabled() {
             return AutobuyConfig.anyEnabled(this::isEnabled, this.itemIds);
         }
@@ -406,5 +425,7 @@ public class AutobuyConfig {
         }
 
         public abstract boolean isEnabled(String id);
+
+        public abstract int getCheckInterval();
     }
 }

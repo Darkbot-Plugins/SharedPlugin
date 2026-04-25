@@ -196,9 +196,8 @@ public final class CustomLootModule extends LootModule {
             return false; // Skip disabled
         }
 
-        Location center = Location.of(Maps.getMapCenterX(), Maps.getMapCenterY());
-        double targetDist = this.movement.getDistanceBetween(target, center);
-        double heroDist = this.movement.getDistanceBetween(this.hero, center);
+        double targetDist = target.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
+        double heroDist = this.hero.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
         return targetDist > Maps.getToleranceDistance()
                 && targetDist > heroDist
                 && target.getHealth().hpPercent() <= 0.25
@@ -210,10 +209,9 @@ public final class CustomLootModule extends LootModule {
      * based on HP, distance to center, and position.
      */
     private boolean isBetterTarget(Npc npc, double distance, Npc target) {
-        Location center = Location.of(Maps.getMapCenterX(), Maps.getMapCenterY());
         return npc.getHealth().hpPercent() > 0.3
                 && this.shouldKill(npc)
-                && this.movement.getDistanceBetween(npc, center) < (distance - 800.0)
+                && npc.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY()) < (distance - 800.0)
                 && Math.signum(npc.getX() - Maps.getMapCenterX()) == Math.signum(target.getX() - Maps.getMapCenterX())
                 && Math.signum(npc.getY() - Maps.getMapCenterY()) == Math.signum(target.getY() - Maps.getMapCenterY());
     }
@@ -223,7 +221,7 @@ public final class CustomLootModule extends LootModule {
      */
     public Comparator<Npc> getNpcComparator(Locatable location) {
         return Comparator.<Npc>comparingInt(n -> n.getInfo().getPriority())
-                .thenComparingDouble(n -> this.movement.getDistanceBetween(n, location))
+                .thenComparingDouble(n -> n.distanceTo(location))
                 .thenComparingDouble(n -> n.getHealth().hpPercent());
     }
 
@@ -268,8 +266,8 @@ public final class CustomLootModule extends LootModule {
         // better in terms of distance to location
         if (this.hero.isAttacking(target)) {
             double offset = 100.0;
-            double targetDist = this.movement.getDistanceBetween(target, location);
-            double bestDist = this.movement.getDistanceBetween(best, location);
+            double targetDist = target.distanceTo(location);
+            double bestDist = best.distanceTo(location);
             if (targetDist < (bestDist + offset)) {
                 return true;
             }
@@ -285,13 +283,22 @@ public final class CustomLootModule extends LootModule {
         return npc.hasEffect(EntityEffect.NPC_ISH) || npc.hasEffect(EntityEffect.ISH);
     }
 
+    /**
+     * Determines if the NPC is blocked by barriers and cannot be reached,
+     * while there are other reachable NPCs.
+     */
+    private boolean isBlockedByBarriers(Npc npc) {
+        return !this.barriers.isEmpty() && !this.movement.canMove(npc)
+                && this.getNpcs().stream().anyMatch(this.movement::canMove);
+    }
+
     @Override
     protected boolean shouldKill(Npc npc) {
         // Ignore in specials cases
         if (npc.getInfo().hasExtraFlag(NpcFlag.PASSIVE)
                 || (this.hasIshEffect(npc) && this.getNpcs().stream().anyMatch(n -> !this.hasIshEffect(n)))
                 || (npc.isBlacklisted() && this.getNpcs().stream().anyMatch(n -> !n.isBlacklisted()))
-                || (!this.movement.canMove(npc) && this.getNpcs().stream().anyMatch(this.movement::canMove))) {
+                || this.isBlockedByBarriers(npc)) {
             return false;
         }
         // Use gate handler logic
@@ -381,10 +388,17 @@ public final class CustomLootModule extends LootModule {
     }
 
     /**
+     * Determines if there are barriers near the hero that could block movement.
+     */
+    private boolean isBarrierNearHero() {
+        return !this.barriers.isEmpty() && this.barriers.stream().anyMatch(b -> b.distanceTo(this.hero) < 1_000.0);
+    }
+
+    /**
      * Determines if need to change direction to approach the center of the map.
      */
     private boolean approachToCenter(Npc target) {
-        if (target == null || !this.gateHandler.isApproachToCenter() || !this.barriers.isEmpty()) {
+        if (target == null || !this.gateHandler.isApproachToCenter() || this.isBarrierNearHero()) {
             return false; // No need to approach
         }
         double distanceHero = this.hero.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
