@@ -12,7 +12,7 @@ import eu.darkbot.api.config.annotations.Option;
 import eu.darkbot.api.config.annotations.Readonly;
 
 @Configuration("autobuy")
-public class AutobuyConfig {
+public final class AutobuyConfig {
 
     @Option("do_gamer.autobuy.booster")
     public BoostersConfig booster = new BoostersConfig();
