@@ -20,7 +20,7 @@ import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.shared.config.ProfileNames;
 
-public class SimpleGalaxyGateConfig {
+public final class SimpleGalaxyGateConfig {
     private static final String LINE_BREAK = "<br><br>";
 
     /**
