@@ -410,25 +410,6 @@ public final class AutobuyConfig {
     }
 
     /**
-     * Functional interface for checking if an item is enabled based on its ID.
-     */
-    @FunctionalInterface
-    private interface EnabledChecker {
-        boolean enabled(String id);
-    }
-
-    /**
-     * Utility method to check if any of the given IDs are enabled.
-     */
-    private static boolean anyEnabled(EnabledChecker checker, String... ids) {
-        for (String id : ids) {
-            if (checker.enabled(id))
-                return true;
-        }
-        return false;
-    }
-
-    /**
      * Abstract class for common configuration properties and methods.
      */
     public abstract static class AbstractItemConfig {
@@ -442,11 +423,15 @@ public final class AutobuyConfig {
         }
 
         public boolean anyEnabled() {
-            return AutobuyConfig.anyEnabled(this::isEnabled, this.itemIds);
-        }
-
-        public boolean anyEnabled(String... ids) {
-            return AutobuyConfig.anyEnabled(this::isEnabled, ids);
+            if (this.itemIds == null) {
+                return false;
+            }
+            for (String id : this.itemIds) {
+                if (this.isEnabled(id)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public abstract boolean isEnabled(String id);
