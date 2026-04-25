@@ -189,14 +189,15 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                     .getContent();
             int count = this.extractLogFileCount(html);
             if (count < 0) {
-                System.out.println("Autobuy: Failed to parse Log Disks count from response, skipping cycle");
+                System.out.println(
+                        "Autobuy: Could not read the Log Disks count from the profile response. Skipping this cycle.");
                 this.handleError();
                 return;
             }
             this.logFileCount = count;
             this.state = State.FETCH_BOOSTERS;
         } catch (IOException e) {
-            System.out.println(String.format("Autobuy: Failed to fetch Log Disks count: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not load the Log Disks count: %s", e.getMessage()));
             this.handleError();
         }
     }
@@ -218,7 +219,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             boosterState.markFetched();
             this.state = State.FETCH_SPECIALS;
         } catch (IOException e) {
-            System.out.println(String.format("Autobuy: Failed to fetch boosters page: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not load the boosters shop page: %s", e.getMessage()));
             this.handleError();
         }
     }
@@ -240,7 +241,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             specialState.markFetched();
             this.state = State.FETCH_AMMO;
         } catch (IOException e) {
-            System.out.println(String.format("Autobuy: Failed to fetch specials page: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not load the specials shop page: %s", e.getMessage()));
             this.handleError();
         }
     }
@@ -262,7 +263,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             ammoState.markFetched();
             this.state = State.PREPARE_QUEUE;
         } catch (IOException e) {
-            System.out.println(String.format("Autobuy: Failed to fetch ammo page: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not load the ammo shop page: %s", e.getMessage()));
             this.handleError();
         }
     }
@@ -297,7 +298,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                 }
             });
         } catch (Exception e) {
-            System.out.println(String.format("Autobuy: Failed to parse shop data: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not process the shop data: %s", e.getMessage()));
             this.handleError();
             return;
         }
@@ -329,11 +330,12 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                     .setRawParam("level", "")
                     .setRawParam("selectedName", "")
                     .getContent();
-            System.out.println(String.format("Autobuy: Bought %s item %s x%d",
-                    task.category, task.shopItem.code, task.batch));
+            int cost = this.calculateCost(task.shopItem.price, task.batch);
+            System.out.println(String.format("Autobuy: Purchased %s item %s x%,d for %,d %s.",
+                    task.category, task.shopItem.code, task.batch, cost, task.shopItem.currency));
             this.delay.activate(5_000L); // Extra delay after purchase
         } catch (Exception e) {
-            System.out.println(String.format("Autobuy: Failed to buy %s item %s x%d: %s",
+            System.out.println(String.format("Autobuy: Could not purchase %s item %s x%,d: %s",
                     task.category, task.shopItem.code, task.batch, e.getMessage()));
         }
     }
@@ -355,7 +357,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             boolean hasBooster = shopItem.shopObj.get("userHasBoosterPackage").getAsBoolean();
             if (!hasBooster) {
-                System.out.println(String.format("Autobuy: Booster %s is enabled but not active, queuing purchase",
+                System.out.println(String.format("Autobuy: Queued booster purchase for %s.",
                         shopItem.code));
                 this.enqueuePurchase(shopItem, 1, BOOSTER_KEY);
             }
@@ -374,7 +376,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             int amount = this.resolveAmmoPurchaseAmount(shopItem);
             if (amount > 0) {
-                System.out.println(String.format("Autobuy: Ammo item %s enabled, queuing purchase x%d",
+                System.out.println(String.format("Autobuy: Queued ammo purchase for %s x%,d.",
                         shopItem.code, amount));
                 this.enqueuePurchase(shopItem, amount, AMMO_KEY);
             }
@@ -414,7 +416,7 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             int amount = this.resolveSpecialPurchaseAmount(shopItem);
             if (amount > 0) {
-                System.out.println(String.format("Autobuy: Special item %s enabled, queuing purchase x%d",
+                System.out.println(String.format("Autobuy: Queued special purchase for %s x%,d.",
                         shopItem.code, amount));
                 this.enqueuePurchase(shopItem, amount, SPECIAL_KEY);
             }
@@ -473,8 +475,8 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
         int remaining = amount;
         if (shopItem.maxAmount > 0 && amount > shopItem.maxAmount) {
-            System.out.println(String.format("Autobuy: Splitting purchase of %s x%d into batches of %d",
-                    shopItem.code, amount, shopItem.maxAmount));
+            System.out.println(String.format("Autobuy: Splitting %s purchase for item %s: total x%,d, batch size x%,d.",
+                    category, shopItem.code, amount, shopItem.maxAmount));
         }
         while (remaining > 0) {
             int batch = shopItem.maxAmount > 0 ? Math.min(remaining, shopItem.maxAmount) : remaining;
@@ -597,34 +599,55 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         String category = shopObj.get("category").getAsString();
         String code = shopObj.get("code").getAsString();
         double price = shopObj.get("price").getAsDouble();
-        String currency = shopObj.get("currency").getAsString();
+        String currency = this.convertCurrencyName(shopObj.get("currency").getAsString());
         int maxAmount = shopObj.get("maxAmount").getAsInt();
         return new ShopItem(itemId, category, code, price, currency, maxAmount, shopObj);
+    }
+
+    /**
+     * Converts currency names from the shop data to match the game naming.
+     */
+    private String convertCurrencyName(String currency) {
+        if ("real".equals(currency)) {
+            return "uridium";
+        }
+        if ("virtual".equals(currency)) {
+            return "credits";
+        }
+        return currency;
+    }
+
+    /**
+     * Calculates the total cost for purchasing the given amount at the given price,
+     * rounding up to the nearest whole unit.
+     */
+    private int calculateCost(double price, int amount) {
+        return (int) Math.ceil(price * amount);
     }
 
     /**
      * Checks whether the player has enough credits or uridium for the purchase.
      */
     private boolean validateFunds(ShopItem shopItem, int amount) {
-        double required = shopItem.price * amount;
+        int cost = this.calculateCost(shopItem.price, amount);
         boolean hasEnough;
-        String currencyName;
 
-        if ("real".equals(shopItem.currency)) {
-            hasEnough = this.stats.getTotalUridium() >= required;
-            currencyName = "uridium";
-        } else if ("virtual".equals(shopItem.currency)) {
-            hasEnough = this.stats.getTotalCredits() >= required;
-            currencyName = "credits";
-        } else {
-            System.out.println(String.format("Autobuy: Unknown currency '%s' for item %s, skipping",
-                    shopItem.currency, shopItem.code));
-            return false;
+        switch (shopItem.currency) {
+            case "uridium":
+                hasEnough = this.stats.getTotalUridium() >= cost;
+                break;
+            case "credits":
+                hasEnough = this.stats.getTotalCredits() >= cost;
+                break;
+            default:
+                System.out.println(String.format("Autobuy: Unsupported currency '%s' for item %s. Skipping purchase.",
+                        shopItem.currency, shopItem.code));
+                return false;
         }
 
         if (!hasEnough) {
-            System.out.println(String.format("Autobuy: Not enough %s for %s. Required: %.2f",
-                    currencyName, shopItem.code, required));
+            System.out.println(String.format("Autobuy: Not enough funds to buy item %s x%,d. Required: %,d %s.",
+                    shopItem.code, amount, cost, shopItem.currency));
         }
         return hasEnough;
     }
