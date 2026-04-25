@@ -153,8 +153,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Triggers an inventory refresh if any non-logfile special item with a min
-     * condition is enabled.
+     * Triggers an inventory refresh if needed.
      */
     private void tickRequestInventory() {
         if (!this.config.special.isUpdateHangar() && !this.config.ammo.isUpdateHangar()) {
@@ -168,7 +167,6 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
 
     /**
      * Fetches the log file count from the pilot profile skill tree page.
-     * Skipped if log file purchasing is not configured.
      */
     private void tickFetchLogFile() {
         if (this.config.special.logFile.amount == 0) {
@@ -199,8 +197,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Fetches the booster shop page HTML; skips if no boosters are enabled or timer
-     * not expired.
+     * Fetches the booster shop page HTML.
      */
     private void tickFetchBoosters() {
         CategoryState boosterState = this.categories.get(BOOSTER_CATEGORY);
@@ -221,8 +218,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Fetches the specials shop page HTML; skips if no specials are enabled or
-     * timer not expired.
+     * Fetches the specials shop page HTML.
      */
     private void tickFetchSpecials() {
         CategoryState specialState = this.categories.get(SPECIAL_CATEGORY);
@@ -243,8 +239,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Fetches the ammo shop page HTML; skips if no ammo is enabled, timer not
-     * expired, or no ammo item currently requires purchase.
+     * Fetches the ammo shop page HTML.
      */
     private void tickFetchAmmo() {
         CategoryState ammoState = this.categories.get(AMMO_CATEGORY);
@@ -322,17 +317,17 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
                     .setRawParam("action", "purchase")
                     .setRawParam("category", task.shopItem.category)
                     .setRawParam("itemId", task.shopItem.itemId)
-                    .setRawParam("amount", task.batch)
+                    .setRawParam("amount", task.amount)
                     .setRawParam("level", "")
                     .setRawParam("selectedName", "")
                     .getContent();
-            int cost = this.calculateCost(task.shopItem.price, task.batch);
+            int cost = this.calculateCost(task.shopItem.price, task.amount);
             System.out.println(String.format("Autobuy: Purchased %s item %s x%,d for %,d %s.",
-                    task.category, task.shopItem.code, task.batch, cost, task.shopItem.currency));
+                    task.category, task.shopItem.code, task.amount, cost, task.shopItem.currency));
             this.delay.activate(5_000L); // Extra delay after purchase
         } catch (Exception e) {
             System.out.println(String.format("Autobuy: Could not purchase %s item %s x%,d: %s",
-                    task.category, task.shopItem.code, task.batch, e.getMessage()));
+                    task.category, task.shopItem.code, task.amount, e.getMessage()));
         }
     }
 
@@ -386,7 +381,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Queues ammo purchases based on configured amounts.
+     * Queues ammo purchases based on configured amounts and conditions.
      */
     private void enqueueAmmoItems(JsonObject itemData) {
         for (Map.Entry<String, JsonElement> entry : itemData.entrySet()) {
@@ -675,6 +670,9 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     // Inner classes
     // -------------------------------------------------------------------------
 
+    /**
+     * Tracks the state of a shop category.
+     */
     private static class CategoryState {
         final Supplier<? extends AutobuyConfig.AbstractItemConfig> configSupplier;
         long nextCheck = 0;
@@ -716,6 +714,9 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
     }
 
+    /**
+     * Represents a purchasable item in the shop.
+     */
     private static class ShopItem {
         final String itemId;
         final String category;
@@ -737,14 +738,17 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
     }
 
+    /**
+     * Represents a purchase task for a specific item and amount.
+     */
     private static class PurchaseTask {
         final ShopItem shopItem;
-        final int batch;
+        final int amount;
         final String category; // For logging purposes only, not same as shopItem.category
 
-        PurchaseTask(ShopItem shopItem, int batch, String category) {
+        PurchaseTask(ShopItem shopItem, int amount, String category) {
             this.shopItem = shopItem;
-            this.batch = batch;
+            this.amount = amount;
             this.category = category;
         }
     }

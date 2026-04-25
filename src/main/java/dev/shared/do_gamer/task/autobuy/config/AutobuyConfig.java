@@ -1,9 +1,5 @@
 package dev.shared.do_gamer.task.autobuy.config;
 
-import java.util.Map;
-import java.util.function.Predicate;
-import java.util.function.ToIntFunction;
-
 import dev.shared.do_gamer.utils.ConfigHtmlInstructions;
 import eu.darkbot.api.config.annotations.Configuration;
 import eu.darkbot.api.config.annotations.Editor;
@@ -36,20 +32,6 @@ public final class AutobuyConfig {
         public static final String HP_B02 = "HP-B02";
         public static final String SHD_B01 = "SHD-B01";
         public static final String SHD_B02 = "SHD-B02";
-
-        /**
-         * Maps for checking if a booster is enabled.
-         */
-        private static final Map<String, Predicate<BoostersConfig>> ENABLED_GETTERS = Map.ofEntries(
-                Map.entry(CD_B01, config -> config.cdb01),
-                Map.entry(CD_B02, config -> config.cdb02),
-                Map.entry(DMG_B01, config -> config.dmgb01),
-                Map.entry(DMG_B02, config -> config.dmgb02),
-                Map.entry(DMG_H01, config -> config.dmgh01),
-                Map.entry(HP_B01, config -> config.hpb01),
-                Map.entry(HP_B02, config -> config.hpb02),
-                Map.entry(SHD_B01, config -> config.shdb01),
-                Map.entry(SHD_B02, config -> config.shdb02));
 
         public BoostersConfig() {
             this.itemIds = new String[] {
@@ -107,7 +89,32 @@ public final class AutobuyConfig {
         public boolean shdb02 = false;
 
         public boolean isEnabled(String code) {
-            return ENABLED_GETTERS.getOrDefault(code, config -> false).test(this);
+            if (code == null) {
+                return false;
+            }
+
+            switch (code) {
+                case CD_B01:
+                    return this.cdb01;
+                case CD_B02:
+                    return this.cdb02;
+                case DMG_B01:
+                    return this.dmgb01;
+                case DMG_B02:
+                    return this.dmgb02;
+                case DMG_H01:
+                    return this.dmgh01;
+                case HP_B01:
+                    return this.hpb01;
+                case HP_B02:
+                    return this.hpb02;
+                case SHD_B01:
+                    return this.shdb01;
+                case SHD_B02:
+                    return this.shdb02;
+                default:
+                    return false;
+            }
         }
 
         @Override
@@ -127,26 +134,6 @@ public final class AutobuyConfig {
         public static final String DSE_KEY_PURPLE = "resource_echo-key-purple";
         public static final String LOG_FILE = "resource_logfile";
         public static final String PIRATE_KEY_GREEN = "resource_booty-key";
-
-        /**
-         * Maps for getting the amount condition of items.
-         */
-        private static final Map<String, ToIntFunction<SpecialConfig>> AMOUNT_GETTERS = Map.ofEntries(
-                Map.entry(LUMINAFLUX_ALLOY, config -> config.luminafluxAlloy),
-                Map.entry(DSE_KEY_ACCESS, config -> config.dseKeyAccess.amount),
-                Map.entry(DSE_KEY_GREEN, config -> config.dseKeyGreen),
-                Map.entry(DSE_KEY_BLUE, config -> config.dseKeyBlue),
-                Map.entry(DSE_KEY_PURPLE, config -> config.dseKeyPurple),
-                Map.entry(LOG_FILE, config -> config.logFile.amount),
-                Map.entry(PIRATE_KEY_GREEN, config -> config.pirateKeyGreen.amount));
-
-        /**
-         * Maps for getting the minimum condition of items.
-         */
-        private static final Map<String, ToIntFunction<SpecialConfig>> MIN_GETTERS = Map.ofEntries(
-                Map.entry(DSE_KEY_ACCESS, config -> config.dseKeyAccess.min),
-                Map.entry(LOG_FILE, config -> config.logFile.min),
-                Map.entry(PIRATE_KEY_GREEN, config -> config.pirateKeyGreen.min));
 
         public SpecialConfig() {
             this.itemIds = new String[] {
@@ -210,11 +197,45 @@ public final class AutobuyConfig {
         }
 
         public int getAmountOfItem(String itemId) {
-            return AMOUNT_GETTERS.getOrDefault(itemId, config -> 0).applyAsInt(this);
+            if (itemId == null) {
+                return 0;
+            }
+
+            switch (itemId) {
+                case LUMINAFLUX_ALLOY:
+                    return this.luminafluxAlloy;
+                case DSE_KEY_ACCESS:
+                    return this.dseKeyAccess.amount;
+                case DSE_KEY_GREEN:
+                    return this.dseKeyGreen;
+                case DSE_KEY_BLUE:
+                    return this.dseKeyBlue;
+                case DSE_KEY_PURPLE:
+                    return this.dseKeyPurple;
+                case LOG_FILE:
+                    return this.logFile.amount;
+                case PIRATE_KEY_GREEN:
+                    return this.pirateKeyGreen.amount;
+                default:
+                    return 0;
+            }
         }
 
         public int getMinConditionForItem(String itemId) {
-            return MIN_GETTERS.getOrDefault(itemId, config -> -1).applyAsInt(this);
+            if (itemId == null) {
+                return 0;
+            }
+
+            switch (itemId) {
+                case DSE_KEY_ACCESS:
+                    return this.dseKeyAccess.min;
+                case LOG_FILE:
+                    return this.logFile.min;
+                case PIRATE_KEY_GREEN:
+                    return this.pirateKeyGreen.min;
+                default:
+                    return 0;
+            }
         }
 
         @Override
@@ -241,41 +262,8 @@ public final class AutobuyConfig {
         public static final String SLUG_COS_D01 = "ammunition_slug_cos-d01";
         public static final String SLUG_ELS_D01 = "ammunition_slug_els-d01";
 
-        /**
-         * Maps for getting the amount condition of items.
-         */
-        private static final Map<String, ToIntFunction<AmmoConfig>> AMOUNT_GETTERS = Map.ofEntries(
-                Map.entry(LCB_10, config -> config.lcb10.amount),
-                Map.entry(MCB_25, config -> config.mcb25.amount),
-                Map.entry(MCB_50, config -> config.mcb50.amount),
-                Map.entry(SAB_50, config -> config.sab50.amount),
-                Map.entry(RSB_75, config -> config.rsb75.amount),
-                Map.entry(JOB_100, config -> config.job100.amount),
-                Map.entry(PLT_2026, config -> config.plt2026.amount),
-                Map.entry(PLT_2021, config -> config.plt2021.amount),
-                Map.entry(EMP_01, config -> config.emp01.amount),
-                Map.entry(ECO_10, config -> config.eco10.amount),
-                Map.entry(SLUG_THS_D01, config -> config.slugThsD01.amount),
-                Map.entry(SLUG_COS_D01, config -> config.slugCosD01.amount),
-                Map.entry(SLUG_ELS_D01, config -> config.slugElsD01.amount));
-
-        /**
-         * Maps for getting the minimum condition of items.
-         */
-        private static final Map<String, ToIntFunction<AmmoConfig>> MIN_GETTERS = Map.ofEntries(
-                Map.entry(LCB_10, config -> config.lcb10.min),
-                Map.entry(MCB_25, config -> config.mcb25.min),
-                Map.entry(MCB_50, config -> config.mcb50.min),
-                Map.entry(SAB_50, config -> config.sab50.min),
-                Map.entry(RSB_75, config -> config.rsb75.min),
-                Map.entry(JOB_100, config -> config.job100.min),
-                Map.entry(PLT_2026, config -> config.plt2026.min),
-                Map.entry(PLT_2021, config -> config.plt2021.min),
-                Map.entry(EMP_01, config -> config.emp01.min),
-                Map.entry(ECO_10, config -> config.eco10.min),
-                Map.entry(SLUG_THS_D01, config -> config.slugThsD01.min),
-                Map.entry(SLUG_COS_D01, config -> config.slugCosD01.min),
-                Map.entry(SLUG_ELS_D01, config -> config.slugElsD01.min));
+        // Shared default purchase configuration for unknown ammo IDs.
+        private static final PurchaseConfig DEFAULT_PURCHASE_CONFIG = new PurchaseConfig(0);
 
         public AmmoConfig() {
             this.itemIds = new String[] {
@@ -353,12 +341,49 @@ public final class AutobuyConfig {
             return this.anyEnabled();
         }
 
+        private PurchaseConfig getPurchaseConfig(String itemId) {
+            if (itemId == null) {
+                return DEFAULT_PURCHASE_CONFIG;
+            }
+
+            switch (itemId) {
+                case LCB_10:
+                    return this.lcb10;
+                case MCB_25:
+                    return this.mcb25;
+                case MCB_50:
+                    return this.mcb50;
+                case SAB_50:
+                    return this.sab50;
+                case RSB_75:
+                    return this.rsb75;
+                case JOB_100:
+                    return this.job100;
+                case PLT_2026:
+                    return this.plt2026;
+                case PLT_2021:
+                    return this.plt2021;
+                case EMP_01:
+                    return this.emp01;
+                case ECO_10:
+                    return this.eco10;
+                case SLUG_THS_D01:
+                    return this.slugThsD01;
+                case SLUG_COS_D01:
+                    return this.slugCosD01;
+                case SLUG_ELS_D01:
+                    return this.slugElsD01;
+                default:
+                    return DEFAULT_PURCHASE_CONFIG;
+            }
+        }
+
         public int getAmountOfItem(String itemId) {
-            return AMOUNT_GETTERS.getOrDefault(itemId, config -> 0).applyAsInt(this);
+            return this.getPurchaseConfig(itemId).amount;
         }
 
         public int getMinConditionForItem(String itemId) {
-            return MIN_GETTERS.getOrDefault(itemId, config -> -1).applyAsInt(this);
+            return this.getPurchaseConfig(itemId).min;
         }
 
         @Override
@@ -385,25 +410,6 @@ public final class AutobuyConfig {
     }
 
     /**
-     * Functional interface for checking if an item is enabled based on its ID.
-     */
-    @FunctionalInterface
-    private interface EnabledChecker {
-        boolean enabled(String id);
-    }
-
-    /**
-     * Utility method to check if any of the given IDs are enabled.
-     */
-    private static boolean anyEnabled(EnabledChecker checker, String... ids) {
-        for (String id : ids) {
-            if (checker.enabled(id))
-                return true;
-        }
-        return false;
-    }
-
-    /**
      * Abstract class for common configuration properties and methods.
      */
     public abstract static class AbstractItemConfig {
@@ -417,11 +423,15 @@ public final class AutobuyConfig {
         }
 
         public boolean anyEnabled() {
-            return AutobuyConfig.anyEnabled(this::isEnabled, this.itemIds);
-        }
-
-        public boolean anyEnabled(String... ids) {
-            return AutobuyConfig.anyEnabled(this::isEnabled, ids);
+            if (this.itemIds == null) {
+                return false;
+            }
+            for (String id : this.itemIds) {
+                if (this.isEnabled(id)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         public abstract boolean isEnabled(String id);
