@@ -5,6 +5,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Queue;
+import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 
 import com.github.manolo8.darkbot.backpage.BackpageManager;
 import com.github.manolo8.darkbot.backpage.entities.Item;
@@ -27,10 +29,10 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private enum State {
         IDLE,
         REQUEST_INVENTORY,
-        UPDATE_INVENTORY,
         FETCH_LOG_FILE,
         FETCH_BOOSTERS,
         FETCH_SPECIALS,
+        FETCH_AMMO,
         PREPARE_QUEUE,
         PURCHASING
     }
@@ -39,25 +41,34 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private static final JsonParser JSON_PARSER = new JsonParser();
     private static final long SHOP_RETRY_DELAY_MS = 30_000L;
 
+    private static final String BOOSTER_KEY = "booster";
+    private static final String SPECIAL_KEY = "special";
+    private static final String AMMO_KEY = "ammo";
+
     private AutobuyConfig config;
     private final StatsAPI stats;
     private final BackpageManager backpageManager;
-    private long nextShopCheck = 0;
+    private final Map<String, CategoryState> categories = new HashMap<>();
     private Timer delay = Timer.getRandom(2_000L, 5_000L);
+    private boolean skipDelay = false;
 
     private State state = State.IDLE;
-    private String boostersHtml;
-    private String specialsHtml;
     private final Queue<PurchaseTask> purchaseQueue = new LinkedList<>();
 
-    private final Map<String, Integer> resource = new HashMap<>(Map.of(
-            AutobuyConfig.SpecialConfig.DSE_KEY_ACCESS, 0,
-            AutobuyConfig.SpecialConfig.LOG_FILE, 0,
-            AutobuyConfig.SpecialConfig.PIRATE_KEY_GREEN, 0));
+    private int logFileCount = 0;
 
     public Autobuy(PluginAPI api) {
         this.stats = api.requireAPI(StatsAPI.class);
         this.backpageManager = api.requireInstance(BackpageManager.class);
+        this.categories.put(BOOSTER_KEY, new CategoryState(
+                () -> this.config != null && this.config.booster.anyEnabled(),
+                () -> this.config != null ? this.config.booster.checkInterval : 30));
+        this.categories.put(SPECIAL_KEY, new CategoryState(
+                () -> this.config != null && this.config.special.anyEnabled(),
+                () -> this.config != null ? this.config.special.checkInterval : 60));
+        this.categories.put(AMMO_KEY, new CategoryState(
+                () -> this.config != null && this.config.ammo.anyEnabled(),
+                () -> this.config != null ? this.config.ammo.checkInterval : 15));
     }
 
     @Override
@@ -88,9 +99,6 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             case REQUEST_INVENTORY:
                 this.tickRequestInventory();
                 break;
-            case UPDATE_INVENTORY:
-                this.tickUpdateInventory();
-                break;
             case FETCH_LOG_FILE:
                 this.tickFetchLogFile();
                 break;
@@ -100,6 +108,9 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             case FETCH_SPECIALS:
                 this.tickFetchSpecials();
                 break;
+            case FETCH_AMMO:
+                this.tickFetchAmmo();
+                break;
             case PREPARE_QUEUE:
                 this.tickPrepareQueue();
                 break;
@@ -108,10 +119,11 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                 break;
         }
 
-        // Activate delay after each state transition to prevent rapid actions
-        if (this.state != State.IDLE && this.delay.isInactive()) {
+        // Activate delay to prevent rapid actions, unless skipped
+        if (!this.skipDelay && this.state != State.IDLE && this.delay.isInactive()) {
             this.delay.activate();
         }
+        this.skipDelay = false;
     }
 
     // -------------------------------------------------------------------------
@@ -122,39 +134,39 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Waits until the check interval elapses, then starts the cycle.
      */
     private void tickIdle() {
-        if (System.currentTimeMillis() >= this.nextShopCheck) {
-            this.state = State.REQUEST_INVENTORY;
+        long currentTime = System.currentTimeMillis();
+
+        CategoryState boosterState = this.categories.get(BOOSTER_KEY);
+        CategoryState specialState = this.categories.get(SPECIAL_KEY);
+        CategoryState ammoState = this.categories.get(AMMO_KEY);
+
+        boolean boosterDue = boosterState.shouldFetch(currentTime);
+        boolean specialDue = specialState.shouldFetch(currentTime);
+        boolean ammoDue = ammoState.shouldFetch(currentTime);
+
+        if (!boosterDue && !specialDue && !ammoDue) {
+            return;
         }
+
+        this.categories.values().forEach(CategoryState::reset);
+        boosterState.pending = !boosterDue;
+        specialState.pending = !specialDue;
+        ammoState.pending = !ammoDue;
+        this.state = (specialDue || ammoDue) ? State.REQUEST_INVENTORY : State.FETCH_BOOSTERS;
+        this.skipDelay = true;
     }
 
     /**
-     * Triggers an inventory refresh; the built-in delay gives data time to arrive
-     * before reading.
+     * Triggers an inventory refresh if any non-logfile special item with a min
+     * condition is enabled.
      */
     private void tickRequestInventory() {
-        this.backpageManager.legacyHangarManager.updateHangarData(500);
-        this.state = State.UPDATE_INVENTORY;
-    }
-
-    /**
-     * Reads current hangar quantities for tracked special items.
-     * LOG_FILE is skipped here; its count is fetched separately in FETCH_LOG_FILE.
-     */
-    private void tickUpdateInventory() {
-        for (String key : this.resource.keySet()) {
-            if (AutobuyConfig.SpecialConfig.LOG_FILE.equals(key)) {
-                continue;
-            }
-            int index = this.backpageManager.legacyHangarManager.getLootIds().indexOf(key);
-            if (index != -1) {
-                int quantity = this.backpageManager.legacyHangarManager.getItems().stream()
-                        .filter(item -> item.getLoot() == index)
-                        .mapToInt(Item::getQuantity)
-                        .findFirst()
-                        .orElse(0);
-                this.resource.put(key, quantity);
-            }
+        if (!this.config.special.isUpdateHangar() && !this.config.ammo.isUpdateHangar()) {
+            this.skipDelay = true;
+            this.state = State.FETCH_LOG_FILE;
+            return;
         }
+        this.backpageManager.legacyHangarManager.updateHangarData(500);
         this.state = State.FETCH_LOG_FILE;
     }
 
@@ -164,6 +176,8 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      */
     private void tickFetchLogFile() {
         if (this.config.special.logFile.amount == 0) {
+            // If log file is not enabled, skip fetching its count
+            this.skipDelay = true;
             this.state = State.FETCH_BOOSTERS;
             return;
         }
@@ -175,50 +189,81 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
                     .getContent();
             int count = this.extractLogFileCount(html);
             if (count < 0) {
-                System.out.println("Autobuy: Failed to parse log file count from response, skipping cycle");
+                System.out.println(
+                        "Autobuy: Could not read the Log Disks count from the profile response. Skipping this cycle.");
                 this.handleError();
                 return;
             }
-            this.resource.put(AutobuyConfig.SpecialConfig.LOG_FILE, count);
+            this.logFileCount = count;
             this.state = State.FETCH_BOOSTERS;
         } catch (IOException e) {
-            System.out.println(String.format("Autobuy: Failed to fetch log file count: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not load the Log Disks count: %s", e.getMessage()));
             this.handleError();
         }
     }
 
     /**
-     * Fetches the booster shop page HTML; skips if no boosters are enabled.
+     * Fetches the booster shop page HTML; skips if no boosters are enabled or timer
+     * not expired.
      */
     private void tickFetchBoosters() {
-        if (!this.config.booster.anyEnabled()) {
-            this.boostersHtml = null;
+        CategoryState boosterState = this.categories.get(BOOSTER_KEY);
+        if (!boosterState.isEnabled() || boosterState.pending) {
+            this.skipDelay = true;
+            boosterState.html = null;
             this.state = State.FETCH_SPECIALS;
             return;
         }
         try {
-            this.boostersHtml = this.fetchShopPage("internalDockBooster");
+            boosterState.html = this.fetchShopPage("internalDockBooster");
+            boosterState.markFetched();
             this.state = State.FETCH_SPECIALS;
         } catch (IOException e) {
-            System.out.println(String.format("Autobuy: Failed to fetch boosters page: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not load the boosters shop page: %s", e.getMessage()));
             this.handleError();
         }
     }
 
     /**
-     * Fetches the specials shop page HTML; skips if no specials are enabled.
+     * Fetches the specials shop page HTML; skips if no specials are enabled or
+     * timer not expired.
      */
     private void tickFetchSpecials() {
-        if (!this.config.special.anyEnabled()) {
-            this.specialsHtml = null;
+        CategoryState specialState = this.categories.get(SPECIAL_KEY);
+        if (!specialState.isEnabled() || specialState.pending) {
+            this.skipDelay = true;
+            specialState.html = null;
+            this.state = State.FETCH_AMMO;
+            return;
+        }
+        try {
+            specialState.html = this.fetchShopPage("internalDockSpecials");
+            specialState.markFetched();
+            this.state = State.FETCH_AMMO;
+        } catch (IOException e) {
+            System.out.println(String.format("Autobuy: Could not load the specials shop page: %s", e.getMessage()));
+            this.handleError();
+        }
+    }
+
+    /**
+     * Fetches the ammo shop page HTML; skips if no ammo is enabled or timer not
+     * expired.
+     */
+    private void tickFetchAmmo() {
+        CategoryState ammoState = this.categories.get(AMMO_KEY);
+        if (!ammoState.isEnabled() || ammoState.pending) {
+            this.skipDelay = true;
+            ammoState.html = null;
             this.state = State.PREPARE_QUEUE;
             return;
         }
         try {
-            this.specialsHtml = this.fetchShopPage("internalDockSpecials");
+            ammoState.html = this.fetchShopPage("internalDockAmmo");
+            ammoState.markFetched();
             this.state = State.PREPARE_QUEUE;
         } catch (IOException e) {
-            System.out.println(String.format("Autobuy: Failed to fetch specials page: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not load the ammo shop page: %s", e.getMessage()));
             this.handleError();
         }
     }
@@ -229,20 +274,31 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private void tickPrepareQueue() {
         this.purchaseQueue.clear();
         try {
-            if (this.boostersHtml != null) {
-                JsonObject itemData = this.parseShopItemData(this.boostersHtml);
-                if (itemData != null) {
-                    this.enqueueBoosterItems(itemData);
+            this.categories.forEach((key, categoryState) -> {
+                if (categoryState.html == null) {
+                    return;
                 }
-            }
-            if (this.specialsHtml != null) {
-                JsonObject itemData = this.parseShopItemData(this.specialsHtml);
-                if (itemData != null) {
-                    this.enqueueSpecialItems(itemData);
+                JsonObject itemData = this.parseShopItemData(categoryState.html);
+                if (itemData == null) {
+                    return;
                 }
-            }
+
+                switch (key) {
+                    case BOOSTER_KEY:
+                        this.enqueueBoosterItems(itemData);
+                        break;
+                    case SPECIAL_KEY:
+                        this.enqueueSpecialItems(itemData);
+                        break;
+                    case AMMO_KEY:
+                        this.enqueueAmmoItems(itemData);
+                        break;
+                    default:
+                        break;
+                }
+            });
         } catch (Exception e) {
-            System.out.println(String.format("Autobuy: Failed to parse shop data: %s", e.getMessage()));
+            System.out.println(String.format("Autobuy: Could not process the shop data: %s", e.getMessage()));
             this.handleError();
             return;
         }
@@ -255,7 +311,12 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     private void tickPurchasing() {
         PurchaseTask task = this.purchaseQueue.poll();
         if (task == null) {
-            this.nextShopCheck = System.currentTimeMillis() + (long) this.config.checkInterval * 60 * 1000L;
+            long currentTime = System.currentTimeMillis();
+            this.categories.values().forEach(categoryState -> {
+                if (categoryState.fetched) {
+                    categoryState.updateNextCheck(currentTime);
+                }
+            });
             this.state = State.IDLE;
             return;
         }
@@ -263,17 +324,18 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
         try {
             this.backpageManager.postHttp("ajax/shop.php")
                     .setRawParam("action", "purchase")
-                    .setRawParam("category", task.category)
+                    .setRawParam("category", task.shopItem.category)
                     .setRawParam("itemId", task.shopItem.itemId)
                     .setRawParam("amount", task.batch)
                     .setRawParam("level", "")
                     .setRawParam("selectedName", "")
                     .getContent();
-            System.out.println(String.format("Autobuy: Bought %s item %s x%d",
-                    task.category, task.shopItem.code, task.batch));
+            int cost = this.calculateCost(task.shopItem.price, task.batch);
+            System.out.println(String.format("Autobuy: Purchased %s item %s x%,d for %,d %s.",
+                    task.category, task.shopItem.code, task.batch, cost, task.shopItem.currency));
             this.delay.activate(5_000L); // Extra delay after purchase
         } catch (Exception e) {
-            System.out.println(String.format("Autobuy: Failed to buy %s item %s x%d: %s",
+            System.out.println(String.format("Autobuy: Could not purchase %s item %s x%,d: %s",
                     task.category, task.shopItem.code, task.batch, e.getMessage()));
         }
     }
@@ -295,10 +357,51 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             boolean hasBooster = shopItem.shopObj.get("userHasBoosterPackage").getAsBoolean();
             if (!hasBooster) {
-                System.out.println(String.format("Autobuy: Booster %s not active, queuing purchase", shopItem.code));
-                this.enqueuePurchase(shopItem, "booster", 1);
+                System.out.println(String.format("Autobuy: Queued booster purchase for %s.",
+                        shopItem.code));
+                this.enqueuePurchase(shopItem, 1, BOOSTER_KEY);
             }
         }
+    }
+
+    /**
+     * Queues ammo purchases based on configured amounts.
+     */
+    private void enqueueAmmoItems(JsonObject itemData) {
+        for (Map.Entry<String, JsonElement> entry : itemData.entrySet()) {
+            ShopItem shopItem = this.parseShopItem(entry);
+            if (shopItem == null) {
+                continue;
+            }
+
+            int amount = this.resolveAmmoPurchaseAmount(shopItem);
+            if (amount > 0) {
+                System.out.println(String.format("Autobuy: Queued ammo purchase for %s x%,d.",
+                        shopItem.code, amount));
+                this.enqueuePurchase(shopItem, amount, AMMO_KEY);
+            }
+        }
+    }
+
+    /**
+     * Returns how many units of an ammo item should be purchased, accounting for
+     * inventory and daily limits.
+     */
+    private int resolveAmmoPurchaseAmount(ShopItem shopItem) {
+        int amount = this.config.ammo.getAmountOfItem(shopItem.itemId);
+        if (amount == 0) {
+            return 0;
+        }
+
+        int minRequired = this.config.ammo.getMinConditionForItem(shopItem.itemId);
+        if (minRequired >= 0) {
+            int current = this.getHangarQuantity(shopItem.itemId);
+            if (current > minRequired) {
+                return 0;
+            }
+        }
+
+        return amount;
     }
 
     /**
@@ -313,9 +416,9 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             int amount = this.resolveSpecialPurchaseAmount(shopItem);
             if (amount > 0) {
-                System.out.println(String.format("Autobuy: Special item %s enabled, queuing purchase x%d",
+                System.out.println(String.format("Autobuy: Queued special purchase for %s x%,d.",
                         shopItem.code, amount));
-                this.enqueuePurchase(shopItem, "special", amount);
+                this.enqueuePurchase(shopItem, amount, SPECIAL_KEY);
             }
         }
     }
@@ -330,10 +433,12 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             return 0;
         }
 
-        if (this.resource.containsKey(shopItem.itemId)) {
-            int current = this.resource.get(shopItem.itemId);
-            int minRequired = this.config.special.getMinConditionForItem(shopItem.itemId);
-            if (minRequired >= 0 && current > minRequired) {
+        int minRequired = this.config.special.getMinConditionForItem(shopItem.itemId);
+        if (minRequired >= 0) {
+            int current = AutobuyConfig.SpecialConfig.LOG_FILE.equals(shopItem.itemId)
+                    ? this.logFileCount
+                    : this.getHangarQuantity(shopItem.itemId);
+            if (current > minRequired) {
                 return 0;
             }
         }
@@ -347,20 +452,35 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
+     * Returns the quantity of the given item in the hangar, or 0 if not found.
+     */
+    private int getHangarQuantity(String itemId) {
+        int index = this.backpageManager.legacyHangarManager.getLootIds().indexOf(itemId);
+        if (index == -1) {
+            return 0;
+        }
+        return this.backpageManager.legacyHangarManager.getItems().stream()
+                .filter(item -> item.getLoot() == index)
+                .mapToInt(Item::getQuantity)
+                .findFirst()
+                .orElse(0);
+    }
+
+    /**
      * Validates funds and splits the total amount into max-batch sized tasks.
      */
-    private void enqueuePurchase(ShopItem shopItem, String category, int amount) {
+    private void enqueuePurchase(ShopItem shopItem, int amount, String category) {
         if (!this.validateFunds(shopItem, amount))
             return;
 
         int remaining = amount;
         if (shopItem.maxAmount > 0 && amount > shopItem.maxAmount) {
-            System.out.println(String.format("Autobuy: Splitting purchase of %s x%d into batches of %d",
-                    shopItem.code, amount, shopItem.maxAmount));
+            System.out.println(String.format("Autobuy: Splitting %s purchase for item %s: total x%,d, batch size x%,d.",
+                    category, shopItem.code, amount, shopItem.maxAmount));
         }
         while (remaining > 0) {
             int batch = shopItem.maxAmount > 0 ? Math.min(remaining, shopItem.maxAmount) : remaining;
-            this.purchaseQueue.add(new PurchaseTask(shopItem, category, batch));
+            this.purchaseQueue.add(new PurchaseTask(shopItem, batch, category));
             remaining -= batch;
         }
     }
@@ -373,10 +493,14 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Resets all transient state and schedules a retry after the error delay.
      */
     private void handleError() {
-        this.nextShopCheck = System.currentTimeMillis() + SHOP_RETRY_DELAY_MS;
+        long retryTime = System.currentTimeMillis() + SHOP_RETRY_DELAY_MS;
+        this.categories.values().forEach(categoryState -> {
+            categoryState.nextCheck = retryTime;
+            categoryState.html = null;
+            categoryState.fetched = false;
+            categoryState.pending = false;
+        });
         this.purchaseQueue.clear();
-        this.boostersHtml = null;
-        this.specialsHtml = null;
         this.state = State.IDLE;
     }
 
@@ -472,36 +596,58 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
             return null;
         }
         String itemId = entry.getKey();
+        String category = shopObj.get("category").getAsString();
         String code = shopObj.get("code").getAsString();
         double price = shopObj.get("price").getAsDouble();
-        String currency = shopObj.get("currency").getAsString();
+        String currency = this.convertCurrencyName(shopObj.get("currency").getAsString());
         int maxAmount = shopObj.get("maxAmount").getAsInt();
-        return new ShopItem(itemId, code, price, currency, maxAmount, shopObj);
+        return new ShopItem(itemId, category, code, price, currency, maxAmount, shopObj);
+    }
+
+    /**
+     * Converts currency names from the shop data to match the game naming.
+     */
+    private String convertCurrencyName(String currency) {
+        if ("real".equals(currency)) {
+            return "uridium";
+        }
+        if ("virtual".equals(currency)) {
+            return "credits";
+        }
+        return currency;
+    }
+
+    /**
+     * Calculates the total cost for purchasing the given amount at the given price,
+     * rounding up to the nearest whole unit.
+     */
+    private int calculateCost(double price, int amount) {
+        return (int) Math.ceil(price * amount);
     }
 
     /**
      * Checks whether the player has enough credits or uridium for the purchase.
      */
     private boolean validateFunds(ShopItem shopItem, int amount) {
-        double required = shopItem.price * amount;
+        int cost = this.calculateCost(shopItem.price, amount);
         boolean hasEnough;
-        String currencyName;
 
-        if ("real".equals(shopItem.currency)) {
-            hasEnough = this.stats.getTotalUridium() >= required;
-            currencyName = "uridium";
-        } else if ("virtual".equals(shopItem.currency)) {
-            hasEnough = this.stats.getTotalCredits() >= required;
-            currencyName = "credits";
-        } else {
-            System.out.println(String.format("Autobuy: Unknown currency '%s' for item %s, skipping",
-                    shopItem.currency, shopItem.code));
-            return false;
+        switch (shopItem.currency) {
+            case "uridium":
+                hasEnough = this.stats.getTotalUridium() >= cost;
+                break;
+            case "credits":
+                hasEnough = this.stats.getTotalCredits() >= cost;
+                break;
+            default:
+                System.out.println(String.format("Autobuy: Unsupported currency '%s' for item %s. Skipping purchase.",
+                        shopItem.currency, shopItem.code));
+                return false;
         }
 
         if (!hasEnough) {
-            System.out.println(String.format("Autobuy: Not enough %s for %s. Required: %.2f",
-                    currencyName, shopItem.code, required));
+            System.out.println(String.format("Autobuy: Not enough funds to buy item %s x%,d. Required: %,d %s.",
+                    shopItem.code, amount, cost, shopItem.currency));
         }
         return hasEnough;
     }
@@ -510,16 +656,56 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
     // Inner classes
     // -------------------------------------------------------------------------
 
+    private static class CategoryState {
+        final Supplier<Boolean> enabled;
+        final IntSupplier interval;
+        long nextCheck = 0;
+        String html;
+        boolean fetched = false;
+        boolean pending = false;
+
+        CategoryState(Supplier<Boolean> enabled, IntSupplier interval) {
+            this.enabled = enabled;
+            this.interval = interval;
+        }
+
+        boolean isEnabled() {
+            return this.enabled.get();
+        }
+
+        boolean shouldFetch(long currentTime) {
+            return this.isEnabled() && currentTime >= this.nextCheck;
+        }
+
+        void reset() {
+            this.html = null;
+            this.fetched = false;
+            this.pending = false;
+        }
+
+        void markFetched() {
+            this.fetched = true;
+            this.pending = false;
+        }
+
+        void updateNextCheck(long currentTime) {
+            this.nextCheck = currentTime + (long) this.interval.getAsInt() * 60 * 1000L;
+        }
+    }
+
     private static class ShopItem {
         final String itemId;
+        final String category;
         final String code;
         final double price;
         final String currency;
         final int maxAmount;
         final JsonObject shopObj;
 
-        ShopItem(String itemId, String code, double price, String currency, int maxAmount, JsonObject shopObj) {
+        ShopItem(String itemId, String category, String code, double price,
+                String currency, int maxAmount, JsonObject shopObj) {
             this.itemId = itemId;
+            this.category = category;
             this.code = code;
             this.price = price;
             this.currency = currency;
@@ -530,13 +716,13 @@ public class Autobuy implements Task, Configurable<AutobuyConfig> {
 
     private static class PurchaseTask {
         final ShopItem shopItem;
-        final String category;
         final int batch;
+        final String category; // For logging purposes only, not same as shopItem.category
 
-        PurchaseTask(ShopItem shopItem, String category, int batch) {
+        PurchaseTask(ShopItem shopItem, int batch, String category) {
             this.shopItem = shopItem;
-            this.category = category;
             this.batch = batch;
+            this.category = category;
         }
     }
 

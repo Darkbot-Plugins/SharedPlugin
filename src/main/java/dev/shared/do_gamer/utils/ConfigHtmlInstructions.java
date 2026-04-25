@@ -1,4 +1,4 @@
-package dev.shared.do_gamer.module.simple_galaxy_gate.config;
+package dev.shared.do_gamer.utils;
 
 import javax.swing.BorderFactory;
 import javax.swing.JComponent;
@@ -7,7 +7,7 @@ import javax.swing.JEditorPane;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.config.util.OptionEditor;
 
-public abstract class HtmlInstructions implements OptionEditor<String> {
+public abstract class ConfigHtmlInstructions implements OptionEditor<String> {
     @Override
     public JComponent getEditorComponent(ConfigSetting<String> setting) {
         String style = "padding: 5px; background-color: #3b3b3b; border: 1px solid #999999;";
