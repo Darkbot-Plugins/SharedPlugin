@@ -1,6 +1,7 @@
 package dev.shared.do_gamer.task.autobuy.config;
 
 import java.util.Map;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 
@@ -214,7 +215,7 @@ public final class AutobuyConfig {
         }
 
         public int getMinConditionForItem(String itemId) {
-            return MIN_GETTERS.getOrDefault(itemId, config -> -1).applyAsInt(this);
+            return MIN_GETTERS.getOrDefault(itemId, config -> 0).applyAsInt(this);
         }
 
         @Override
@@ -242,40 +243,22 @@ public final class AutobuyConfig {
         public static final String SLUG_ELS_D01 = "ammunition_slug_els-d01";
 
         /**
-         * Maps for getting the amount condition of items.
+         * Maps for getting the ammo purchase configuration for each item.
          */
-        private static final Map<String, ToIntFunction<AmmoConfig>> AMOUNT_GETTERS = Map.ofEntries(
-                Map.entry(LCB_10, config -> config.lcb10.amount),
-                Map.entry(MCB_25, config -> config.mcb25.amount),
-                Map.entry(MCB_50, config -> config.mcb50.amount),
-                Map.entry(SAB_50, config -> config.sab50.amount),
-                Map.entry(RSB_75, config -> config.rsb75.amount),
-                Map.entry(JOB_100, config -> config.job100.amount),
-                Map.entry(PLT_2026, config -> config.plt2026.amount),
-                Map.entry(PLT_2021, config -> config.plt2021.amount),
-                Map.entry(EMP_01, config -> config.emp01.amount),
-                Map.entry(ECO_10, config -> config.eco10.amount),
-                Map.entry(SLUG_THS_D01, config -> config.slugThsD01.amount),
-                Map.entry(SLUG_COS_D01, config -> config.slugCosD01.amount),
-                Map.entry(SLUG_ELS_D01, config -> config.slugElsD01.amount));
-
-        /**
-         * Maps for getting the minimum condition of items.
-         */
-        private static final Map<String, ToIntFunction<AmmoConfig>> MIN_GETTERS = Map.ofEntries(
-                Map.entry(LCB_10, config -> config.lcb10.min),
-                Map.entry(MCB_25, config -> config.mcb25.min),
-                Map.entry(MCB_50, config -> config.mcb50.min),
-                Map.entry(SAB_50, config -> config.sab50.min),
-                Map.entry(RSB_75, config -> config.rsb75.min),
-                Map.entry(JOB_100, config -> config.job100.min),
-                Map.entry(PLT_2026, config -> config.plt2026.min),
-                Map.entry(PLT_2021, config -> config.plt2021.min),
-                Map.entry(EMP_01, config -> config.emp01.min),
-                Map.entry(ECO_10, config -> config.eco10.min),
-                Map.entry(SLUG_THS_D01, config -> config.slugThsD01.min),
-                Map.entry(SLUG_COS_D01, config -> config.slugCosD01.min),
-                Map.entry(SLUG_ELS_D01, config -> config.slugElsD01.min));
+        private static final Map<String, Function<AmmoConfig, PurchaseConfig>> GETTERS = Map.ofEntries(
+                Map.entry(LCB_10, config -> config.lcb10),
+                Map.entry(MCB_25, config -> config.mcb25),
+                Map.entry(MCB_50, config -> config.mcb50),
+                Map.entry(SAB_50, config -> config.sab50),
+                Map.entry(RSB_75, config -> config.rsb75),
+                Map.entry(JOB_100, config -> config.job100),
+                Map.entry(PLT_2026, config -> config.plt2026),
+                Map.entry(PLT_2021, config -> config.plt2021),
+                Map.entry(EMP_01, config -> config.emp01),
+                Map.entry(ECO_10, config -> config.eco10),
+                Map.entry(SLUG_THS_D01, config -> config.slugThsD01),
+                Map.entry(SLUG_COS_D01, config -> config.slugCosD01),
+                Map.entry(SLUG_ELS_D01, config -> config.slugElsD01));
 
         public AmmoConfig() {
             this.itemIds = new String[] {
@@ -353,12 +336,16 @@ public final class AutobuyConfig {
             return this.anyEnabled();
         }
 
+        private PurchaseConfig getPurchaseConfig(String itemId) {
+            return GETTERS.getOrDefault(itemId, config -> new PurchaseConfig(0)).apply(this);
+        }
+
         public int getAmountOfItem(String itemId) {
-            return AMOUNT_GETTERS.getOrDefault(itemId, config -> 0).applyAsInt(this);
+            return this.getPurchaseConfig(itemId).amount;
         }
 
         public int getMinConditionForItem(String itemId) {
-            return MIN_GETTERS.getOrDefault(itemId, config -> -1).applyAsInt(this);
+            return this.getPurchaseConfig(itemId).min;
         }
 
         @Override
