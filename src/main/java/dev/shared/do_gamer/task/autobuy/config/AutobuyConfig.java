@@ -109,6 +109,11 @@ public final class AutobuyConfig {
         public boolean isEnabled(String code) {
             return ENABLED_GETTERS.getOrDefault(code, config -> false).test(this);
         }
+
+        @Override
+        public int getCheckInterval() {
+            return this.checkInterval;
+        }
     }
 
     /**
@@ -210,6 +215,11 @@ public final class AutobuyConfig {
 
         public int getMinConditionForItem(String itemId) {
             return MIN_GETTERS.getOrDefault(itemId, config -> -1).applyAsInt(this);
+        }
+
+        @Override
+        public int getCheckInterval() {
+            return this.checkInterval;
         }
     }
 
@@ -350,6 +360,11 @@ public final class AutobuyConfig {
         public int getMinConditionForItem(String itemId) {
             return MIN_GETTERS.getOrDefault(itemId, config -> -1).applyAsInt(this);
         }
+
+        @Override
+        public int getCheckInterval() {
+            return this.checkInterval;
+        }
     }
 
     /**
@@ -410,5 +425,7 @@ public final class AutobuyConfig {
         }
 
         public abstract boolean isEnabled(String id);
+
+        public abstract int getCheckInterval();
     }
 }
