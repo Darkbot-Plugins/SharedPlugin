@@ -37,6 +37,9 @@ public class AutobuyConfig {
         public static final String SHD_B01 = "SHD-B01";
         public static final String SHD_B02 = "SHD-B02";
 
+        /**
+         * Maps for checking if a booster is enabled.
+         */
         private static final Map<String, Predicate<BoostersConfig>> ENABLED_GETTERS = Map.ofEntries(
                 Map.entry(CD_B01, config -> config.cdb01),
                 Map.entry(CD_B02, config -> config.cdb02),
@@ -49,7 +52,7 @@ public class AutobuyConfig {
                 Map.entry(SHD_B02, config -> config.shdb02));
 
         public BoostersConfig() {
-            this.enabledIds = new String[] {
+            this.itemIds = new String[] {
                     CD_B01, CD_B02, DMG_B01, DMG_B02, DMG_H01,
                     HP_B01, HP_B02, SHD_B01, SHD_B02
             };
@@ -120,6 +123,9 @@ public class AutobuyConfig {
         public static final String LOG_FILE = "resource_logfile";
         public static final String PIRATE_KEY_GREEN = "resource_booty-key";
 
+        /**
+         * Maps for getting the amount condition of items.
+         */
         private static final Map<String, ToIntFunction<SpecialConfig>> AMOUNT_GETTERS = Map.ofEntries(
                 Map.entry(LUMINAFLUX_ALLOY, config -> config.luminafluxAlloy),
                 Map.entry(DSE_KEY_ACCESS, config -> config.dseKeyAccess.amount),
@@ -129,13 +135,16 @@ public class AutobuyConfig {
                 Map.entry(LOG_FILE, config -> config.logFile.amount),
                 Map.entry(PIRATE_KEY_GREEN, config -> config.pirateKeyGreen.amount));
 
+        /**
+         * Maps for getting the minimum condition of items.
+         */
         private static final Map<String, ToIntFunction<SpecialConfig>> MIN_GETTERS = Map.ofEntries(
                 Map.entry(DSE_KEY_ACCESS, config -> config.dseKeyAccess.min),
                 Map.entry(LOG_FILE, config -> config.logFile.min),
                 Map.entry(PIRATE_KEY_GREEN, config -> config.pirateKeyGreen.min));
 
         public SpecialConfig() {
-            this.enabledIds = new String[] {
+            this.itemIds = new String[] {
                     LUMINAFLUX_ALLOY, DSE_KEY_ACCESS, DSE_KEY_GREEN, DSE_KEY_BLUE,
                     DSE_KEY_PURPLE, LOG_FILE, PIRATE_KEY_GREEN
             };
@@ -222,6 +231,9 @@ public class AutobuyConfig {
         public static final String SLUG_COS_D01 = "ammunition_slug_cos-d01";
         public static final String SLUG_ELS_D01 = "ammunition_slug_els-d01";
 
+        /**
+         * Maps for getting the amount condition of items.
+         */
         private static final Map<String, ToIntFunction<AmmoConfig>> AMOUNT_GETTERS = Map.ofEntries(
                 Map.entry(LCB_10, config -> config.lcb10.amount),
                 Map.entry(MCB_25, config -> config.mcb25.amount),
@@ -237,6 +249,9 @@ public class AutobuyConfig {
                 Map.entry(SLUG_COS_D01, config -> config.slugCosD01.amount),
                 Map.entry(SLUG_ELS_D01, config -> config.slugElsD01.amount));
 
+        /**
+         * Maps for getting the minimum condition of items.
+         */
         private static final Map<String, ToIntFunction<AmmoConfig>> MIN_GETTERS = Map.ofEntries(
                 Map.entry(LCB_10, config -> config.lcb10.min),
                 Map.entry(MCB_25, config -> config.mcb25.min),
@@ -253,11 +268,9 @@ public class AutobuyConfig {
                 Map.entry(SLUG_ELS_D01, config -> config.slugElsD01.min));
 
         public AmmoConfig() {
-            this.enabledIds = new String[] {
-                    LCB_10, MCB_25, MCB_50,
-                    SAB_50, RSB_75, JOB_100,
-                    PLT_2026, PLT_2021, EMP_01,
-                    ECO_10, SLUG_THS_D01,
+            this.itemIds = new String[] {
+                    LCB_10, MCB_25, MCB_50, SAB_50, RSB_75, JOB_100,
+                    PLT_2026, PLT_2021, EMP_01, ECO_10, SLUG_THS_D01,
                     SLUG_COS_D01, SLUG_ELS_D01
             };
         }
@@ -379,13 +392,13 @@ public class AutobuyConfig {
      * Abstract class for common configuration properties and methods.
      */
     public abstract static class AbstractItemConfig {
-        protected String[] enabledIds;
+        protected String[] itemIds;
 
         protected AbstractItemConfig() {
         }
 
         public boolean anyEnabled() {
-            return AutobuyConfig.anyEnabled(this::isEnabled, this.enabledIds);
+            return AutobuyConfig.anyEnabled(this::isEnabled, this.itemIds);
         }
 
         public boolean anyEnabled(String... ids) {
