@@ -397,6 +397,10 @@ public final class AutobuyConfig {
         protected AbstractItemConfig() {
         }
 
+        public String[] getItemIds() {
+            return this.itemIds;
+        }
+
         public boolean anyEnabled() {
             return AutobuyConfig.anyEnabled(this::isEnabled, this.itemIds);
         }

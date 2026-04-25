@@ -230,7 +230,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
      */
     private void tickFetchSpecials() {
         CategoryState specialState = this.categories.get(SPECIAL_KEY);
-        if (!specialState.isEnabled() || specialState.pending) {
+        if (!specialState.isEnabled() || specialState.pending || !this.hasPendingSpecialPurchases()) {
             this.skipDelay = true;
             specialState.html = null;
             this.state = State.FETCH_AMMO;
@@ -247,12 +247,12 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
-     * Fetches the ammo shop page HTML; skips if no ammo is enabled or timer not
-     * expired.
+     * Fetches the ammo shop page HTML; skips if no ammo is enabled, timer not
+     * expired, or no ammo item currently requires purchase.
      */
     private void tickFetchAmmo() {
         CategoryState ammoState = this.categories.get(AMMO_KEY);
-        if (!ammoState.isEnabled() || ammoState.pending) {
+        if (!ammoState.isEnabled() || ammoState.pending || !this.hasPendingAmmoPurchases()) {
             this.skipDelay = true;
             ammoState.html = null;
             this.state = State.PREPARE_QUEUE;
@@ -364,6 +364,32 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     }
 
     /**
+     * Queues special item purchases based on configured amounts and conditions.
+     */
+    private void enqueueSpecialItems(JsonObject itemData) {
+        for (Map.Entry<String, JsonElement> entry : itemData.entrySet()) {
+            ShopItem shopItem = this.parseShopItem(entry);
+            if (shopItem == null) {
+                continue;
+            }
+
+            int amount = this.resolveSpecialPurchaseAmount(shopItem.itemId);
+
+            // Daily limit check (if applicable)
+            JsonElement dailyLimit = shopItem.shopObj.get("dailyLimitRemaining");
+            if (dailyLimit != null && !dailyLimit.isJsonNull()) {
+                amount = Math.min(amount, dailyLimit.getAsInt());
+            }
+
+            if (amount > 0) {
+                this.enqueuePurchase(shopItem, amount, SPECIAL_KEY);
+                System.out.println(String.format("Autobuy: Queued special purchase for %s x%,d.",
+                        shopItem.code, amount));
+            }
+        }
+    }
+
+    /**
      * Queues ammo purchases based on configured amounts.
      */
     private void enqueueAmmoItems(JsonObject itemData) {
@@ -377,50 +403,6 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             if (amount > 0) {
                 this.enqueuePurchase(shopItem, amount, AMMO_KEY);
                 System.out.println(String.format("Autobuy: Queued ammo purchase for %s x%,d.",
-                        shopItem.code, amount));
-            }
-        }
-    }
-
-    /**
-     * Returns how many units of an ammo item should be purchased.
-     */
-    private int resolveAmmoPurchaseAmount(String itemId) {
-        int amount = this.config.ammo.getAmountOfItem(itemId);
-        if (amount == 0) {
-            return 0;
-        }
-
-        int minRequired = this.config.ammo.getMinConditionForItem(itemId);
-        if (minRequired >= 0) {
-            int current = this.getHangarQuantity(itemId);
-            if (current > minRequired) {
-                return 0;
-            }
-        }
-
-        return amount;
-    }
-
-    /**
-     * Queues special item purchases based on configured amounts and conditions.
-     */
-    private void enqueueSpecialItems(JsonObject itemData) {
-        for (Map.Entry<String, JsonElement> entry : itemData.entrySet()) {
-            ShopItem shopItem = this.parseShopItem(entry);
-            if (shopItem == null) {
-                continue;
-            }
-
-            int amount = this.resolveSpecialPurchaseAmount(shopItem.itemId);
-            if (amount > 0) {
-                JsonElement dailyLimit = shopItem.shopObj.get("dailyLimitRemaining");
-                if (dailyLimit != null && !dailyLimit.isJsonNull()) {
-                    amount = Math.min(amount, dailyLimit.getAsInt());
-                }
-
-                this.enqueuePurchase(shopItem, amount, SPECIAL_KEY);
-                System.out.println(String.format("Autobuy: Queued special purchase for %s x%,d.",
                         shopItem.code, amount));
             }
         }
@@ -446,6 +428,50 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
 
         return amount;
+    }
+
+    /**
+     * Returns how many units of an ammo item should be purchased.
+     */
+    private int resolveAmmoPurchaseAmount(String itemId) {
+        int amount = this.config.ammo.getAmountOfItem(itemId);
+        if (amount == 0) {
+            return 0;
+        }
+
+        int minRequired = this.config.ammo.getMinConditionForItem(itemId);
+        if (minRequired >= 0) {
+            int current = this.getHangarQuantity(itemId);
+            if (current > minRequired) {
+                return 0;
+            }
+        }
+
+        return amount;
+    }
+
+    /**
+     * Checks if there are any special items that currently require purchase.
+     */
+    private boolean hasPendingSpecialPurchases() {
+        for (String itemId : this.config.special.getItemIds()) {
+            if (this.resolveSpecialPurchaseAmount(itemId) > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks if there are any ammo items that currently require purchase.
+     */
+    private boolean hasPendingAmmoPurchases() {
+        for (String itemId : this.config.ammo.getItemIds()) {
+            if (this.resolveAmmoPurchaseAmount(itemId) > 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
