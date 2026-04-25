@@ -82,8 +82,11 @@ public class AutobuyConfig {
         public boolean shdb02 = false;
 
         public boolean anyEnabled() {
-            return this.cdb01 || this.cdb02 || this.dmgb01 || this.dmgb02 || this.dmgh01
-                    || this.hpb01 || this.hpb02 || this.shdb01 || this.shdb02;
+            return this.isEnabled(CD_B01) || this.isEnabled(CD_B02)
+                    || this.isEnabled(DMG_B01) || this.isEnabled(DMG_B02)
+                    || this.isEnabled(DMG_H01) || this.isEnabled(HP_B01)
+                    || this.isEnabled(HP_B02) || this.isEnabled(SHD_B01)
+                    || this.isEnabled(SHD_B02);
         }
 
         public boolean isEnabled(String code) {
@@ -171,9 +174,10 @@ public class AutobuyConfig {
         public PurchaseConfig pirateKeyGreen = new PurchaseConfig(500);
 
         public boolean anyEnabled() {
-            return this.luminafluxAlloy > 0 || this.dseKeyAccess.amount > 0 || this.dseKeyGreen > 0
-                    || this.dseKeyBlue > 0 || this.dseKeyPurple > 0 || this.logFile.amount > 0
-                    || this.pirateKeyGreen.amount > 0;
+            return this.isEnabled(LUMINAFLUX_ALLOY) || this.isEnabled(DSE_KEY_ACCESS)
+                    || this.isEnabled(DSE_KEY_GREEN) || this.isEnabled(DSE_KEY_BLUE)
+                    || this.isEnabled(DSE_KEY_PURPLE) || this.isEnabled(LOG_FILE)
+                    || this.isEnabled(PIRATE_KEY_GREEN);
         }
 
         public boolean isEnabled(String itemId) {
@@ -181,7 +185,7 @@ public class AutobuyConfig {
         }
 
         public boolean isUpdateHangar() {
-            return this.dseKeyAccess.amount > 0 || this.pirateKeyGreen.amount > 0;
+            return this.isEnabled(DSE_KEY_ACCESS) || this.isEnabled(PIRATE_KEY_GREEN);
         }
 
         public int getAmountOfItem(String itemId) {
@@ -298,11 +302,11 @@ public class AutobuyConfig {
         public PurchaseConfig slugElsD01 = new PurchaseConfig(1_000);
 
         public boolean anyEnabled() {
-            return this.lcb10.amount > 0 || this.mcb25.amount > 0 || this.mcb50.amount > 0
-                    || this.sab50.amount > 0 || this.rsb75.amount > 0 || this.job100.amount > 0
-                    || this.plt2026.amount > 0 || this.plt2021.amount > 0 || this.emp01.amount > 0
-                    || this.eco10.amount > 0 || this.slugThsD01.amount > 0 || this.slugCosD01.amount > 0
-                    || this.slugElsD01.amount > 0;
+            return this.isEnabled(LCB_10) || this.isEnabled(MCB_25) || this.isEnabled(MCB_50)
+                    || this.isEnabled(SAB_50) || this.isEnabled(RSB_75) || this.isEnabled(JOB_100)
+                    || this.isEnabled(PLT_2026) || this.isEnabled(PLT_2021) || this.isEnabled(EMP_01)
+                    || this.isEnabled(ECO_10) || this.isEnabled(SLUG_THS_D01)
+                    || this.isEnabled(SLUG_COS_D01) || this.isEnabled(SLUG_ELS_D01);
         }
 
         public boolean isEnabled(String itemId) {
