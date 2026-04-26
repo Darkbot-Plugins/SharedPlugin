@@ -35,8 +35,7 @@ public final class BackpageHelper {
      * Checks if the BackpageManager instance is valid and has a valid SID status.
      */
     public boolean isValid() {
-        return this.getInstance() != null && this.getInstance().isInstanceValid()
-                && this.getInstance().getSidStatus().contains("OK");
+        return this.getInstance().isInstanceValid() && this.getInstance().getSidStatus().contains("OK");
     }
 
     /**
