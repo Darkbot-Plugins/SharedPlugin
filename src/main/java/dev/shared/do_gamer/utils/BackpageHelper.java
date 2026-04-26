@@ -130,7 +130,7 @@ public final class BackpageHelper {
     /**
      * Performs a POST request to purchase an item from the shop.
      */
-    public void purschaseShopItem(String page, String category, String itemId, int amount) throws IOException {
+    public void purchaseShopItem(String page, String category, String itemId, int amount) throws IOException {
         this.postHttp(SHOP_PATH)
                 .setRawParam("action", "purchase")
                 .setRawParam("category", category)

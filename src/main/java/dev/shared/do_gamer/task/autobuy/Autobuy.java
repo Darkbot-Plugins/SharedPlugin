@@ -307,7 +307,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
 
         try {
-            this.backpageHelper.purschaseShopItem(task.page, task.shopItem.category, task.shopItem.itemId, task.amount);
+            this.backpageHelper.purchaseShopItem(task.page, task.shopItem.category, task.shopItem.itemId, task.amount);
             int cost = this.calculateCost(task.shopItem.price, task.amount);
             this.log("Purchased %s item %s x%,d for %,d %s.",
                     task.page, task.shopItem.code, task.amount, cost, task.shopItem.currency);
