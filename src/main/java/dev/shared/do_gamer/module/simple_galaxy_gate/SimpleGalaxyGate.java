@@ -232,7 +232,7 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     @Override
     public boolean canRefresh() {
-        return (!this.isMapGG() && StateStore.current() == StateStore.State.WAITING) || this.safeRefreshInGate;
+        return (!this.isMapGG() && StateStore.current() != StateStore.State.BUILDING) || this.safeRefreshInGate;
     }
 
     public void setShouldMoveToRefinery(boolean shouldMoveToRefinery) {
