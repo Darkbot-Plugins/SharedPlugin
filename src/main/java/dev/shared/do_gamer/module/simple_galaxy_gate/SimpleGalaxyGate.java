@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.github.manolo8.darkbot.backpage.BackpageManager;
 import com.github.manolo8.darkbot.backpage.entities.ShipInfo;
 import com.github.manolo8.darkbot.config.NpcExtraFlag;
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
@@ -17,6 +16,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.utils.BackpageHelper;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
@@ -56,7 +56,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     public final MapTraveler traveler;
     public final PortalJumper jumper;
     public final BotAPI bot;
-    public final BackpageManager backpageManager;
+    public final BackpageHelper backpageHelper;
     private final ExtensionsAPI extensionsAPI;
     private final ConfigAPI configApi;
     public final GameScreenAPI gameScreenApi;
@@ -96,7 +96,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.traveler = api.requireInstance(MapTraveler.class);
         this.jumper = api.requireInstance(PortalJumper.class);
         this.bot = api.requireAPI(BotAPI.class);
-        this.backpageManager = api.requireInstance(BackpageManager.class);
+        this.backpageHelper = new BackpageHelper(api);
         this.extensionsAPI = api.requireAPI(ExtensionsAPI.class);
         this.configApi = api.requireAPI(ConfigAPI.class);
         this.gameScreenApi = api.requireAPI(GameScreenAPI.class);
@@ -263,19 +263,23 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     @Override
     public void onBackgroundTick() {
+        if (!this.backpageHelper.isValid()) {
+            return; // BackpageManager not valid, skip background tasks
+        }
+
         if (this.fetchServerOffset) {
-            ServerTimeHelper.fetchServerOffset(this.backpageManager);
+            ServerTimeHelper.fetchServerOffset(this.backpageHelper.getInstance());
         }
 
         if (this.updateHangarData) {
-            this.backpageManager.legacyHangarManager.updateHangarData(500);
+            this.backpageHelper.getLegacyHangarManager().updateHangarData(500);
             this.setUpdateHangarData(false);
         }
 
         // Populate ship dropdown if empty
         Map<String, String> ships = SimpleGalaxyGateConfig.BuilderSettings.ShipDropdown.getShips();
         if (ships.isEmpty()) {
-            List<ShipInfo> shipInfos = this.backpageManager.legacyHangarManager.getShipInfos();
+            List<ShipInfo> shipInfos = this.backpageHelper.getLegacyHangarManager().getShipInfos();
             if (shipInfos.isEmpty()) {
                 this.setUpdateHangarData(true);
                 return;

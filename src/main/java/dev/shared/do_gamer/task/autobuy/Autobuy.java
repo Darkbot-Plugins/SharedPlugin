@@ -7,13 +7,12 @@ import java.util.Map;
 import java.util.Queue;
 import java.util.function.Supplier;
 
-import com.github.manolo8.darkbot.backpage.BackpageManager;
 import com.github.manolo8.darkbot.backpage.entities.Item;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 
 import dev.shared.do_gamer.task.autobuy.config.AutobuyConfig;
+import dev.shared.do_gamer.utils.BackpageHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Configurable;
@@ -36,18 +35,16 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         PURCHASING
     }
 
-    @SuppressWarnings("deprecation")
-    private static final JsonParser JSON_PARSER = new JsonParser();
     private static final long SHOP_RETRY_DELAY_MS = 30_000L;
 
-    private static final String BOOSTER_CATEGORY = "booster";
-    private static final String SPECIAL_CATEGORY = "special";
-    private static final String AMMO_CATEGORY = "ammo";
+    private static final String BOOSTER_PAGE = "Booster";
+    private static final String SPECIAL_PAGE = "Specials";
+    private static final String AMMO_PAGE = "Ammo";
 
     private AutobuyConfig config;
     private final StatsAPI stats;
-    private final BackpageManager backpageManager;
-    private final Map<String, CategoryState> categories = new HashMap<>();
+    private final BackpageHelper backpageHelper;
+    private final Map<String, PageState> pages = new HashMap<>();
     private Timer delay = Timer.getRandom(2_000L, 5_000L);
     private boolean skipDelay = false;
 
@@ -58,13 +55,10 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
 
     public Autobuy(PluginAPI api) {
         this.stats = api.requireAPI(StatsAPI.class);
-        this.backpageManager = api.requireInstance(BackpageManager.class);
-        this.categories.put(BOOSTER_CATEGORY,
-                new CategoryState(() -> this.config != null ? this.config.booster : null));
-        this.categories.put(SPECIAL_CATEGORY,
-                new CategoryState(() -> this.config != null ? this.config.special : null));
-        this.categories.put(AMMO_CATEGORY,
-                new CategoryState(() -> this.config != null ? this.config.ammo : null));
+        this.backpageHelper = new BackpageHelper(api);
+        this.pages.put(BOOSTER_PAGE, new PageState(() -> this.config != null ? this.config.booster : null));
+        this.pages.put(SPECIAL_PAGE, new PageState(() -> this.config != null ? this.config.special : null));
+        this.pages.put(AMMO_PAGE, new PageState(() -> this.config != null ? this.config.ammo : null));
     }
 
     @Override
@@ -79,7 +73,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
 
     @Override
     public void onBackgroundTick() {
-        if (this.config == null || this.backpageManager == null) {
+        if (this.config == null || !this.backpageHelper.isValid()) {
             return;
         }
 
@@ -132,9 +126,9 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     private void tickIdle() {
         long currentTime = System.currentTimeMillis();
 
-        CategoryState boosterState = this.categories.get(BOOSTER_CATEGORY);
-        CategoryState specialState = this.categories.get(SPECIAL_CATEGORY);
-        CategoryState ammoState = this.categories.get(AMMO_CATEGORY);
+        PageState boosterState = this.pages.get(BOOSTER_PAGE);
+        PageState specialState = this.pages.get(SPECIAL_PAGE);
+        PageState ammoState = this.pages.get(AMMO_PAGE);
 
         boolean boosterDue = boosterState.shouldFetch(currentTime);
         boolean specialDue = specialState.shouldFetch(currentTime);
@@ -144,7 +138,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             return;
         }
 
-        this.categories.values().forEach(CategoryState::reset);
+        this.pages.values().forEach(PageState::reset);
         boosterState.pending = !boosterDue;
         specialState.pending = !specialDue;
         ammoState.pending = !ammoDue;
@@ -161,7 +155,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             this.state = State.FETCH_LOG_FILE;
             return;
         }
-        this.backpageManager.legacyHangarManager.updateHangarData(500);
+        this.backpageHelper.getLegacyHangarManager().updateHangarData(500);
         this.state = State.FETCH_LOG_FILE;
     }
 
@@ -176,10 +170,11 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             return;
         }
         try {
-            String html = this.backpageManager.postHttp("ajax/pilotprofil.php")
+            String html = this.backpageHelper.postHttp("ajax/pilotprofil.php")
                     .setRawParam("command", "getInternalProfilPage")
                     .setRawParam("type", "showSkilltree")
                     .setRawParam("imgUrl", "")
+                    .setHeader("Referer", this.backpageHelper.referer("internalPilotSheet"))
                     .getContent();
             int count = this.extractLogFileCount(html);
             if (count < 0) {
@@ -200,7 +195,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Fetches the booster shop page HTML.
      */
     private void tickFetchBoosters() {
-        CategoryState boosterState = this.categories.get(BOOSTER_CATEGORY);
+        PageState boosterState = this.pages.get(BOOSTER_PAGE);
         if (!boosterState.isEnabled() || boosterState.pending) {
             this.skipDelay = true;
             boosterState.html = null;
@@ -208,7 +203,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             return;
         }
         try {
-            boosterState.html = this.fetchShopPage("internalDockBooster");
+            boosterState.html = this.backpageHelper.fetchShopPage(BOOSTER_PAGE);
             boosterState.markFetched();
             this.state = State.FETCH_SPECIALS;
         } catch (IOException e) {
@@ -221,7 +216,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Fetches the specials shop page HTML.
      */
     private void tickFetchSpecials() {
-        CategoryState specialState = this.categories.get(SPECIAL_CATEGORY);
+        PageState specialState = this.pages.get(SPECIAL_PAGE);
         if (!specialState.isEnabled() || specialState.pending || !this.hasPendingSpecialPurchases()) {
             this.skipDelay = true;
             specialState.html = null;
@@ -229,7 +224,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             return;
         }
         try {
-            specialState.html = this.fetchShopPage("internalDockSpecials");
+            specialState.html = this.backpageHelper.fetchShopPage(SPECIAL_PAGE);
             specialState.markFetched();
             this.state = State.FETCH_AMMO;
         } catch (IOException e) {
@@ -242,7 +237,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Fetches the ammo shop page HTML.
      */
     private void tickFetchAmmo() {
-        CategoryState ammoState = this.categories.get(AMMO_CATEGORY);
+        PageState ammoState = this.pages.get(AMMO_PAGE);
         if (!ammoState.isEnabled() || ammoState.pending || !this.hasPendingAmmoPurchases()) {
             this.skipDelay = true;
             ammoState.html = null;
@@ -250,7 +245,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             return;
         }
         try {
-            ammoState.html = this.fetchShopPage("internalDockAmmo");
+            ammoState.html = this.backpageHelper.fetchShopPage(AMMO_PAGE);
             ammoState.markFetched();
             this.state = State.PREPARE_QUEUE;
         } catch (IOException e) {
@@ -265,23 +260,23 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     private void tickPrepareQueue() {
         this.purchaseQueue.clear();
         try {
-            this.categories.forEach((key, categoryState) -> {
+            this.pages.forEach((key, categoryState) -> {
                 if (categoryState.html == null) {
                     return;
                 }
-                JsonObject itemData = this.parseShopItemData(categoryState.html);
+                JsonObject itemData = this.backpageHelper.parseShopItemData(categoryState.html);
                 if (itemData == null) {
                     return;
                 }
 
                 switch (key) {
-                    case BOOSTER_CATEGORY:
+                    case BOOSTER_PAGE:
                         this.enqueueBoosterItems(itemData);
                         break;
-                    case SPECIAL_CATEGORY:
+                    case SPECIAL_PAGE:
                         this.enqueueSpecialItems(itemData);
                         break;
-                    case AMMO_CATEGORY:
+                    case AMMO_PAGE:
                         this.enqueueAmmoItems(itemData);
                         break;
                     default:
@@ -303,7 +298,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         PurchaseTask task = this.purchaseQueue.poll();
         if (task == null) {
             long currentTime = System.currentTimeMillis();
-            this.categories.values().forEach(categoryState -> {
+            this.pages.values().forEach(categoryState -> {
                 if (categoryState.fetched) {
                     categoryState.updateNextCheck(currentTime);
                 }
@@ -313,21 +308,14 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
 
         try {
-            this.backpageManager.postHttp("ajax/shop.php")
-                    .setRawParam("action", "purchase")
-                    .setRawParam("category", task.shopItem.category)
-                    .setRawParam("itemId", task.shopItem.itemId)
-                    .setRawParam("amount", task.amount)
-                    .setRawParam("level", "")
-                    .setRawParam("selectedName", "")
-                    .getContent();
+            this.backpageHelper.purschaseShopItem(task.page, task.shopItem.category, task.shopItem.itemId, task.amount);
             int cost = this.calculateCost(task.shopItem.price, task.amount);
             System.out.println(String.format("Autobuy: Purchased %s item %s x%,d for %,d %s.",
-                    task.category, task.shopItem.code, task.amount, cost, task.shopItem.currency));
+                    task.page, task.shopItem.code, task.amount, cost, task.shopItem.currency));
             this.delay.activate(5_000L); // Extra delay after purchase
         } catch (Exception e) {
             System.out.println(String.format("Autobuy: Could not purchase %s item %s x%,d: %s",
-                    task.category, task.shopItem.code, task.amount, e.getMessage()));
+                    task.page, task.shopItem.code, task.amount, e.getMessage()));
         }
     }
 
@@ -348,7 +336,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             boolean hasBooster = shopItem.shopObj.get("userHasBoosterPackage").getAsBoolean();
             if (!hasBooster) {
-                this.enqueuePurchase(shopItem, 1, BOOSTER_CATEGORY);
+                this.enqueuePurchase(shopItem, 1, BOOSTER_PAGE);
                 System.out.println(String.format("Autobuy: Queued booster purchase for %s.", shopItem.code));
             }
         }
@@ -373,7 +361,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             }
 
             if (amount > 0) {
-                this.enqueuePurchase(shopItem, amount, SPECIAL_CATEGORY);
+                this.enqueuePurchase(shopItem, amount, SPECIAL_PAGE);
                 System.out.println(String.format("Autobuy: Queued special purchase for %s x%,d.",
                         shopItem.code, amount));
             }
@@ -392,7 +380,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
 
             int amount = this.resolveAmmoPurchaseAmount(shopItem.itemId);
             if (amount > 0) {
-                this.enqueuePurchase(shopItem, amount, AMMO_CATEGORY);
+                this.enqueuePurchase(shopItem, amount, AMMO_PAGE);
                 System.out.println(String.format("Autobuy: Queued ammo purchase for %s x%,d.",
                         shopItem.code, amount));
             }
@@ -469,11 +457,11 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Returns the quantity of the given item in the hangar, or 0 if not found.
      */
     private int getHangarQuantity(String itemId) {
-        int index = this.backpageManager.legacyHangarManager.getLootIds().indexOf(itemId);
+        int index = this.backpageHelper.getLegacyHangarManager().getLootIds().indexOf(itemId);
         if (index == -1) {
             return 0;
         }
-        return this.backpageManager.legacyHangarManager.getItems().stream()
+        return this.backpageHelper.getLegacyHangarManager().getItems().stream()
                 .filter(item -> item.getLoot() == index)
                 .mapToInt(Item::getQuantity)
                 .findFirst()
@@ -483,18 +471,18 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     /**
      * Validates funds and splits the total amount into max-batch sized tasks.
      */
-    private void enqueuePurchase(ShopItem shopItem, int amount, String category) {
+    private void enqueuePurchase(ShopItem shopItem, int amount, String page) {
         if (!this.validateFunds(shopItem, amount))
             return;
 
         int remaining = amount;
         if (shopItem.maxAmount > 0 && amount > shopItem.maxAmount) {
             System.out.println(String.format("Autobuy: Splitting %s purchase for item %s: total x%,d, batch size x%,d.",
-                    category, shopItem.code, amount, shopItem.maxAmount));
+                    page, shopItem.code, amount, shopItem.maxAmount));
         }
         while (remaining > 0) {
             int batch = shopItem.maxAmount > 0 ? Math.min(remaining, shopItem.maxAmount) : remaining;
-            this.purchaseQueue.add(new PurchaseTask(shopItem, batch, category));
+            this.purchaseQueue.add(new PurchaseTask(shopItem, batch, page));
             remaining -= batch;
         }
     }
@@ -508,7 +496,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
      */
     private void handleError() {
         long retryTime = System.currentTimeMillis() + SHOP_RETRY_DELAY_MS;
-        this.categories.values().forEach(categoryState -> {
+        this.pages.values().forEach(categoryState -> {
             categoryState.nextCheck = retryTime;
             categoryState.html = null;
             categoryState.fetched = false;
@@ -516,33 +504,6 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         });
         this.purchaseQueue.clear();
         this.state = State.IDLE;
-    }
-
-    /**
-     * Performs a GET request for the given internal dock template page.
-     */
-    private String fetchShopPage(String tpl) throws IOException {
-        return this.backpageManager.getHttp("indexInternal.es")
-                .setRawParam("action", "internalDock")
-                .setRawParam("tpl", tpl)
-                .getContent();
-    }
-
-    /**
-     * Extracts the itemData object from the raw shop page HTML.
-     */
-    private JsonObject parseShopItemData(String html) {
-        String json = this.extractShopParametersJson(html);
-        if (json == null)
-            return null;
-
-        @SuppressWarnings("deprecation")
-        JsonObject parsed = JSON_PARSER.parse(json).getAsJsonObject();
-        JsonElement itemDataElement = parsed.get("itemData");
-        if (itemDataElement == null || itemDataElement.isJsonNull() || !itemDataElement.isJsonObject()) {
-            return null;
-        }
-        return itemDataElement.getAsJsonObject();
     }
 
     /**
@@ -568,36 +529,6 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         } catch (NumberFormatException e) {
             return -1;
         }
-    }
-
-    /**
-     * Finds and returns the outermost JSON object following "Shop.Parameters" in
-     * the HTML.
-     */
-    private String extractShopParametersJson(String html) {
-        if (html == null)
-            return null;
-
-        int start = html.indexOf("Shop.Parameters");
-        if (start < 0)
-            return null;
-
-        int braceStart = html.indexOf("{", start);
-        if (braceStart < 0)
-            return null;
-
-        int depth = 0;
-        for (int i = braceStart; i < html.length(); i++) {
-            char c = html.charAt(i);
-            if (c == '{')
-                depth++;
-            else if (c == '}') {
-                depth--;
-                if (depth == 0)
-                    return html.substring(braceStart, i + 1);
-            }
-        }
-        return null;
     }
 
     /**
@@ -671,16 +602,16 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     // -------------------------------------------------------------------------
 
     /**
-     * Tracks the state of a shop category.
+     * Tracks the state of a shop page.
      */
-    private static class CategoryState {
+    private static class PageState {
         final Supplier<? extends AutobuyConfig.AbstractItemConfig> configSupplier;
         long nextCheck = 0;
         String html;
         boolean fetched = false;
         boolean pending = false;
 
-        CategoryState(Supplier<? extends AutobuyConfig.AbstractItemConfig> configSupplier) {
+        PageState(Supplier<? extends AutobuyConfig.AbstractItemConfig> configSupplier) {
             this.configSupplier = configSupplier;
         }
 
@@ -744,12 +675,12 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
     private static class PurchaseTask {
         final ShopItem shopItem;
         final int amount;
-        final String category; // For logging purposes only, not same as shopItem.category
+        final String page;
 
-        PurchaseTask(ShopItem shopItem, int amount, String category) {
+        PurchaseTask(ShopItem shopItem, int amount, String page) {
             this.shopItem = shopItem;
             this.amount = amount;
-            this.category = category;
+            this.page = page;
         }
     }
 

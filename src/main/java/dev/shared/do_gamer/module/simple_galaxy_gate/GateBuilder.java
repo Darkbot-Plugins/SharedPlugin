@@ -156,6 +156,7 @@ public final class GateBuilder {
     private boolean isBuildingUnavailable() {
         return this.module.getConfig() == null
                 || !this.module.getConfig().builder.enabled
+                || !this.module.backpageHelper.isValid()
                 || (StateStore.current() != StateStore.State.WAITING
                         && StateStore.current() != StateStore.State.BUILDING);
     }
@@ -231,7 +232,7 @@ public final class GateBuilder {
             return false; // No ship available to switch, wait for next update
         }
 
-        String currentHangar = this.module.backpageManager.legacyHangarManager.getActiveHangar();
+        String currentHangar = this.module.backpageHelper.getLegacyHangarManager().getActiveHangar();
 
         if (hangarId.equals(currentHangar)) {
             if (this.isActiveShip(hangarId)) {
@@ -247,7 +248,7 @@ public final class GateBuilder {
         }
 
         this.switchingShip = true;
-        this.module.backpageManager.legacyHangarManager.changeHangar(hangarId);
+        this.module.backpageHelper.getLegacyHangarManager().changeHangar(hangarId);
         return false;
     }
 
