@@ -468,7 +468,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             return;
         }
 
-        this.log("Queued %s purchase for %s x%,d.", this.getLogPageName(page), shopItem.code, amount);
+        this.log("Queued purchase for %s item %s x%,d.", this.getLogPageName(page), shopItem.code, amount);
 
         int remaining = amount;
         if (shopItem.maxAmount > 0 && amount > shopItem.maxAmount) {
