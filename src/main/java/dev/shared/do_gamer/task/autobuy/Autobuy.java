@@ -472,8 +472,8 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
 
         int remaining = amount;
         if (shopItem.maxAmount > 0 && amount > shopItem.maxAmount) {
-            this.log("Splitting %s purchase for item %s: total x%,d, batch size x%,d.",
-                    page, shopItem.code, amount, shopItem.maxAmount);
+            this.log("Splitting purchase for %s item %s: total x%,d, batch size x%,d.",
+                    this.getLogPageName(page), shopItem.code, amount, shopItem.maxAmount);
         }
         while (remaining > 0) {
             int batch = shopItem.maxAmount > 0 ? Math.min(remaining, shopItem.maxAmount) : remaining;
