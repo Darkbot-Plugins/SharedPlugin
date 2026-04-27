@@ -413,11 +413,9 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
         }
 
         int minRequired = this.config.ammo.getMinConditionForItem(itemId);
-        if (minRequired >= 0) {
-            int current = this.getHangarQuantity(itemId);
-            if (current > minRequired) {
-                return 0;
-            }
+        int current = this.getHangarQuantity(itemId);
+        if (current > minRequired) {
+            return 0;
         }
 
         return amount;
