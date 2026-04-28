@@ -398,7 +398,8 @@ public final class CustomLootModule extends LootModule {
      * Determines if need to change direction to approach the center of the map.
      */
     private boolean approachToCenter(Npc target) {
-        if (target == null || !this.gateHandler.isApproachToCenter() || this.isBarrierNearHero()) {
+        if (target == null || !this.gateHandler.isApproachToCenter() || this.isBarrierNearHero()
+                || target.getHealth().hpPercent() <= 0.3) {
             return false; // No need to approach
         }
         double distanceHero = this.hero.distanceTo(Maps.getMapCenterX(), Maps.getMapCenterY());
