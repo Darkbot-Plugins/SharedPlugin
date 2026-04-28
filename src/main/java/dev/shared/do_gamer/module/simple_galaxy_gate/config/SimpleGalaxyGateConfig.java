@@ -63,6 +63,9 @@ public final class SimpleGalaxyGateConfig {
     @Option("do_gamer.simple_galaxy_gate.any_gate")
     public AnyGateSettings anyGate = new AnyGateSettings();
 
+    @Option("do_gamer.simple_galaxy_gate.eternal_blacklight")
+    public EternalBlacklightSettings eternalBlacklight = new EternalBlacklightSettings();
+
     @Option("do_gamer.simple_galaxy_gate.kamikaze")
     public KamikazeSettings kamikaze = new KamikazeSettings();
 
@@ -141,6 +144,15 @@ public final class SimpleGalaxyGateConfig {
 
         @Option("do_gamer.simple_galaxy_gate.any_gate.move_to_center")
         public boolean moveToCenter = false;
+    }
+
+    /**
+     * Settings specific to the Eternal Blacklight gate.
+     */
+    public static class EternalBlacklightSettings {
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.suicide_wave")
+        @Number(min = 0, max = 999, step = 1)
+        public int suicideOnWave = 0;
     }
 
     /**

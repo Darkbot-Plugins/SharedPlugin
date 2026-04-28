@@ -7,6 +7,7 @@ import eu.darkbot.api.game.items.ItemFlag;
 import eu.darkbot.api.game.items.SelectableItem;
 
 public final class EternalBlacklightGate extends GateHandler {
+    private boolean autoStart = false;
 
     public EternalBlacklightGate() {
         this.npcMap.put("-=[ Barrage Seeker Rocket ]=-", new NpcParam(600.0, -90));
@@ -76,6 +77,10 @@ public final class EternalBlacklightGate extends GateHandler {
 
     @Override
     public boolean collectTickModule() {
+        if (this.isSuicideWaveReached() && this.module.entities.getPortals().isEmpty()) {
+            this.pauseForSuicideWave();
+            return true;
+        }
         if (StateStore.current() == StateStore.State.COLLECTING) {
             this.showGateWave();
         } else {
@@ -84,16 +89,60 @@ public final class EternalBlacklightGate extends GateHandler {
         return false;
     }
 
+    @Override
+    public void stoppedTickModule() {
+        if (!this.autoStart) {
+            return; // Only handle auto-start scenario
+        }
+        if (this.isSuicideWaveReached()) {
+            if (this.module.hero.getHealth().getHp() == 0) {
+                // If ship desctoyed then need to refresh and start bot
+                this.module.bot.handleRefresh();
+                this.module.bot.setRunning(true);
+                this.autoStart = false;
+                return;
+            } else if (!this.module.entities.getPortals().isEmpty()) {
+                // If the portals appears then need to jump to next wave
+                this.module.bot.setRunning(true);
+                this.autoStart = false;
+                return;
+            }
+        }
+        StateStore.request(StateStore.State.WAITING_IN_GATE);
+        this.showSuicideOnWave();
+        this.module.petGearHelper.disable();
+    }
+
     /**
      * Updates the status details to show the current wave.
      */
     private void showGateWave() {
-        int currentWave = this.module.ebgApi.getCurrentWave();
-        this.statusDetails = "Wave: " + currentWave;
+        this.statusDetails = "Wave: " + this.module.ebgApi.getCurrentWave();
+        int suicideWave = this.module.getConfig().eternalBlacklight.suicideOnWave;
+        if (suicideWave > 0) {
+            this.statusDetails += " (suicide on " + suicideWave + ")";
+        }
+    }
+
+    private boolean isSuicideWaveReached() {
+        int suicideWave = this.module.getConfig().eternalBlacklight.suicideOnWave;
+        return suicideWave > 0 && this.module.ebgApi.getCurrentWave() >= suicideWave;
+    }
+
+    private void pauseForSuicideWave() {
+        this.module.bot.setRunning(false);
+        this.showSuicideOnWave();
+        this.autoStart = true;
+    }
+
+    private void showSuicideOnWave() {
+        this.statusDetails = "suicide wave";
     }
 
     @Override
     public void reset() {
-        this.statusDetails = null;
+        if (!this.autoStart) {
+            this.statusDetails = null;
+        }
     }
 }
