@@ -14,6 +14,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.AnyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DeltaGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DseGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EpsilonGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EternalBlacklightGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.InvasionGate;
@@ -95,6 +96,8 @@ public final class Maps {
         list.add(new MapInfo(499, "Trinity Trials", null, StarSystemAPI.BASE_MAPS, TrinityTrialsGate::new));
         list.add(new MapInfo(473, "DSE", null, StarSystemAPI.HOME_MAPS, DseGate::new));
         list.add(new MapInfo(-3, "Mimesis Mutiny", null, StarSystemAPI.BASE_MAPS, MimesisMutinyGate::new));
+        list.add(new MapInfo(-4, "Eternal Blacklight", null, StarSystemAPI.BLACK_LIGHT_MAPS,
+                EternalBlacklightGate::new));
 
         ggMaps = Collections.unmodifiableList(list);
     }

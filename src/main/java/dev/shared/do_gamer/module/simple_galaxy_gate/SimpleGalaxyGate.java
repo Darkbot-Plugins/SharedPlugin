@@ -32,9 +32,11 @@ import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
+import eu.darkbot.api.managers.EternalBlacklightGateAPI;
 import eu.darkbot.api.managers.ExtensionsAPI;
 import eu.darkbot.api.managers.GameScreenAPI;
 import eu.darkbot.api.managers.HeroAPI;
+import eu.darkbot.api.managers.HeroItemsAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.api.managers.RepairAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
@@ -50,6 +52,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     public final HeroAPI hero;
     public final MovementAPI movement;
     public final EntitiesAPI entities;
+    public final HeroItemsAPI items;
     public final CustomLootModule lootModule;
     public final CustomCollectorModule collectorModule;
     public final StarSystemAPI starSystem;
@@ -61,6 +64,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     private final ConfigAPI configApi;
     public final GameScreenAPI gameScreenApi;
     private final RepairAPI repairAPI;
+    public final EternalBlacklightGateAPI ebgApi;
 
     public final ConfigSetting<BrowserApi> botBrowserApi;
 
@@ -90,6 +94,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.hero = api.requireAPI(HeroAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
+        this.items = api.requireAPI(HeroItemsAPI.class);
         this.lootModule = new CustomLootModule(api);
         this.collectorModule = new CustomCollectorModule(api);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
@@ -101,6 +106,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.configApi = api.requireAPI(ConfigAPI.class);
         this.gameScreenApi = api.requireAPI(GameScreenAPI.class);
         this.repairAPI = api.requireAPI(RepairAPI.class);
+        this.ebgApi = api.requireAPI(EternalBlacklightGateAPI.class);
 
         this.botBrowserApi = this.configApi.requireConfig("bot_settings.api_config.browser_api");
         this.lootModule.setCollector(this.collectorModule); // Link collector module
@@ -596,7 +602,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     /**
      * Checks if a Galaxy Gate is available on the current map.
      */
-    private boolean isGateAvailable(int gateId) {
+    public boolean isGateAvailable(int gateId) {
         return this.entities.getPortals().stream()
                 .anyMatch(p -> p.getTargetMap().map(m -> m.getId() == gateId).orElse(false));
     }
