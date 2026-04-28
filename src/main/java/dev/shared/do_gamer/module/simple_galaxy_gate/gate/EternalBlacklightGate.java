@@ -2,12 +2,17 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
+import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.items.ItemFlag;
 import eu.darkbot.api.game.items.SelectableItem;
+import eu.darkbot.api.managers.EternalBlacklightGateAPI;
+import eu.darkbot.api.managers.HeroItemsAPI;
 
 public final class EternalBlacklightGate extends GateHandler {
     private boolean autoStart = false;
+    private EternalBlacklightGateAPI ebgApi;
+    private HeroItemsAPI items;
 
     public EternalBlacklightGate() {
         this.npcMap.put("-=[ Barrage Seeker Rocket ]=-", new NpcParam(600.0, -90));
@@ -31,6 +36,12 @@ public final class EternalBlacklightGate extends GateHandler {
         this.npcMap.put("\\\\ Impulse II //", new NpcParam(600.0));
         this.defaultNpcParam = new NpcParam(560.0);
         this.showCompletedGates = false;
+    }
+
+    @Override
+    protected void onModuleSet(PluginAPI api) {
+        this.ebgApi = api.requireAPI(EternalBlacklightGateAPI.class);
+        this.items = api.requireAPI(HeroItemsAPI.class);
     }
 
     @Override
@@ -58,7 +69,7 @@ public final class EternalBlacklightGate extends GateHandler {
      * Attempts to use the Eternal Blacklight CPU if available.
      */
     private void useCpu() {
-        this.module.items.useItem(SelectableItem.Cpu.ETERNAL_BLACKLIGHT_CPU, 250,
+        this.items.useItem(SelectableItem.Cpu.ETERNAL_BLACKLIGHT_CPU, 250,
                 ItemFlag.USABLE, ItemFlag.READY, ItemFlag.AVAILABLE, ItemFlag.NOT_SELECTED);
     }
 
@@ -66,7 +77,7 @@ public final class EternalBlacklightGate extends GateHandler {
      * Checks if the player has any Eternal Blacklight CPUs available.
      */
     private boolean hasCpu() {
-        return this.module.ebgApi.getCpuCount() > 0;
+        return this.ebgApi.getCpuCount() > 0;
     }
 
     @Override
@@ -109,7 +120,7 @@ public final class EternalBlacklightGate extends GateHandler {
      * Updates the status details to show the current wave.
      */
     private void showGateWave() {
-        this.statusDetails = "Wave: " + this.module.ebgApi.getCurrentWave();
+        this.statusDetails = "Wave: " + this.ebgApi.getCurrentWave();
         int suicideWave = this.module.getConfig().eternalBlacklight.suicideOnWave;
         if (suicideWave > 0) {
             this.statusDetails += " (suicide on " + suicideWave + ")";
@@ -118,7 +129,7 @@ public final class EternalBlacklightGate extends GateHandler {
 
     private boolean isSuicideWaveReached() {
         int suicideWave = this.module.getConfig().eternalBlacklight.suicideOnWave;
-        return suicideWave > 0 && this.module.ebgApi.getCurrentWave() >= suicideWave;
+        return suicideWave > 0 && this.ebgApi.getCurrentWave() >= suicideWave;
     }
 
     private void pauseForSuicideWave() {
