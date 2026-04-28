@@ -94,23 +94,15 @@ public final class EternalBlacklightGate extends GateHandler {
         if (!this.autoStart) {
             return; // Only handle auto-start scenario
         }
-        if (this.isSuicideWaveReached()) {
-            if (this.module.hero.getHealth().getHp() == 0) {
-                // If ship desctoyed then need to refresh and start bot
-                this.module.bot.handleRefresh();
-                this.module.bot.setRunning(true);
-                this.autoStart = false;
-                return;
-            } else if (!this.module.entities.getPortals().isEmpty()) {
-                // If the portals appears then need to jump to next wave
-                this.module.bot.setRunning(true);
-                this.autoStart = false;
-                return;
-            }
+        if (this.isSuicideWaveReached()
+                && (this.module.hero.getHealth().getHp() == 0 || !this.module.entities.getPortals().isEmpty())) {
+            this.module.bot.setRunning(true);
+            this.autoStart = false;
+            return;
         }
-        StateStore.request(StateStore.State.WAITING_IN_GATE);
+
+        this.module.petGearHelper.setPassive();
         this.showSuicideOnWave();
-        this.module.petGearHelper.disable();
     }
 
     /**
@@ -130,6 +122,7 @@ public final class EternalBlacklightGate extends GateHandler {
     }
 
     private void pauseForSuicideWave() {
+        this.module.petGearHelper.setPassive();
         this.module.bot.setRunning(false);
         this.showSuicideOnWave();
         this.autoStart = true;
