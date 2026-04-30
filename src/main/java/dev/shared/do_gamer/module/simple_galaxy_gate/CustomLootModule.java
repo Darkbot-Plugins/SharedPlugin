@@ -335,16 +335,6 @@ public final class CustomLootModule extends LootModule {
             radius = npc.getInfo().getRadius();
         }
 
-        // Stay closer to low HP NPCs if no others are nearby
-        if (npc.getHealth().hpPercent() <= 0.25 && !npc.getInfo().hasExtraFlag(NpcFlag.AGGRESSIVE_FOLLOW)) {
-            double distance = npc.distanceTo(this.hero) + 100.0; // Add small buffer to distance
-            if (this.getNpcs().stream()
-                    .filter(n -> !Objects.equals(n, npc))
-                    .noneMatch(n -> n.distanceTo(this.hero) < distance)) {
-                radius *= 0.75;
-            }
-        }
-
         return this.attack.modifyRadius(radius);
     }
 
