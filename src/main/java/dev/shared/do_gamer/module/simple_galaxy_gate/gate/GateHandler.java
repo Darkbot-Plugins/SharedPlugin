@@ -12,6 +12,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
+import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
@@ -81,7 +82,19 @@ public class GateHandler {
      * Set the module instance for this gate handler
      */
     public final void setModule(SimpleGalaxyGate module) {
+        if (this.module == module) {
+            return; // Same module, no need to set again
+        }
         this.module = module;
+        this.onModuleSet(module.getApi());
+    }
+
+    /**
+     * Called after the module is set. Override in subclasses to perform
+     * one-time initialization that requires the module (e.g. acquiring APIs).
+     */
+    protected void onModuleSet(PluginAPI api) {
+        // no-op by default
     }
 
     /**

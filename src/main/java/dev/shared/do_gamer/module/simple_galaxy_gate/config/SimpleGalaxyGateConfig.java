@@ -7,16 +7,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.RowSorter;
+import javax.swing.SortOrder;
+import javax.swing.SwingConstants;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableModel;
+import javax.swing.table.TableRowSorter;
+
 import dev.shared.do_gamer.utils.ConfigHtmlInstructions;
+import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.config.annotations.Dropdown;
 import eu.darkbot.api.config.annotations.Editor;
 import eu.darkbot.api.config.annotations.Number;
 import eu.darkbot.api.config.annotations.Option;
 import eu.darkbot.api.config.annotations.Percentage;
 import eu.darkbot.api.config.annotations.Readonly;
+import eu.darkbot.api.config.annotations.Table;
 import eu.darkbot.api.config.types.PercentRange;
 import eu.darkbot.api.config.types.ShipMode;
 import eu.darkbot.api.managers.ConfigAPI;
+import eu.darkbot.api.managers.EternalBlacklightGateAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.shared.config.ProfileNames;
 
@@ -62,6 +75,9 @@ public final class SimpleGalaxyGateConfig {
 
     @Option("do_gamer.simple_galaxy_gate.any_gate")
     public AnyGateSettings anyGate = new AnyGateSettings();
+
+    @Option("do_gamer.simple_galaxy_gate.eternal_blacklight")
+    public EternalBlacklightSettings eternalBlacklight = new EternalBlacklightSettings();
 
     @Option("do_gamer.simple_galaxy_gate.kamikaze")
     public KamikazeSettings kamikaze = new KamikazeSettings();
@@ -141,6 +157,113 @@ public final class SimpleGalaxyGateConfig {
 
         @Option("do_gamer.simple_galaxy_gate.any_gate.move_to_center")
         public boolean moveToCenter = false;
+    }
+
+    /**
+     * Settings specific to the Eternal Blacklight gate.
+     */
+    public static class EternalBlacklightSettings {
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.suicide_wave")
+        @Number(min = 0, max = 999, step = 1)
+        public int suicideOnWave = 0;
+
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.try_split_uber_kristallon")
+        public boolean trySplitUberKristallon = true;
+
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.boosters")
+        public BoostersTable boosters = new BoostersTable();
+
+        public static class BoostersTable {
+            @Option("")
+            @Table(controls = {}, decorator = BoostersTable.Decorator.class)
+            public Map<String, BoosterPriority> table = initBoosters();
+
+            private static Map<String, BoosterPriority> initBoosters() {
+                Map<String, BoosterPriority> map = new LinkedHashMap<>();
+                for (Map.Entry<String, CategoryData> entry : BoostersTable.categories.entrySet()) {
+                    map.put(entry.getKey(), new BoosterPriority(entry.getValue().priority));
+                }
+                return map;
+            }
+
+            public static class BoosterPriority {
+                public BoosterPriority(int priority) {
+                    this.priority = priority;
+                }
+
+                @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.boosters.priority")
+                public int priority = 0;
+            }
+
+            /**
+             * Predefined categories with labels and default priorities for Eternal
+             * Blacklight boosters.
+             */
+            private static final Map<String, CategoryData> categories = Map.of(
+                    EternalBlacklightGateAPI.Category.DAMAGE_LASER.name(), new CategoryData("Laser Damage", 0),
+                    EternalBlacklightGateAPI.Category.DAMAGE.name(), new CategoryData("Damage", 0),
+                    EternalBlacklightGateAPI.Category.HITCHANCE_LASER.name(), new CategoryData("Laser Hitchance", 0),
+                    EternalBlacklightGateAPI.Category.HITPOINTS.name(), new CategoryData("Hitpoints", 1),
+                    EternalBlacklightGateAPI.Category.ABILITY_COOLDOWN_TIME.name(), new CategoryData("Cool Down", 1),
+                    EternalBlacklightGateAPI.Category.SHIELD.name(), new CategoryData("Shield", 2),
+                    EternalBlacklightGateAPI.Category.SPEED.name(), new CategoryData("Speed", 2),
+                    EternalBlacklightGateAPI.Category.DAMAGE_ROCKETS.name(), new CategoryData("Rockets Damage", 2));
+
+            /**
+             * Helper class to store label and default priority for each booster category.
+             */
+            private static final class CategoryData {
+                String label;
+                int priority;
+
+                CategoryData(String label, int priority) {
+                    this.label = label;
+                    this.priority = priority;
+                }
+            }
+
+            /**
+             * Decorator for the boosters table to enhance the UI with sorting,
+             * column width constraints, and custom cell rendering.
+             */
+            public static class Decorator implements Table.Decorator<BoosterPriority> {
+                @Override
+                public void handle(JTable table, JScrollPane scrollPane, JPanel wrapper,
+                        ConfigSetting<Map<String, BoosterPriority>> setting) {
+                    TableRowSorter<TableModel> sorter = new TableRowSorter<>(table.getModel());
+                    sorter.setSortKeys(List.of(new RowSorter.SortKey(1, SortOrder.ASCENDING)));
+                    table.setRowSorter(sorter);
+
+                    // Constrain priority column to digits-only width
+                    table.getColumnModel().getColumn(1).setPreferredWidth(80);
+                    table.getColumnModel().getColumn(1).setMaxWidth(100);
+
+                    // Center-align priority column
+                    DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+                    centerRenderer.setHorizontalAlignment(SwingConstants.CENTER);
+                    table.getColumnModel().getColumn(1).setCellRenderer(centerRenderer);
+
+                    // Render category names with friendly labels
+                    DefaultTableCellRenderer categoryRenderer = new DefaultTableCellRenderer() {
+                        @Override
+                        protected void setValue(Object value) {
+                            super.setValue(value == null ? null : this.formatCategoryName(String.valueOf(value)));
+                        }
+
+                        private String formatCategoryName(String category) {
+                            BoostersTable.CategoryData data = BoostersTable.categories.get(category);
+                            return data != null ? data.label : category;
+                        }
+                    };
+                    table.getColumnModel().getColumn(0).setCellRenderer(categoryRenderer);
+
+                    // Shrink the table size
+                    scrollPane.setPreferredSize(new java.awt.Dimension(250, 200));
+                }
+            }
+
+        }
+
     }
 
     /**
