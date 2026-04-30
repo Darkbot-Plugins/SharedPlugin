@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.github.manolo8.darkbot.backpage.BackpageManager;
 import com.github.manolo8.darkbot.backpage.entities.ShipInfo;
 import com.github.manolo8.darkbot.config.NpcExtraFlag;
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
@@ -17,6 +16,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.utils.BackpageHelper;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
@@ -42,11 +42,12 @@ import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
-@Feature(name = "Simple Galaxy Gate", description = "Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Trinity, DSE, and Mimesis gates.")
+@Feature(name = "Simple Galaxy Gate", description = "Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Trinity, DSE, Mimesis and EBG.")
 public final class SimpleGalaxyGate implements Module, Task,
         Configurable<SimpleGalaxyGateConfig>,
         NpcExtraProvider {
 
+    private final PluginAPI api;
     public final HeroAPI hero;
     public final MovementAPI movement;
     public final EntitiesAPI entities;
@@ -56,7 +57,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     public final MapTraveler traveler;
     public final PortalJumper jumper;
     public final BotAPI bot;
-    public final BackpageManager backpageManager;
+    public final BackpageHelper backpageHelper;
     private final ExtensionsAPI extensionsAPI;
     private final ConfigAPI configApi;
     public final GameScreenAPI gameScreenApi;
@@ -86,7 +87,12 @@ public final class SimpleGalaxyGate implements Module, Task,
     private SimpleGalaxyGateConfig config;
     private String statusDetails = null;
 
+    public PluginAPI getApi() {
+        return this.api;
+    }
+
     public SimpleGalaxyGate(PluginAPI api) {
+        this.api = api;
         this.hero = api.requireAPI(HeroAPI.class);
         this.movement = api.requireAPI(MovementAPI.class);
         this.entities = api.requireAPI(EntitiesAPI.class);
@@ -96,7 +102,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.traveler = api.requireInstance(MapTraveler.class);
         this.jumper = api.requireInstance(PortalJumper.class);
         this.bot = api.requireAPI(BotAPI.class);
-        this.backpageManager = api.requireInstance(BackpageManager.class);
+        this.backpageHelper = new BackpageHelper(api);
         this.extensionsAPI = api.requireAPI(ExtensionsAPI.class);
         this.configApi = api.requireAPI(ConfigAPI.class);
         this.gameScreenApi = api.requireAPI(GameScreenAPI.class);
@@ -232,7 +238,7 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     @Override
     public boolean canRefresh() {
-        return (!this.isMapGG() && StateStore.current() == StateStore.State.WAITING) || this.safeRefreshInGate;
+        return (!this.isMapGG() && StateStore.current() != StateStore.State.BUILDING) || this.safeRefreshInGate;
     }
 
     public void setShouldMoveToRefinery(boolean shouldMoveToRefinery) {
@@ -263,19 +269,23 @@ public final class SimpleGalaxyGate implements Module, Task,
 
     @Override
     public void onBackgroundTick() {
+        if (!this.backpageHelper.isValid()) {
+            return; // BackpageManager not valid, skip background tasks
+        }
+
         if (this.fetchServerOffset) {
-            ServerTimeHelper.fetchServerOffset(this.backpageManager);
+            ServerTimeHelper.fetchServerOffset(this.backpageHelper.getInstance());
         }
 
         if (this.updateHangarData) {
-            this.backpageManager.legacyHangarManager.updateHangarData(500);
+            this.backpageHelper.getLegacyHangarManager().updateHangarData(500);
             this.setUpdateHangarData(false);
         }
 
         // Populate ship dropdown if empty
         Map<String, String> ships = SimpleGalaxyGateConfig.BuilderSettings.ShipDropdown.getShips();
         if (ships.isEmpty()) {
-            List<ShipInfo> shipInfos = this.backpageManager.legacyHangarManager.getShipInfos();
+            List<ShipInfo> shipInfos = this.backpageHelper.getLegacyHangarManager().getShipInfos();
             if (shipInfos.isEmpty()) {
                 this.setUpdateHangarData(true);
                 return;
@@ -592,7 +602,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     /**
      * Checks if a Galaxy Gate is available on the current map.
      */
-    private boolean isGateAvailable(int gateId) {
+    public boolean isGateAvailable(int gateId) {
         return this.entities.getPortals().stream()
                 .anyMatch(p -> p.getTargetMap().map(m -> m.getId() == gateId).orElse(false));
     }

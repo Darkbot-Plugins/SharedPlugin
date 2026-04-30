@@ -12,6 +12,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
+import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
@@ -39,6 +40,7 @@ public class GateHandler {
     protected boolean skipFarTargets = true;
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
+    protected boolean forceRefresh = false;
     protected boolean showBoxCount = true;
     protected boolean showCompletedGates = true;
     protected String statusDetails = null;
@@ -81,7 +83,19 @@ public class GateHandler {
      * Set the module instance for this gate handler
      */
     public final void setModule(SimpleGalaxyGate module) {
+        if (this.module == module) {
+            return; // Same module, no need to set again
+        }
         this.module = module;
+        this.onModuleSet(module.getApi());
+    }
+
+    /**
+     * Called after the module is set. Override in subclasses to perform
+     * one-time initialization that requires the module (e.g. acquiring APIs).
+     */
+    protected void onModuleSet(PluginAPI api) {
+        // no-op by default
     }
 
     /**
@@ -339,6 +353,9 @@ public class GateHandler {
      * Determines if it's safe to refresh the map while in the gate.
      */
     public final boolean canSafeRefreshInGate() {
+        if (this.forceRefresh) {
+            return true; // Force refresh enabled, ignore safety checks
+        }
         if (this.safeRefreshInGate) {
             return this.module.isMapGG()
                     && this.module.lootModule.getNpcs().isEmpty()

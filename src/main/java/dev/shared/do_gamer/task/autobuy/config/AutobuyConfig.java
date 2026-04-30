@@ -234,7 +234,7 @@ public final class AutobuyConfig {
                 case PIRATE_KEY_GREEN:
                     return this.pirateKeyGreen.min;
                 default:
-                    return 0;
+                    return -1; // Indicates no min condition for this item
             }
         }
 
