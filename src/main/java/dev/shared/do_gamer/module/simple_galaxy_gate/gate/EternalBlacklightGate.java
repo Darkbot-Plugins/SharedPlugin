@@ -141,20 +141,11 @@ public final class EternalBlacklightGate extends GateHandler {
             return; // Only handle auto-start scenario
         }
         if (this.module.hero.getHealth().getHp() > 0) {
-            this.stopAttackAndSetPassive();
             this.statusDetails = "suicide wave";
             return;
         }
         this.module.bot.setRunning(true);
         this.autoStart = false;
-    }
-
-    /**
-     * Stops the attacker and sets the pet helper to passive.
-     */
-    private void stopAttackAndSetPassive() {
-        this.module.lootModule.getAttacker().stopAttack();
-        this.module.petGearHelper.setPassive();
     }
 
     /**
@@ -181,10 +172,16 @@ public final class EternalBlacklightGate extends GateHandler {
      */
     private boolean pauseForSuicideWave() {
         Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
-        if (target != null && target.distanceTo(this.module.hero) < 1_000.0) {
-            this.stopAttackAndSetPassive();
-            this.module.bot.setRunning(false);
-            this.autoStart = true;
+        if (target != null) {
+            this.module.petGearHelper.setPassive();
+            if (this.module.lootModule.getAttacker().isAttacking()) {
+                this.module.lootModule.getAttacker().stopAttack();
+            }
+            this.module.lootModule.moveToTarget(target);
+            if (target.distanceTo(this.module.hero) < 1_000.0) {
+                this.module.bot.setRunning(false);
+                this.autoStart = true;
+            }
             return true;
         }
         return false;
