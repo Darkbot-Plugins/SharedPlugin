@@ -3,24 +3,32 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-
-import com.github.manolo8.darkbot.core.entities.Npc;
+import java.util.stream.Collectors;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
-import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig.EternalBlacklightSettings.BoostersTable.Piority;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig.EternalBlacklightSettings.BoostersTable;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcFlag;
+import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.items.ItemFlag;
 import eu.darkbot.api.game.items.SelectableItem;
 import eu.darkbot.api.managers.EternalBlacklightGateAPI;
 import eu.darkbot.api.managers.HeroItemsAPI;
 
 public final class EternalBlacklightGate extends GateHandler {
-    private static final String GUI = "eternal_blacklight";
-    private boolean autoStart = false;
     private EternalBlacklightGateAPI ebgApi;
     private HeroItemsAPI items;
+
+    private boolean autoStart = false;
+    private static final String GUI = "eternal_blacklight";
+    private static final int GATE_CYCLE_WAVES = 51;
+    private static final int UBER_KRISTALLON_WAVE_IN_CYCLE = 47;
+    private static final double UBER_KRISTALLON_SPLIT_DISTANCE = 300.0;
+    private static final double UBER_KRISTALLON_SHIFT_X = 4_000.0;
+    private static final double UBER_KRISTALLON_SHIFT_Y = 2_000.0;
+    private static final double UBER_KRISTALLON_TOLERANCE_DISTANCE = 1_500.0;
 
     public EternalBlacklightGate() {
         this.npcMap.put("-=[ Barrage Seeker Rocket ]=-", new NpcParam(600.0, -90));
@@ -93,8 +101,53 @@ public final class EternalBlacklightGate extends GateHandler {
         if (this.isSuicideWaveReached() && this.pauseForSuicideWave()) {
             return true;
         }
+        this.updateUberKristallonCenter();
         this.showGateWave();
         return false;
+    }
+
+    /**
+     * Determines if the given NPC is Uber Kristallon.
+     */
+    private boolean npcHasUberKristallonName(Npc npc) {
+        return this.nameContains(npc, "( UberKristallon )");
+    }
+
+    /**
+     * Determines if the current wave is the Uber Kristallon appears in the cycle.
+     */
+    private boolean isUberKristallonWave() {
+        return this.ebgApi.getCurrentWave() % GATE_CYCLE_WAVES == UBER_KRISTALLON_WAVE_IN_CYCLE;
+    }
+
+    /**
+     * Updates the map center and tolerance distance for Uber Kristallon wave.
+     */
+    private void updateUberKristallonCenter() {
+        if (this.module.getConfig().eternalBlacklight.trySplitUberKristallon && this.isUberKristallonWave()) {
+            List<Npc> ubers = this.module.lootModule.getNpcs().stream()
+                    .filter(this::npcHasUberKristallonName)
+                    .collect(Collectors.toList());
+            if (ubers.size() == 2) {
+                double dist = ubers.get(0).distanceTo(ubers.get(1));
+                if (dist < UBER_KRISTALLON_SPLIT_DISTANCE) {
+                    // left top
+                    this.mapCenterX = Defaults.MAP_CENTER_X - UBER_KRISTALLON_SHIFT_X;
+                    this.mapCenterY = Defaults.MAP_CENTER_Y - UBER_KRISTALLON_SHIFT_Y;
+                } else {
+                    // right bottom
+                    this.mapCenterX = Defaults.MAP_CENTER_X + UBER_KRISTALLON_SHIFT_X;
+                    this.mapCenterY = Defaults.MAP_CENTER_Y + UBER_KRISTALLON_SHIFT_Y;
+                }
+                this.toleranceDistance = UBER_KRISTALLON_TOLERANCE_DISTANCE;
+                return;
+            }
+        }
+
+        // Reset to defaults
+        this.mapCenterX = Defaults.MAP_CENTER_X;
+        this.mapCenterY = Defaults.MAP_CENTER_Y;
+        this.toleranceDistance = Defaults.TOLERANCE_DISTANCE;
     }
 
     @Override
@@ -118,7 +171,7 @@ public final class EternalBlacklightGate extends GateHandler {
             this.getVisibleGui(GUI).ifPresent(gui -> gui.setVisible(false));
             return;
         }
-        Map<String, Piority> boosters = this.module.getConfig().eternalBlacklight.boosters.table;
+        Map<String, BoostersTable.Piority> boosters = this.module.getConfig().eternalBlacklight.boosters.table;
         List<? extends EternalBlacklightGateAPI.Booster> options = this.ebgApi.getBoosterOptions();
         if (options == null || options.isEmpty()) {
             return;
@@ -126,7 +179,7 @@ public final class EternalBlacklightGate extends GateHandler {
         EternalBlacklightGateAPI.Booster best = options.stream()
                 .sorted(Comparator.comparingInt(EternalBlacklightGateAPI.Booster::getPercentage).reversed())
                 .min(Comparator.comparingInt(b -> {
-                    Piority p = boosters.get(b.getCategoryType().name());
+                    BoostersTable.Piority p = boosters.get(b.getCategoryType().name());
                     return p != null ? p.priority : 0;
                 }))
                 .orElse(null);

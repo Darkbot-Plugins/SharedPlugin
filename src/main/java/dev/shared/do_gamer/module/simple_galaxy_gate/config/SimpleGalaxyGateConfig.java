@@ -167,6 +167,9 @@ public final class SimpleGalaxyGateConfig {
         @Number(min = 0, max = 999, step = 1)
         public int suicideOnWave = 0;
 
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.try_split_uber_kristallon")
+        public boolean trySplitUberKristallon = true;
+
         @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.boosters")
         public BoostersTable boosters = new BoostersTable();
 
