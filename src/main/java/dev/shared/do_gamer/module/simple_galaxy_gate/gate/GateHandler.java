@@ -40,6 +40,7 @@ public class GateHandler {
     protected boolean skipFarTargets = true;
     protected boolean fetchServerOffset = false;
     protected boolean safeRefreshInGate = true;
+    protected boolean forceRefresh = false;
     protected boolean showBoxCount = true;
     protected boolean showCompletedGates = true;
     protected String statusDetails = null;
@@ -352,6 +353,9 @@ public class GateHandler {
      * Determines if it's safe to refresh the map while in the gate.
      */
     public final boolean canSafeRefreshInGate() {
+        if (this.forceRefresh) {
+            return true; // Force refresh enabled, ignore safety checks
+        }
         if (this.safeRefreshInGate) {
             return this.module.isMapGG()
                     && this.module.lootModule.getNpcs().isEmpty()

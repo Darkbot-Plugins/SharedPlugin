@@ -77,6 +77,8 @@ public final class LowGate extends GateHandler {
         int relaysCount = relays.size();
 
         this.updateBossStatus(relaysCount);
+        // Force refresh if boss was destroyed
+        this.forceRefresh = (this.bossState == BossState.DESTROYED);
 
         if (npcsCount == 0 && relaysCount > 0 && this.bossState == BossState.NONE) {
             this.handleRelayAttack(relays.get(0));
@@ -205,6 +207,7 @@ public final class LowGate extends GateHandler {
     public void reset() {
         this.bossState = BossState.NONE;
         this.statusDetails = null;
+        this.forceRefresh = false;
     }
 
 }
