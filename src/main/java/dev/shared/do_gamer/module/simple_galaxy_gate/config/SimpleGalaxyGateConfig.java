@@ -2,6 +2,7 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.config;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -231,7 +232,10 @@ public final class SimpleGalaxyGateConfig {
                 public void handle(JTable table, JScrollPane scrollPane, JPanel wrapper,
                         ConfigSetting<Map<String, BoosterPriority>> setting) {
                     TableRowSorter<TableModel> sorter = new TableRowSorter<>(table.getModel());
-                    sorter.setSortKeys(List.of(new RowSorter.SortKey(1, SortOrder.ASCENDING)));
+                    sorter.setComparator(0, Comparator.comparing(Decorator::getLabel));
+                    sorter.setSortKeys(List.of(
+                            new RowSorter.SortKey(1, SortOrder.ASCENDING),
+                            new RowSorter.SortKey(0, SortOrder.ASCENDING)));
                     table.setRowSorter(sorter);
 
                     // Constrain priority column to digits-only width
@@ -247,18 +251,22 @@ public final class SimpleGalaxyGateConfig {
                     DefaultTableCellRenderer categoryRenderer = new DefaultTableCellRenderer() {
                         @Override
                         protected void setValue(Object value) {
-                            super.setValue(value == null ? null : this.formatCategoryName(String.valueOf(value)));
-                        }
-
-                        private String formatCategoryName(String category) {
-                            BoostersTable.CategoryData data = BoostersTable.categories.get(category);
-                            return data != null ? data.label : category;
+                            super.setValue(Decorator.getLabel(value));
                         }
                     };
                     table.getColumnModel().getColumn(0).setCellRenderer(categoryRenderer);
 
                     // Shrink the table size
                     scrollPane.setPreferredSize(new java.awt.Dimension(250, 200));
+                }
+
+                /**
+                 * Helper method to get the display label for a booster category.
+                 */
+                private static String getLabel(Object value) {
+                    String category = String.valueOf(value);
+                    BoostersTable.CategoryData data = BoostersTable.categories.get(category);
+                    return data != null ? data.label : category;
                 }
             }
 
