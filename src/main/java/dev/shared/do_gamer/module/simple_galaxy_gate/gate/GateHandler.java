@@ -22,9 +22,11 @@ import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
 import eu.darkbot.api.game.other.Locatable;
 import eu.darkbot.api.game.other.Lockable;
+import eu.darkbot.api.managers.GameScreenAPI;
 
 public class GateHandler {
     protected SimpleGalaxyGate module;
+    protected GameScreenAPI gameScreenApi;
     protected final Map<String, NpcParam> npcMap = new HashMap<>();
     protected NpcParam defaultNpcParam = null;
     protected double mapCenterX = Defaults.MAP_CENTER_X;
@@ -87,6 +89,7 @@ public class GateHandler {
             return; // Same module, no need to set again
         }
         this.module = module;
+        this.gameScreenApi = module.getApi().requireAPI(GameScreenAPI.class);
         this.onModuleSet(module.getApi());
     }
 
@@ -403,7 +406,7 @@ public class GateHandler {
      * Returns the visible GUI matching the given ID, if present.
      */
     protected final Optional<Gui> getVisibleGui(String guiId) {
-        Gui gui = this.module.gameScreenApi.getGui(guiId);
+        Gui gui = this.gameScreenApi.getGui(guiId);
         if (gui != null && gui.isVisible()) {
             return Optional.of(gui);
         }
