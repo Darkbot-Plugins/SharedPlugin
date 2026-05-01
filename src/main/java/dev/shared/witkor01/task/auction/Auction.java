@@ -9,11 +9,8 @@ import com.github.manolo8.darkbot.utils.Base62;
 import eu.darkbot.api.config.annotations.Number;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.extensions.Task;
-import eu.darkbot.util.IOUtils;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
-import java.net.HttpURLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -180,8 +177,7 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
     }
 
     private String fetchAuctionPage() throws IOException {
-        HttpURLConnection conn = backpage.getHttp("indexInternal.es?action=internalAuction").getConnection();
-        return IOUtils.read(conn.getInputStream());
+        return backpage.getHttp("indexInternal.es?action=internalAuction").getContent();
     }
 
     private void parse(String html) {

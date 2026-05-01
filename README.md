@@ -22,6 +22,7 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - Orbit Helper Quick Login: Adds a button to navigate to Orbit Helper from the menu. By @orbithelper
 - Simple Galaxy Gate: Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Trinity, DSE, Mimesis and EBG. By @do-gamer
 - Autobuy: Automatically buys boosters and special items from the shop at a configured interval. By @do-gamer
+- Auction: Monitors the in-game auction and automatically places bids on selected items shortly before the auction ends. By @witkor01
 
 ## Contributing
 
