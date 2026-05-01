@@ -264,6 +264,9 @@ public final class SimpleGalaxyGateConfig {
                  * Helper method to get the display label for a booster category.
                  */
                 private static String getLabel(Object value) {
+                    if (value == null) {
+                        return null;
+                    }
                     String category = String.valueOf(value);
                     BoostersTable.CategoryData data = BoostersTable.categories.get(category);
                     return data != null ? data.label : category;
