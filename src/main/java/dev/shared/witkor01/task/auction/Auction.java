@@ -249,7 +249,8 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
         try {
             if (p.length == 2) return Long.parseLong(p[0].trim()) * 60 + Long.parseLong(p[1].trim());
             if (p.length == 3) return Long.parseLong(p[0].trim()) * 3600 + Long.parseLong(p[1].trim()) * 60 + Long.parseLong(p[2].trim());
-        } catch (NumberFormatException ignored) {}
+        } catch (NumberFormatException ignored) { // non-numeric time string — return -1
+        }
         return -1;
     }
 
@@ -338,13 +339,14 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
         @Option("Log raw HTML (debug)")
         public boolean logRawHtml = false;
 
-        public java.util.Map<String, ItemBidConfig> itemConfigs = new java.util.HashMap<>();
+        java.util.Map<String, ItemBidConfig> itemConfigs = new java.util.HashMap<>();
 
         @Option("Available items")
         @Editor(AuctionItemsEditor.class)
         public Object itemsDisplay = null;
 
-        public transient Auction module;
+        @SuppressWarnings("java:S1104")
+        transient Auction module;
     }
 }
 

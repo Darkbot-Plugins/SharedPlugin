@@ -8,10 +8,12 @@ import java.awt.*;
 
 public class CountdownEditor implements OptionEditor {
 
+    private static final String TIME_LABEL_PREFIX = "Time until auction end: ";
+
     private final JLabel label;
 
     public CountdownEditor(Auction.AuctionConfig config) {
-        this.label = new JLabel("Time until auction end: N/A");
+        this.label = new JLabel(TIME_LABEL_PREFIX + "N/A");
         this.label.setOpaque(false);
         this.label.setFont(this.label.getFont().deriveFont(Font.BOLD));
     }
@@ -25,13 +27,13 @@ public class CountdownEditor implements OptionEditor {
         int endMinute = (cfg != null) ? cfg.auctionEndMinute : 35;
         long secs = Auction.computeSecondsUntilMinute(endMinute);
         if (secs <= 30) {
-            label.setText("Time until auction end: " + secs + " sec  \u26A1");
+            label.setText(TIME_LABEL_PREFIX + secs + " sec  \u26A1");
             label.setForeground(new Color(200, 0, 0));
         } else if (secs <= 120) {
-            label.setText("Time until auction end: " + secs + " sec");
+            label.setText(TIME_LABEL_PREFIX + secs + " sec");
             label.setForeground(new Color(180, 100, 0));
         } else {
-            label.setText("Time until auction end: " + secs + " sec");
+            label.setText(TIME_LABEL_PREFIX + secs + " sec");
             label.setForeground(UIManager.getColor("Label.foreground"));
         }
     }

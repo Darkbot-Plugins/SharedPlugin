@@ -119,6 +119,7 @@ public class AuctionItemsEditor extends JPanel implements OptionEditor {
                 case COL_BID: bc.enabled   = Boolean.TRUE.equals(value); break;
                 case COL_MAX: bc.maxBid    = toInt(value); break;
                 case COL_INC: bc.increment = toInt(value); break;
+                default: break;
             }
             fireTableCellUpdated(row, col);
         }
