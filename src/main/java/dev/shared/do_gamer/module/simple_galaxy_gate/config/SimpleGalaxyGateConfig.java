@@ -57,7 +57,8 @@ public final class SimpleGalaxyGateConfig {
             html.append(LINE_BREAK);
             html.append(buildList("NPC extra flags:",
                     "Kamikaze: allows Kamikaze for this NPC when the feature is enabled.",
-                    "Stick to Target: to stick to the current target, don't switch away."));
+                    "Stick to Target: to stick to the current target, don't switch away.",
+                    "Finish Off: Switch to <b>Run config</b> below 25% HP until destroyed."));
             html.append(LINE_BREAK);
             html.append(buildList("Gate-specific notes:",
                     "DSE gate requires <b>manual</b> action to select ship and reset waves."));
@@ -201,11 +202,11 @@ public final class SimpleGalaxyGateConfig {
              * Blacklight boosters.
              */
             private static final Map<String, CategoryData> categories = Map.of(
-                    EternalBlacklightGateAPI.Category.DAMAGE_LASER.name(), new CategoryData("Laser Damage", 0),
-                    EternalBlacklightGateAPI.Category.DAMAGE.name(), new CategoryData("Damage", 0),
-                    EternalBlacklightGateAPI.Category.HITCHANCE_LASER.name(), new CategoryData("Laser Hitchance", 0),
+                    EternalBlacklightGateAPI.Category.DAMAGE_LASER.name(), new CategoryData("Laser Damage", 1),
+                    EternalBlacklightGateAPI.Category.DAMAGE.name(), new CategoryData("Damage", 1),
+                    EternalBlacklightGateAPI.Category.HITCHANCE_LASER.name(), new CategoryData("Laser Hitchance", 1),
                     EternalBlacklightGateAPI.Category.HITPOINTS.name(), new CategoryData("Hitpoints", 1),
-                    EternalBlacklightGateAPI.Category.ABILITY_COOLDOWN_TIME.name(), new CategoryData("Cool Down", 1),
+                    EternalBlacklightGateAPI.Category.ABILITY_COOLDOWN_TIME.name(), new CategoryData("Cool Down", 2),
                     EternalBlacklightGateAPI.Category.SHIELD.name(), new CategoryData("Shield", 2),
                     EternalBlacklightGateAPI.Category.SPEED.name(), new CategoryData("Speed", 2),
                     EternalBlacklightGateAPI.Category.DAMAGE_ROCKETS.name(), new CategoryData("Rockets Damage", 2));
