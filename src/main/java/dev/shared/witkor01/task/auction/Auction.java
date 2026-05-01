@@ -345,8 +345,7 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
         @Editor(AuctionItemsEditor.class)
         public Object itemsDisplay = null;
 
-        @SuppressWarnings("java:S1104")
-        transient Auction module;
+        Auction module;
     }
 }
 
