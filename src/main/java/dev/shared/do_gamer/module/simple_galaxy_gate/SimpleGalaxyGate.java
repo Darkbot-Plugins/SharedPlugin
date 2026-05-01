@@ -32,7 +32,6 @@ import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.ExtensionsAPI;
-import eu.darkbot.api.managers.GameScreenAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.api.managers.RepairAPI;
@@ -59,7 +58,6 @@ public final class SimpleGalaxyGate implements Module, Task,
     public final BackpageHelper backpageHelper;
     private final ExtensionsAPI extensionsAPI;
     public final ConfigAPI configApi;
-    public final GameScreenAPI gameScreenApi;
     private final RepairAPI repairAPI;
 
     private static final Pattern GENERAL_MAP_PATTERN = Pattern.compile("^([1-5]-[1-8]|[1-3]BL)$");
@@ -102,7 +100,6 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.backpageHelper = new BackpageHelper(api);
         this.extensionsAPI = api.requireAPI(ExtensionsAPI.class);
         this.configApi = api.requireAPI(ConfigAPI.class);
-        this.gameScreenApi = api.requireAPI(GameScreenAPI.class);
         this.repairAPI = api.requireAPI(RepairAPI.class);
 
         this.lootModule.setCollector(this.collectorModule); // Link collector module
