@@ -9,7 +9,6 @@ import java.util.regex.Pattern;
 
 import com.github.manolo8.darkbot.backpage.entities.ShipInfo;
 import com.github.manolo8.darkbot.config.NpcExtraFlag;
-import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
 import com.github.manolo8.darkbot.core.itf.NpcExtraProvider;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
@@ -33,7 +32,6 @@ import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.ExtensionsAPI;
-import eu.darkbot.api.managers.GameScreenAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.api.managers.RepairAPI;
@@ -59,11 +57,8 @@ public final class SimpleGalaxyGate implements Module, Task,
     public final BotAPI bot;
     public final BackpageHelper backpageHelper;
     private final ExtensionsAPI extensionsAPI;
-    private final ConfigAPI configApi;
-    public final GameScreenAPI gameScreenApi;
+    public final ConfigAPI configApi;
     private final RepairAPI repairAPI;
-
-    public final ConfigSetting<BrowserApi> botBrowserApi;
 
     private static final Pattern GENERAL_MAP_PATTERN = Pattern.compile("^([1-5]-[1-8]|[1-3]BL)$");
     private final Timer stuckInGateTimer = Timer.get();
@@ -105,10 +100,8 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.backpageHelper = new BackpageHelper(api);
         this.extensionsAPI = api.requireAPI(ExtensionsAPI.class);
         this.configApi = api.requireAPI(ConfigAPI.class);
-        this.gameScreenApi = api.requireAPI(GameScreenAPI.class);
         this.repairAPI = api.requireAPI(RepairAPI.class);
 
-        this.botBrowserApi = this.configApi.requireConfig("bot_settings.api_config.browser_api");
         this.lootModule.setCollector(this.collectorModule); // Link collector module
         this.gateBuilder = new GateBuilder(this, api);
         this.petGearHelper = new PetGearHelper(api);

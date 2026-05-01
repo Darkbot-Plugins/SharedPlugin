@@ -8,6 +8,8 @@ import java.util.stream.Collectors;
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import eu.darkbot.api.PluginAPI;
+import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.Relay;
@@ -15,6 +17,7 @@ import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.api.utils.Version;
 
 public final class LowGate extends GateHandler {
+    private ConfigSetting<BrowserApi> botBrowserApi;
 
     private static final double FAR_TARGET_DISTANCE = 1_200.0;
 
@@ -49,6 +52,11 @@ public final class LowGate extends GateHandler {
         // but set offset to 0 just in case
         this.kamikazeOffsetX = 0.0;
         this.kamikazeOffsetY = 0.0;
+    }
+
+    @Override
+    public void onModuleSet(PluginAPI api) {
+        this.botBrowserApi = this.module.configApi.requireConfig("bot_settings.api_config.browser_api");
     }
 
     @Override
@@ -148,7 +156,7 @@ public final class LowGate extends GateHandler {
         this.module.lootModule.moveToTarget(targetRelay);
 
         // Relay attack not supported for Tanos API in bot versions older than 1.131.8
-        if (this.module.botBrowserApi.getValue().equals(BrowserApi.TANOS_API)
+        if (this.botBrowserApi.getValue().equals(BrowserApi.TANOS_API)
                 && this.module.bot.getVersion().isOlderThan(Version.of(1, 131, 8))) {
             return; // Prevent error: Invalid flash method signature! 23(set target)(2626)1016221500
         }
