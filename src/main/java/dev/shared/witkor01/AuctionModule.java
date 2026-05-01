@@ -254,7 +254,7 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
         return s.replaceAll("<[^>]+>", "").replace("&nbsp;", " ").trim();
     }
 
-    public List<AuctionItem> getItems() { return items; }
+    public List<AuctionItem> getItems() { return new ArrayList<>(items); }
 
     public boolean isMyBid(AuctionItem item) {
         long myId = backpage.getUserId();

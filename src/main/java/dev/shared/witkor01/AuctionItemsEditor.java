@@ -67,11 +67,14 @@ public class AuctionItemsEditor extends JPanel implements OptionEditor {
     private class ItemsTableModel extends AbstractTableModel {
         private final List<Object[]> rows = new ArrayList<>();
         private final List<String> lootIds = new ArrayList<>();
+        private AuctionModule.AuctionConfig currentConfig;
 
         void refresh(AuctionModule.AuctionConfig cfg) {
+            currentConfig = cfg;
             rows.clear();
             lootIds.clear();
             if (cfg == null || cfg.module == null) { fireTableDataChanged(); return; }
+
             List<AuctionModule.AuctionItem> items = cfg.module.getItems();
             for (int i = 0; i < items.size(); i++) {
                 AuctionModule.AuctionItem it = items.get(i);
@@ -107,8 +110,9 @@ public class AuctionItemsEditor extends JPanel implements OptionEditor {
         @Override
         public void setValueAt(Object value, int row, int col) {
             if (row >= rows.size() || (col != COL_BID && col != COL_MAX && col != COL_INC)) return;
+            if (currentConfig == null) return;
             String lootId = lootIds.get(row);
-            AuctionModule.ItemBidConfig bc = config.ITEM_CONFIGS
+            AuctionModule.ItemBidConfig bc = currentConfig.ITEM_CONFIGS
                     .computeIfAbsent(lootId, k -> new AuctionModule.ItemBidConfig());
             rows.get(row)[col] = value;
             switch (col) {
