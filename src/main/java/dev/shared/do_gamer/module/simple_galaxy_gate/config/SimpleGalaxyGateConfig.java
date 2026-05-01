@@ -57,7 +57,8 @@ public final class SimpleGalaxyGateConfig {
             html.append(LINE_BREAK);
             html.append(buildList("NPC extra flags:",
                     "Kamikaze: allows Kamikaze for this NPC when the feature is enabled.",
-                    "Stick to Target: to stick to the current target, don't switch away."));
+                    "Stick to Target: to stick to the current target, don't switch away.",
+                    "Finish Off: Switch to <b>Run config</b> below 25% HP until destroyed."));
             html.append(LINE_BREAK);
             html.append(buildList("Gate-specific notes:",
                     "DSE gate requires <b>manual</b> action to select ship and reset waves."));

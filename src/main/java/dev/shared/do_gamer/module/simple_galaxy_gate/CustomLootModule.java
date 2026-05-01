@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
@@ -25,6 +26,7 @@ import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.shared.modules.LootModule;
+import eu.darkbot.util.Timer;
 
 public final class CustomLootModule extends LootModule {
 
@@ -39,6 +41,7 @@ public final class CustomLootModule extends LootModule {
     private GateHandler gateHandler;
     private boolean repair = false;
     private boolean approachingCenter = false;
+    private final Timer finishOffTimer = Timer.get(2_000L);
 
     private final KamikazeHandler kamikazeHandler;
 
@@ -174,7 +177,12 @@ public final class CustomLootModule extends LootModule {
         if (this.repair) {
             return; // Skip while repairing
         }
-        Npc target = (Npc) this.attack.getTargetAs(Npc.class);
+        Npc target = this.attack.getTargetAs(Npc.class);
+        // If finishing off, switch to run mode and skip other logic
+        if (this.isFinishingOff(target)) {
+            this.hero.setRunMode();
+            return;
+        }
         if (target != null && target.isValid()) {
             if (this.hero.distanceTo(target) > this.gateHandler.getFarTargetDistance()) {
                 this.hero.setRoamMode(); // If target is far, switch to roam mode
@@ -184,6 +192,20 @@ public final class CustomLootModule extends LootModule {
         } else {
             this.hero.setRoamMode();
         }
+    }
+
+    /**
+     * Determines if the target NPC should be finished off using Run config.
+     * And keep active for 2 seconds after to collect rewards safely.
+     */
+    private boolean isFinishingOff(Npc target) {
+        if (target != null && target.isValid()
+                && target.getInfo().hasExtraFlag(GateNpcFlag.FINISH_OFF)
+                && target.getHealth().hpPercent() < 0.25) {
+            this.finishOffTimer.activate();
+            return true;
+        }
+        return this.finishOffTimer.isActive();
     }
 
     /**
