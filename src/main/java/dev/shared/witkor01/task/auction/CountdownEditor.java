@@ -1,4 +1,4 @@
-package dev.shared.witkor01;
+package dev.shared.witkor01.task.auction;
 
 import com.github.manolo8.darkbot.config.tree.ConfigField;
 import com.github.manolo8.darkbot.gui.tree.OptionEditor;
@@ -10,7 +10,7 @@ public class CountdownEditor implements OptionEditor {
 
     private final JLabel label;
 
-    public CountdownEditor(AuctionModule.AuctionConfig config) {
+    public CountdownEditor(Auction.AuctionConfig config) {
         this.label = new JLabel("Time until auction end: N/A");
         this.label.setOpaque(false);
         this.label.setFont(this.label.getFont().deriveFont(Font.BOLD));
@@ -21,9 +21,9 @@ public class CountdownEditor implements OptionEditor {
 
     @Override
     public void edit(ConfigField field) {
-        AuctionModule.AuctionConfig cfg = (AuctionModule.AuctionConfig) field.getParent();
-        int endMinute = (cfg != null) ? cfg.AUCTION_END_MINUTE : 35;
-        long secs = AuctionModule.computeSecondsUntilMinute(endMinute);
+        Auction.AuctionConfig cfg = (Auction.AuctionConfig) field.getParent();
+        int endMinute = (cfg != null) ? cfg.auctionEndMinute : 35;
+        long secs = Auction.computeSecondsUntilMinute(endMinute);
         if (secs <= 30) {
             label.setText("Time until auction end: " + secs + " sec  \u26A1");
             label.setForeground(new Color(200, 0, 0));

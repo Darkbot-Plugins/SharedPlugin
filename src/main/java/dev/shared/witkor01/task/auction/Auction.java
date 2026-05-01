@@ -1,4 +1,4 @@
-package dev.shared.witkor01;
+package dev.shared.witkor01.task.auction;
 
 import com.github.manolo8.darkbot.backpage.BackpageManager;
 import com.github.manolo8.darkbot.backpage.auction.AuctionItems;
@@ -28,8 +28,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Feature(name = "Auction Module", description = "Periodically fetches and parses the in-game internal auction page.", enabledByDefault = true)
-public class AuctionModule implements Task, Configurable<AuctionModule.AuctionConfig> {
+@Feature(name = "Auction", description = "Periodically fetches and parses the in-game internal auction page.")
+public class Auction implements Task, Configurable<Auction.AuctionConfig> {
 
     private static final Path LOG_FILE = Paths.get("auction_debug.log");
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -57,7 +57,7 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
 
     private final Set<String> biddedThisRound = new HashSet<>();
 
-    public AuctionModule(BackpageManager backpage) {
+    public Auction(BackpageManager backpage) {
         this.backpage = backpage;
     }
 
@@ -68,7 +68,7 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
     }
 
     public long getSecondsLeft() {
-        int endMinute = (config != null) ? config.AUCTION_END_MINUTE : 35;
+        int endMinute = (config != null) ? config.auctionEndMinute : 35;
         return computeSecondsUntilMinute(endMinute);
     }
 
@@ -89,14 +89,14 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
 
     @Override
     public void onTickTask() {
-        if (config == null || !config.ENABLED) return;
+        if (config == null || !config.enabled) return;
         long now = System.currentTimeMillis();
         long secsLeft = getSecondsLeft();
 
-        boolean hasEnabledBids = config.ITEM_CONFIGS.values().stream().anyMatch(c -> c.enabled);
+        boolean hasEnabledBids = config.itemConfigs.values().stream().anyMatch(c -> c.enabled);
 
         if (hasEnabledBids && secsLeft >= 0) {
-            long target = config.BID_BEFORE_SECONDS;
+            long target = config.bidBeforeSeconds;
             if (secsLeft <= target + 10 && secsLeft >= Math.max(0, target - 10)) {
                 tryPlaceBids(secsLeft);
             }
@@ -104,8 +104,8 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
 
         if (now < nextFetch) return;
 
-        boolean closeToBid = hasEnabledBids && secsLeft >= 0 && secsLeft <= config.BID_BEFORE_SECONDS + 60;
-        long fetchInterval = closeToBid ? 20_000L : Math.max(1, config.FETCH_INTERVAL_MINUTES) * 60_000L;
+        boolean closeToBid = hasEnabledBids && secsLeft >= 0 && secsLeft <= config.bidBeforeSeconds + 60;
+        long fetchInterval = closeToBid ? 20_000L : Math.max(1, config.fetchIntervalMinutes) * 60_000L;
         nextFetch = now + fetchInterval;
 
         try {
@@ -114,7 +114,7 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
             String html = fetchAuctionPage();
             if (html == null || html.isEmpty()) { log("No HTML received."); return; }
             log("Received HTML, length=" + html.length());
-            if (config.LOG_RAW_HTML) { log("---- RAW HTML BEGIN ----"); log(html); log("---- RAW HTML END ----"); }
+            if (config.logRawHtml) { log("---- RAW HTML BEGIN ----"); log(html); log("---- RAW HTML END ----"); }
 
             items.clear();
             parse(html);
@@ -130,36 +130,40 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
 
     private void tryPlaceBids(long secsLeft) {
         for (AuctionItem item : items) {
-            String lootId = item.lootId != null ? item.lootId : item.itemKey;
-            if (biddedThisRound.contains(lootId)) continue;
+            tryBidItem(item, secsLeft);
+        }
+    }
 
-            ItemBidConfig bc = config.ITEM_CONFIGS.get(lootId);
-            if (bc == null || !bc.enabled) continue;
+    private void tryBidItem(AuctionItem item, long secsLeft) {
+        String lootId = item.lootId != null ? item.lootId : item.itemKey;
+        if (biddedThisRound.contains(lootId)) return;
 
-            if (item.highestBidderId != 0 && item.highestBidderId == backpage.getUserId()) {
-                log("SKIP '" + item.name + "': already top bidder");
-                biddedThisRound.add(lootId);
-                continue;
-            }
+        ItemBidConfig bc = config.itemConfigs.get(lootId);
+        if (bc == null || !bc.enabled) return;
 
-            long bidAmount = item.currentBid + bc.increment;
-            if (bidAmount > bc.maxBid) {
-                log("SKIP bid on '" + item.name + "': next bid " + bidAmount + " > maxBid " + bc.maxBid);
-                biddedThisRound.add(lootId);
-                continue;
-            }
+        if (item.highestBidderId != 0 && item.highestBidderId == backpage.getUserId()) {
+            log("SKIP '" + item.name + "': already top bidder");
+            biddedThisRound.add(lootId);
+            return;
+        }
 
-            log("BID on '" + item.name + "' for " + bidAmount
-                    + " credits (currentBid=" + item.currentBid + ", secsLeft=" + secsLeft + ")");
-            try {
-                AuctionItems ai = buildAuctionItems(item);
-                boolean ok = backpage.auctionManager.bidItem(ai, bidAmount);
-                log("BID result for '" + item.name + "': " + (ok ? "SUCCESS" : "FAILED"));
-                if (ok) biddedThisRound.add(lootId);
-            } catch (Exception e) {
-                log("BID exception for '" + item.name + "': " + e);
-                e.printStackTrace();
-            }
+        long bidAmount = item.currentBid + bc.increment;
+        if (bidAmount > bc.maxBid) {
+            log("SKIP bid on '" + item.name + "': next bid " + bidAmount + " > maxBid " + bc.maxBid);
+            biddedThisRound.add(lootId);
+            return;
+        }
+
+        log("BID on '" + item.name + "' for " + bidAmount
+                + " credits (currentBid=" + item.currentBid + ", secsLeft=" + secsLeft + ")");
+        try {
+            AuctionItems ai = buildAuctionItems(item);
+            boolean ok = backpage.auctionManager.bidItem(ai, bidAmount);
+            log("BID result for '" + item.name + "': " + (ok ? "SUCCESS" : "FAILED"));
+            if (ok) biddedThisRound.add(lootId);
+        } catch (Exception e) {
+            log("BID exception for '" + item.name + "': " + e);
+            e.printStackTrace();
         }
     }
 
@@ -181,7 +185,7 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
     }
 
     private void parse(String html) {
-        int endMinute = (config != null) ? config.AUCTION_END_MINUTE : 35;
+        int endMinute = (config != null) ? config.auctionEndMinute : 35;
         long newSecs = computeSecondsUntilMinute(endMinute);
         String timeLeft = formatSeconds(newSecs);
         log("Countdown (minute=" + endMinute + "): " + newSecs + "s (" + timeLeft + ")");
@@ -195,39 +199,47 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
         Matcher rm = ROW_PATTERN.matcher(html);
         int idx = 0;
         while (rm.find()) {
-            String key = rm.group(1);
-            String row = rm.group(2);
-
-            AuctionItem item = new AuctionItem();
-            item.itemKey  = key;
-            item.timeLeft = timeLeft;
-
-            Matcher nm = NAME_PATTERN.matcher(row);
-            if (nm.find()) item.name = stripTags(nm.group(1));
-
-            Matcher tm = TYPE_PATTERN.matcher(row);
-            if (tm.find()) item.type = stripTags(tm.group(1));
-
-            Matcher hm = HIDDEN_INPUT_PATTERN.matcher(row);
-            while (hm.find()) {
-                String id = hm.group(1); String val = hm.group(2);
-                if      (id.endsWith("_bid"))        item.currentBid = parseLong(val);
-                else if (id.endsWith("_buyPrice"))   item.buyPrice   = parseLong(val);
-                else if (id.endsWith("_lootId"))     item.lootId     = val;
-                else if (id.endsWith("_instantBuy")) item.instantBuy = "1".equals(val.trim());
-            }
-
-            Matcher su = SHOW_USER_PATTERN.matcher(row);
-            if (su.find()) {
-                try { item.highestBidderId = Base62.decode(su.group(1)); }
-                catch (Exception ignored) {}
-            }
-
-            log("Row #" + (idx++) + " key=" + key + " name='" + item.name
+            AuctionItem item = parseRow(rm.group(1), rm.group(2), timeLeft);
+            log("Row #" + (idx++) + " key=" + item.itemKey + " name='" + item.name
                     + "' bid=" + item.currentBid + " topBidder=" + item.highestBidderId
                     + " myId=" + backpage.getUserId()
                     + (item.highestBidderId != 0 && item.highestBidderId == backpage.getUserId() ? " [MY BID]" : ""));
             items.add(item);
+        }
+    }
+
+    private AuctionItem parseRow(String key, String row, String timeLeft) {
+        AuctionItem item = new AuctionItem();
+        item.itemKey  = key;
+        item.timeLeft = timeLeft;
+
+        Matcher nm = NAME_PATTERN.matcher(row);
+        if (nm.find()) item.name = stripTags(nm.group(1));
+
+        Matcher tm = TYPE_PATTERN.matcher(row);
+        if (tm.find()) item.type = stripTags(tm.group(1));
+
+        parseHiddenInputs(item, row);
+
+        Matcher su = SHOW_USER_PATTERN.matcher(row);
+        if (su.find()) {
+            try {
+                item.highestBidderId = Base62.decode(su.group(1));
+            } catch (Exception ignored) { // Base62 decode failure — highestBidderId stays 0
+            }
+        }
+        return item;
+    }
+
+    private void parseHiddenInputs(AuctionItem item, String row) {
+        Matcher hm = HIDDEN_INPUT_PATTERN.matcher(row);
+        while (hm.find()) {
+            String id = hm.group(1);
+            String val = hm.group(2);
+            if      (id.endsWith("_bid"))        item.currentBid = parseLong(val);
+            else if (id.endsWith("_buyPrice"))   item.buyPrice   = parseLong(val);
+            else if (id.endsWith("_lootId"))     item.lootId     = val;
+            else if (id.endsWith("_instantBuy")) item.instantBuy = "1".equals(val.trim());
         }
     }
 
@@ -242,12 +254,19 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
     }
 
     private static String formatSeconds(long secs) {
-        long h = secs / 3600, m = (secs % 3600) / 60, s = secs % 60;
+        long h = secs / 3600;
+        long m = (secs % 3600) / 60;
+        long s = secs % 60;
         return h > 0 ? String.format("%d:%02d:%02d", h, m, s) : String.format("%d:%02d", m, s);
     }
 
     private static long parseLong(String s) {
-        try { return Long.parseLong(s.trim()); } catch (NumberFormatException e) { return 0L; }
+        try {
+            return Long.parseLong(s.trim());
+        } catch (NumberFormatException ignored) {
+            // non-numeric HTML field value — treat as 0
+            return 0L;
+        }
     }
 
     private static String stripTags(String s) {
@@ -266,13 +285,20 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
         try (BufferedWriter w = Files.newBufferedWriter(LOG_FILE, StandardCharsets.UTF_8,
                 StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
             w.write(line);
-        } catch (IOException ignored) {}
+        } catch (IOException ignored) { // log write failure — non-critical, silently skip
+        }
     }
 
     public static class AuctionItem {
-        public String itemKey, name, type, lootId, timeLeft;
-        public long currentBid, buyPrice, highestBidderId;
-        public boolean instantBuy;
+        String itemKey;
+        String name;
+        String type;
+        String lootId;
+        String timeLeft;
+        long currentBid;
+        long buyPrice;
+        long highestBidderId;
+        boolean instantBuy;
 
         @Override
         public String toString() {
@@ -284,41 +310,41 @@ public class AuctionModule implements Task, Configurable<AuctionModule.AuctionCo
     }
 
     public static class ItemBidConfig {
-        public boolean enabled   = false;
-        public int     maxBid    = 500_000;
-        public int     increment = 20_000;
+        boolean enabled   = false;
+        int     maxBid    = 500_000;
+        int     increment = 20_000;
     }
 
     public static class AuctionConfig {
         @Option("Time until auction end")
         @Editor(CountdownEditor.class)
-        public transient Object COUNTDOWN_DISPLAY = null;
+        public Object countdownDisplay = null;
 
         @Option("Enabled")
-        public boolean ENABLED = true;
+        public boolean enabled = true;
 
         @Option("Auction end minute (0-59)")
         @Number(min = 0, max = 59)
-        public int AUCTION_END_MINUTE = 35;
+        public int auctionEndMinute = 35;
 
         @Option("Fetch interval (minutes)")
         @Number(min = 1, max = 60)
-        public int FETCH_INTERVAL_MINUTES = 5;
+        public int fetchIntervalMinutes = 5;
 
         @Option("Seconds before end to bid")
         @Number(min = 0, max = 3600)
-        public int BID_BEFORE_SECONDS = 10;
+        public int bidBeforeSeconds = 10;
 
         @Option("Log raw HTML (debug)")
-        public boolean LOG_RAW_HTML = false;
+        public boolean logRawHtml = false;
 
-        public java.util.Map<String, ItemBidConfig> ITEM_CONFIGS = new java.util.HashMap<>();
+        public java.util.Map<String, ItemBidConfig> itemConfigs = new java.util.HashMap<>();
 
         @Option("Available items")
         @Editor(AuctionItemsEditor.class)
-        public transient Object ITEMS_DISPLAY = null;
+        public Object itemsDisplay = null;
 
-        public transient AuctionModule module;
+        public transient Auction module;
     }
 }
 

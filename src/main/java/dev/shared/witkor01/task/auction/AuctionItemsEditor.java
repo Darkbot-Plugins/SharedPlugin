@@ -1,4 +1,4 @@
-package dev.shared.witkor01;
+package dev.shared.witkor01.task.auction;
 
 import com.github.manolo8.darkbot.config.tree.ConfigField;
 import com.github.manolo8.darkbot.gui.tree.OptionEditor;
@@ -19,10 +19,10 @@ public class AuctionItemsEditor extends JPanel implements OptionEditor {
     private static final int COL_MAX = 5;
     private static final int COL_INC = 6;
 
-    private final AuctionModule.AuctionConfig config;
+    private final transient Auction.AuctionConfig config;
     private final ItemsTableModel tableModel;
 
-    public AuctionItemsEditor(AuctionModule.AuctionConfig config) {
+    public AuctionItemsEditor(Auction.AuctionConfig config) {
         super(new BorderLayout(0, 2));
         this.config = config;
         this.tableModel = new ItemsTableModel();
@@ -56,7 +56,7 @@ public class AuctionItemsEditor extends JPanel implements OptionEditor {
 
     @Override
     public void edit(ConfigField field) {
-        AuctionModule.AuctionConfig fresh = (AuctionModule.AuctionConfig) field.getParent();
+        Auction.AuctionConfig fresh = (Auction.AuctionConfig) field.getParent();
         if (fresh != null) tableModel.refresh(fresh);
         else tableModel.refresh(config);
     }
@@ -67,21 +67,21 @@ public class AuctionItemsEditor extends JPanel implements OptionEditor {
     private class ItemsTableModel extends AbstractTableModel {
         private final List<Object[]> rows = new ArrayList<>();
         private final List<String> lootIds = new ArrayList<>();
-        private AuctionModule.AuctionConfig currentConfig;
+        private transient Auction.AuctionConfig currentConfig;
 
-        void refresh(AuctionModule.AuctionConfig cfg) {
+        void refresh(Auction.AuctionConfig cfg) {
             currentConfig = cfg;
             rows.clear();
             lootIds.clear();
             if (cfg == null || cfg.module == null) { fireTableDataChanged(); return; }
 
-            List<AuctionModule.AuctionItem> items = cfg.module.getItems();
+            List<Auction.AuctionItem> items = cfg.module.getItems();
             for (int i = 0; i < items.size(); i++) {
-                AuctionModule.AuctionItem it = items.get(i);
+                Auction.AuctionItem it = items.get(i);
                 String lootId = it.lootId != null ? it.lootId : it.itemKey;
                 lootIds.add(lootId);
-                AuctionModule.ItemBidConfig bc = cfg.ITEM_CONFIGS
-                        .computeIfAbsent(lootId, k -> new AuctionModule.ItemBidConfig());
+                Auction.ItemBidConfig bc = cfg.itemConfigs
+                        .computeIfAbsent(lootId, k -> new Auction.ItemBidConfig());
                 rows.add(new Object[]{
                         i + 1, it.name, it.type, it.currentBid,
                         bc.enabled, bc.maxBid, bc.increment
@@ -112,8 +112,8 @@ public class AuctionItemsEditor extends JPanel implements OptionEditor {
             if (row >= rows.size() || (col != COL_BID && col != COL_MAX && col != COL_INC)) return;
             if (currentConfig == null) return;
             String lootId = lootIds.get(row);
-            AuctionModule.ItemBidConfig bc = currentConfig.ITEM_CONFIGS
-                    .computeIfAbsent(lootId, k -> new AuctionModule.ItemBidConfig());
+            Auction.ItemBidConfig bc = currentConfig.itemConfigs
+                    .computeIfAbsent(lootId, k -> new Auction.ItemBidConfig());
             rows.get(row)[col] = value;
             switch (col) {
                 case COL_BID: bc.enabled   = Boolean.TRUE.equals(value); break;
