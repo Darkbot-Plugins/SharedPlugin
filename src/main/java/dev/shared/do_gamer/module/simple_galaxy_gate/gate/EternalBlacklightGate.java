@@ -68,7 +68,7 @@ public final class EternalBlacklightGate extends GateHandler {
                 this.useCpu();
             }
         } else {
-            if (!this.hasCpu()) {
+            if (!this.hasCpu() && this.ebgApi.getCurrentWave() == 0) {
                 if (this.module.moveToRefinery()) {
                     StateStore.request(StateStore.State.MOVE_TO_SAFE_POSITION);
                 } else {
