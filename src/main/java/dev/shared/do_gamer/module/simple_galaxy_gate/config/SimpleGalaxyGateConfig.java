@@ -8,13 +8,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import javax.swing.AbstractCellEditor;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
+import javax.swing.JSpinner;
 import javax.swing.JTable;
 import javax.swing.RowSorter;
 import javax.swing.SortOrder;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableModel;
 import javax.swing.table.TableRowSorter;
 
@@ -189,12 +193,17 @@ public final class SimpleGalaxyGateConfig {
             }
 
             public static class BoosterPriority {
+                public static final int MIN = 1;
+                public static final int MAX = 10;
+                public static final int STEP = 1;
+
                 public BoosterPriority(int priority) {
                     this.priority = priority;
                 }
 
                 @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.boosters.priority")
-                public int priority = 0;
+                @Number(min = MIN, max = MAX, step = STEP)
+                public int priority = 1;
             }
 
             /**
@@ -202,14 +211,14 @@ public final class SimpleGalaxyGateConfig {
              * Blacklight boosters.
              */
             private static final Map<String, CategoryData> categories = Map.of(
-                    EternalBlacklightGateAPI.Category.DAMAGE_LASER.name(), new CategoryData("Laser Damage", 1),
                     EternalBlacklightGateAPI.Category.DAMAGE.name(), new CategoryData("Damage", 1),
+                    EternalBlacklightGateAPI.Category.DAMAGE_LASER.name(), new CategoryData("Laser Damage", 1),
                     EternalBlacklightGateAPI.Category.HITCHANCE_LASER.name(), new CategoryData("Laser Hitchance", 1),
-                    EternalBlacklightGateAPI.Category.HITPOINTS.name(), new CategoryData("Hitpoints", 1),
+                    EternalBlacklightGateAPI.Category.HITPOINTS.name(), new CategoryData("Hitpoints", 2),
                     EternalBlacklightGateAPI.Category.ABILITY_COOLDOWN_TIME.name(), new CategoryData("Cool Down", 2),
-                    EternalBlacklightGateAPI.Category.SHIELD.name(), new CategoryData("Shield", 2),
-                    EternalBlacklightGateAPI.Category.SPEED.name(), new CategoryData("Speed", 2),
-                    EternalBlacklightGateAPI.Category.DAMAGE_ROCKETS.name(), new CategoryData("Rockets Damage", 2));
+                    EternalBlacklightGateAPI.Category.DAMAGE_ROCKETS.name(), new CategoryData("Rockets Damage", 2),
+                    EternalBlacklightGateAPI.Category.SHIELD.name(), new CategoryData("Shield", 3),
+                    EternalBlacklightGateAPI.Category.SPEED.name(), new CategoryData("Speed", 3));
 
             /**
              * Helper class to store label and default priority for each booster category.
@@ -257,6 +266,9 @@ public final class SimpleGalaxyGateConfig {
                     };
                     table.getColumnModel().getColumn(0).setCellRenderer(categoryRenderer);
 
+                    // Spinner cell editor to enforce min=1, max=10
+                    table.getColumnModel().getColumn(1).setCellEditor(new SpinnerCellEditor());
+
                     // Shrink the table size
                     scrollPane.setPreferredSize(new java.awt.Dimension(250, 200));
                 }
@@ -271,6 +283,33 @@ public final class SimpleGalaxyGateConfig {
                     String category = String.valueOf(value);
                     BoostersTable.CategoryData data = BoostersTable.categories.get(category);
                     return data != null ? data.label : category;
+                }
+
+                private static class SpinnerCellEditor extends AbstractCellEditor implements TableCellEditor {
+                    private final JSpinner spinner = new JSpinner(
+                            new SpinnerNumberModel(1, BoosterPriority.MIN, BoosterPriority.MAX, BoosterPriority.STEP));
+
+                    @Override
+                    public java.awt.Component getTableCellEditorComponent(JTable table, Object value,
+                            boolean isSelected, int row, int column) {
+                        spinner.setValue(Math.max(BoosterPriority.MIN, Math.min(BoosterPriority.MAX, (int) value)));
+                        return spinner;
+                    }
+
+                    @Override
+                    public Object getCellEditorValue() {
+                        return spinner.getValue();
+                    }
+
+                    @Override
+                    public boolean stopCellEditing() {
+                        try {
+                            spinner.commitEdit();
+                        } catch (java.text.ParseException e) {
+                            // keep current value
+                        }
+                        return super.stopCellEditing();
+                    }
                 }
             }
 

@@ -1,6 +1,6 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
-import java.util.Comparator;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -162,9 +162,8 @@ public final class EternalBlacklightGate extends GateHandler {
     }
 
     /**
-     * Selects the best available booster based on configured priorities.
-     * Options are sorted by percentage descending; the one whose category has
-     * the lowest configured priority value is preferred.
+     * Selects the booster with the highest score (percentage / priority).
+     * Lower priority value and higher percentage both increase the score.
      */
     private void selectBestBooster() {
         if (this.ebgApi.getBoosterPoints() <= 0) {
@@ -176,15 +175,30 @@ public final class EternalBlacklightGate extends GateHandler {
         if (options == null || options.isEmpty()) {
             return;
         }
-        EternalBlacklightGateAPI.Booster best = options.stream()
-                .min(Comparator.<EternalBlacklightGateAPI.Booster>comparingInt(b -> {
-                    BoostersTable.BoosterPriority p = boosters.get(b.getCategoryType().name());
-                    return p != null ? p.priority : 0;
-                }).thenComparing(Comparator.comparingInt(EternalBlacklightGateAPI.Booster::getPercentage).reversed()))
-                .orElse(null);
-        if (best != null) {
-            this.ebgApi.selectBooster(best);
+
+        List<EternalBlacklightGateAPI.Booster> candidates = new ArrayList<>();
+        List<Double> weights = new ArrayList<>();
+
+        for (EternalBlacklightGateAPI.Booster b : options) {
+            BoostersTable.BoosterPriority p = boosters.get(b.getCategoryType().name());
+            int min = BoostersTable.BoosterPriority.MIN;
+            int priority = Math.max(min, (p != null) ? p.priority : min);
+            double weight = (double) b.getPercentage() / priority;
+            candidates.add(b);
+            weights.add(weight);
         }
+
+        if (candidates.isEmpty()) {
+            return;
+        }
+
+        int selected = 0;
+        for (int i = 1; i < candidates.size(); i++) {
+            if (weights.get(i) > weights.get(selected)) {
+                selected = i;
+            }
+        }
+        this.ebgApi.selectBooster(candidates.get(selected));
     }
 
     @Override
