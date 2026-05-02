@@ -290,7 +290,7 @@ public final class SimpleGalaxyGateConfig {
 
                 private static class SpinnerCellEditor extends AbstractCellEditor implements TableCellEditor {
                     private final JSpinner spinner = new JSpinner(
-                            new SpinnerNumberModel(0, BoosterPriority.MIN, BoosterPriority.MAX, BoosterPriority.STEP));
+                            new SpinnerNumberModel(BoosterPriority.MIN, BoosterPriority.MIN, BoosterPriority.MAX, BoosterPriority.STEP));
 
                     @Override
                     public java.awt.Component getTableCellEditorComponent(JTable table, Object value,
