@@ -717,11 +717,8 @@ public final class SimpleGalaxyGate implements Module, Task,
                 }
                 this.gateVisited = false; // Reset for next gate
                 this.gateCompletionDelayTimer.disarm();
-                this.statusDetails = null; // Clear delay status
-            } else {
-                StateStore.request(StateStore.State.WAITING);
-                this.statusDetails = "in completion delay..."; // Show delay status
             }
+            StateStore.request(StateStore.State.WAITING);
             return true; // In completion delay
         }
         return false;
