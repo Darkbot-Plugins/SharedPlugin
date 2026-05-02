@@ -180,6 +180,9 @@ public final class SimpleGalaxyGateConfig {
         public BoostersTable boosters = new BoostersTable();
 
         public static class BoostersTable {
+            @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.boosters.auto_select")
+            public boolean autoSelect = true;
+
             @Option("")
             @Table(controls = {}, decorator = BoostersTable.Decorator.class)
             public Map<String, BoosterPriority> table = initBoosters();
@@ -193,7 +196,7 @@ public final class SimpleGalaxyGateConfig {
             }
 
             public static class BoosterPriority {
-                public static final int MIN = 1;
+                public static final int MIN = 0;
                 public static final int MAX = 10;
                 public static final int STEP = 1;
 
@@ -203,7 +206,7 @@ public final class SimpleGalaxyGateConfig {
 
                 @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.boosters.priority")
                 @Number(min = MIN, max = MAX, step = STEP)
-                public int priority = 1;
+                public int priority = 0;
             }
 
             /**
@@ -211,14 +214,14 @@ public final class SimpleGalaxyGateConfig {
              * Blacklight boosters.
              */
             private static final Map<String, CategoryData> categories = Map.of(
-                    EternalBlacklightGateAPI.Category.DAMAGE.name(), new CategoryData("Damage", 1),
-                    EternalBlacklightGateAPI.Category.DAMAGE_LASER.name(), new CategoryData("Laser Damage", 1),
-                    EternalBlacklightGateAPI.Category.HITCHANCE_LASER.name(), new CategoryData("Laser Hitchance", 1),
-                    EternalBlacklightGateAPI.Category.HITPOINTS.name(), new CategoryData("Hitpoints", 2),
-                    EternalBlacklightGateAPI.Category.ABILITY_COOLDOWN_TIME.name(), new CategoryData("Cool Down", 2),
-                    EternalBlacklightGateAPI.Category.DAMAGE_ROCKETS.name(), new CategoryData("Rockets Damage", 2),
-                    EternalBlacklightGateAPI.Category.SHIELD.name(), new CategoryData("Shield", 3),
-                    EternalBlacklightGateAPI.Category.SPEED.name(), new CategoryData("Speed", 3));
+                    EternalBlacklightGateAPI.Category.DAMAGE.name(), new CategoryData("Damage", 0),
+                    EternalBlacklightGateAPI.Category.DAMAGE_LASER.name(), new CategoryData("Laser Damage", 0),
+                    EternalBlacklightGateAPI.Category.HITCHANCE_LASER.name(), new CategoryData("Laser Hitchance", 0),
+                    EternalBlacklightGateAPI.Category.HITPOINTS.name(), new CategoryData("Hitpoints", 1),
+                    EternalBlacklightGateAPI.Category.ABILITY_COOLDOWN_TIME.name(), new CategoryData("Cool Down", 1),
+                    EternalBlacklightGateAPI.Category.DAMAGE_ROCKETS.name(), new CategoryData("Rockets Damage", 1),
+                    EternalBlacklightGateAPI.Category.SHIELD.name(), new CategoryData("Shield", 2),
+                    EternalBlacklightGateAPI.Category.SPEED.name(), new CategoryData("Speed", 2));
 
             /**
              * Helper class to store label and default priority for each booster category.
@@ -287,7 +290,7 @@ public final class SimpleGalaxyGateConfig {
 
                 private static class SpinnerCellEditor extends AbstractCellEditor implements TableCellEditor {
                     private final JSpinner spinner = new JSpinner(
-                            new SpinnerNumberModel(1, BoosterPriority.MIN, BoosterPriority.MAX, BoosterPriority.STEP));
+                            new SpinnerNumberModel(0, BoosterPriority.MIN, BoosterPriority.MAX, BoosterPriority.STEP));
 
                     @Override
                     public java.awt.Component getTableCellEditorComponent(JTable table, Object value,
