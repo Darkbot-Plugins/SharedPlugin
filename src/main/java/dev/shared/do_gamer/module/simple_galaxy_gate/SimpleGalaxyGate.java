@@ -707,6 +707,7 @@ public final class SimpleGalaxyGate implements Module, Task,
             // Activate completion delay timer
             if (!this.gateCompletionDelayTimer.isArmed()) {
                 this.gateCompletionDelayTimer.activate();
+                return true; // Just started completion delay
             }
             if (this.gateCompletionDelayTimer.isInactive()) {
                 if (this.showCompletedGates) {

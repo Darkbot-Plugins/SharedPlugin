@@ -152,8 +152,7 @@ public final class CustomLootModule extends LootModule {
      */
     private boolean shouldCollectWhileAttacking(Npc npc, Box box) {
         double radius = this.collectRadius.getValue();
-        return npc != null && !this.shouldIgnoreBox(npc, box)
-                && (box.distanceTo(this.hero) <= radius || this.isFarTarget(npc));
+        return npc != null && !this.shouldIgnoreBox(npc, box) && box.distanceTo(this.hero) <= radius;
     }
 
     /**

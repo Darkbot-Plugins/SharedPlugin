@@ -68,7 +68,7 @@ public final class EternalBlacklightGate extends GateHandler {
                 this.useCpu();
             }
         } else {
-            if (!this.hasCpu()) {
+            if (!this.hasCpu() && this.ebgApi.getCurrentWave() == 0) {
                 if (this.module.moveToRefinery()) {
                     StateStore.request(StateStore.State.MOVE_TO_SAFE_POSITION);
                 } else {
@@ -167,6 +167,9 @@ public final class EternalBlacklightGate extends GateHandler {
      * the lowest configured priority value is preferred.
      */
     private void selectBestBooster() {
+        if (!this.module.getConfig().eternalBlacklight.boosters.autoSelect) {
+            return; // Auto-select is disabled
+        }
         if (this.ebgApi.getBoosterPoints() <= 0) {
             this.getVisibleGui(GUI).ifPresent(gui -> gui.setVisible(false));
             return;

@@ -103,8 +103,8 @@ public final class GateBuilder {
         this.galaxyInfoFailCount = 0; // Reset fail count on success
 
         if (this.isGateBuiltOnMap(info, targetGate)) {
-            this.state = BuildState.END;
-            return true; // Gate already built
+            this.handleBuiltGateState();
+            return true;
         }
 
         GalaxyGate gateToPlace = this.findGateToPlace(info, targetGate);
@@ -328,6 +328,22 @@ public final class GateBuilder {
             return targetGate;
         }
         return null;
+    }
+
+    /**
+     * Handles the case where the gate is already built.
+     */
+    private void handleBuiltGateState() {
+        // If gate is built but not on map, refresh to update the state
+        if (!this.module.isGateAvailable(this.module.getConfig().gateId)) {
+            System.out.println("Gate was built and placed, but it's not displays on the map. Refresh the game...");
+            this.module.bot.handleRefresh();
+            this.reset();
+            return;
+        }
+
+        // Gate already built
+        this.state = BuildState.END;
     }
 
     /**
