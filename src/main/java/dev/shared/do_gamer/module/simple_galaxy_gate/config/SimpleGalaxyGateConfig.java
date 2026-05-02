@@ -269,7 +269,7 @@ public final class SimpleGalaxyGateConfig {
                     };
                     table.getColumnModel().getColumn(0).setCellRenderer(categoryRenderer);
 
-                    // Spinner cell editor to enforce min=1, max=10
+                    // Spinner cell editor to enforce numeric input and min/max constraints
                     table.getColumnModel().getColumn(1).setCellEditor(new SpinnerCellEditor());
 
                     // Shrink the table size
@@ -295,7 +295,12 @@ public final class SimpleGalaxyGateConfig {
                     @Override
                     public java.awt.Component getTableCellEditorComponent(JTable table, Object value,
                             boolean isSelected, int row, int column) {
-                        spinner.setValue(Math.max(BoosterPriority.MIN, Math.min(BoosterPriority.MAX, (int) value)));
+                        int priority = BoosterPriority.MIN;
+                        if (value instanceof java.lang.Number) {
+                            priority = ((java.lang.Number) value).intValue();
+                        }
+                        priority = Math.max(BoosterPriority.MIN, Math.min(BoosterPriority.MAX, priority));
+                        spinner.setValue(priority);
                         return spinner;
                     }
 
