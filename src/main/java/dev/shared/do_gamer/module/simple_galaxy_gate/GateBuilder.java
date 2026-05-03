@@ -335,7 +335,7 @@ public final class GateBuilder {
      */
     private void handleBuiltGateState() {
         // If gate is built but not on map, refresh to update the state
-        if (!this.module.isGateAvailable(this.module.getConfig().gateId)) {
+        if (this.module.getMapForTravel() == null) {
             System.out.println("Gate was built and placed, but it's not displays on the map. Refresh the game...");
             this.module.bot.handleRefresh();
             this.reset();
