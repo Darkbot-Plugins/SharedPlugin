@@ -1,5 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
+import java.util.Objects;
+
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
@@ -96,12 +98,22 @@ public final class DseGate extends GateHandler {
     }
 
     /**
+     * Checks if we should stick to the current target
+     */
+    private boolean shouldStickToCurrentTarget(Npc npc) {
+        Npc currentTarget = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
+        return Objects.equals(npc, currentTarget) || this.isStickToTarget(currentTarget);
+    }
+
+    /**
      * Checks whether a guardable NPC is currently under attack by another NPC.
      */
     private boolean isGuardableNpcAttackedByOtherNpc(Npc npc) {
         Npc guardableNpc = this.getGuardableNpc();
-        return guardableNpc != null
-                && !npc.isAttacking(guardableNpc)
+        if (guardableNpc == null || this.shouldStickToCurrentTarget(npc)) {
+            return false; // No guardable NPC or sticking to current target, ignore this check
+        }
+        return !npc.isAttacking(guardableNpc)
                 && this.module.lootModule.getNpcs().stream()
                         .anyMatch(n -> !this.isGuardableNpc(n) && n.isAttacking(guardableNpc));
     }
@@ -110,7 +122,10 @@ public final class DseGate extends GateHandler {
      * Checks if there is a nearby Missile-Storm NPC.
      */
     private boolean hasNearbyMissileStorm(Npc npc) {
-        return !this.npcHasMissileStormName(npc) && this.module.lootModule.getNpcs().stream()
+        if (!this.npcHasMissileStormName(npc) || this.shouldStickToCurrentTarget(npc)) {
+            return false; // NPC is not Missile-Storm or sticking to current target, ignore this check
+        }
+        return this.module.lootModule.getNpcs().stream()
                 .anyMatch(n -> this.npcHasMissileStormName(n) && n.distanceTo(this.getNpcSearchLocation()) < 2_000.0);
     }
 
