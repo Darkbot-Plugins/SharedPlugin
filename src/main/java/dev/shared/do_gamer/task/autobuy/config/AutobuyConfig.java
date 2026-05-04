@@ -28,15 +28,20 @@ public final class AutobuyConfig {
         public static final String DMG_B01 = "DMG-B01";
         public static final String DMG_B02 = "DMG-B02";
         public static final String DMG_H01 = "DMG-H01";
+        public static final String DMG_PVP01 = "DMG-PVP01";
         public static final String HP_B01 = "HP-B01";
         public static final String HP_B02 = "HP-B02";
         public static final String SHD_B01 = "SHD-B01";
         public static final String SHD_B02 = "SHD-B02";
+        public static final String EP_B01 = "EP-B01";
+        public static final String EP_B02 = "EP-B02";
+        public static final String HON_B01 = "HON-B01";
+        public static final String HON_B02 = "HON-B02";
 
         public BoostersConfig() {
             this.itemIds = new String[] {
-                    CD_B01, CD_B02, DMG_B01, DMG_B02, DMG_H01,
-                    HP_B01, HP_B02, SHD_B01, SHD_B02
+                    CD_B01, CD_B02, DMG_B01, DMG_B02, DMG_H01, DMG_PVP01,
+                    HP_B01, HP_B02, SHD_B01, SHD_B02, EP_B01, EP_B02, HON_B01, HON_B02
             };
         }
 
@@ -76,6 +81,9 @@ public final class AutobuyConfig {
         @Option("do_gamer.autobuy.booster.DMG_H01")
         public boolean dmgh01 = false;
 
+        @Option("do_gamer.autobuy.booster.DMG_PVP01")
+        public boolean dmgpvp01 = false;
+
         @Option("do_gamer.autobuy.booster.HP_B01")
         public boolean hpb01 = false;
 
@@ -87,6 +95,18 @@ public final class AutobuyConfig {
 
         @Option("do_gamer.autobuy.booster.SHD_B02")
         public boolean shdb02 = false;
+
+        @Option("do_gamer.autobuy.booster.EP_B01")
+        public boolean epb01 = false;
+
+        @Option("do_gamer.autobuy.booster.EP_B02")
+        public boolean epb02 = false;
+
+        @Option("do_gamer.autobuy.booster.HON_B01")
+        public boolean honb01 = false;
+
+        @Option("do_gamer.autobuy.booster.HON_B02")
+        public boolean honb02 = false;
 
         public boolean isEnabled(String code) {
             if (code == null) {
@@ -104,6 +124,8 @@ public final class AutobuyConfig {
                     return this.dmgb02;
                 case DMG_H01:
                     return this.dmgh01;
+                case DMG_PVP01:
+                    return this.dmgpvp01;
                 case HP_B01:
                     return this.hpb01;
                 case HP_B02:
@@ -112,6 +134,14 @@ public final class AutobuyConfig {
                     return this.shdb01;
                 case SHD_B02:
                     return this.shdb02;
+                case EP_B01:
+                    return this.epb01;
+                case EP_B02:
+                    return this.epb02;
+                case HON_B01:
+                    return this.honb01;
+                case HON_B02:
+                    return this.honb02;
                 default:
                     return false;
             }

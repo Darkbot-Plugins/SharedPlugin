@@ -565,7 +565,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     /**
      * Gets the appropriate map for traveling to the Galaxy Gate.
      */
-    private GameMap getMapForTravel() {
+    public GameMap getMapForTravel() {
         Integer gateId = this.config.gateId;
         if (gateId == null) {
             return null;
@@ -707,6 +707,7 @@ public final class SimpleGalaxyGate implements Module, Task,
             // Activate completion delay timer
             if (!this.gateCompletionDelayTimer.isArmed()) {
                 this.gateCompletionDelayTimer.activate();
+                return true; // Just started completion delay
             }
             if (this.gateCompletionDelayTimer.isInactive()) {
                 if (this.showCompletedGates) {
