@@ -9,13 +9,7 @@ import com.github.manolo8.darkbot.utils.Base62;
 import eu.darkbot.api.config.annotations.Number;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.extensions.Task;
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -28,7 +22,8 @@ import java.util.regex.Pattern;
 @Feature(name = "Auction", description = "Periodically fetches and parses the in-game internal auction page.")
 public class Auction implements Task, Configurable<Auction.AuctionConfig> {
 
-    private static final Path LOG_FILE = Paths.get("auction_debug.log");
+    static final int DEFAULT_AUCTION_END_MINUTE = 35;
+
     private static final DateTimeFormatter TS = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final Pattern ROW_PATTERN = Pattern.compile(
@@ -65,7 +60,7 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
     }
 
     public long getSecondsLeft() {
-        int endMinute = (config != null) ? config.auctionEndMinute : 35;
+        int endMinute = (config != null) ? config.auctionEndMinute : DEFAULT_AUCTION_END_MINUTE;
         return computeSecondsUntilMinute(endMinute);
     }
 
@@ -111,10 +106,13 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
             String html = fetchAuctionPage();
             if (html == null || html.isEmpty()) { log("No HTML received."); return; }
             log("Received HTML, length=" + html.length());
-            if (config.logRawHtml) { log("---- RAW HTML BEGIN ----"); log(html); log("---- RAW HTML END ----"); }
 
             items.clear();
             parse(html);
+
+            if (items.isEmpty()) {
+                log("WARN: HTML received (" + html.length() + " bytes) but no auction rows parsed, markup may have changed");
+            }
 
             log("Parsed " + items.size() + " auction item(s). secsLeft=" + getSecondsLeft());
             for (AuctionItem it : items) log("  - " + it);
@@ -181,7 +179,7 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
     }
 
     private void parse(String html) {
-        int endMinute = (config != null) ? config.auctionEndMinute : 35;
+        int endMinute = (config != null) ? config.auctionEndMinute : DEFAULT_AUCTION_END_MINUTE;
         long newSecs = computeSecondsUntilMinute(endMinute);
         String timeLeft = formatSeconds(newSecs);
         log("Countdown (minute=" + endMinute + "): " + newSecs + "s (" + timeLeft + ")");
@@ -201,6 +199,14 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
                     + " myId=" + backpage.getUserId()
                     + (item.highestBidderId != 0 && item.highestBidderId == backpage.getUserId() ? " [MY BID]" : ""));
             items.add(item);
+        }
+
+        if (!biddedThisRound.isEmpty() && !items.isEmpty()) {
+            Set<String> currentIds = new HashSet<>();
+            for (AuctionItem it : items) currentIds.add(it.lootId != null ? it.lootId : it.itemKey);
+            if (biddedThisRound.removeIf(id -> !currentIds.contains(id))) {
+                log("Pruned stale entries from bid history (round rotation)");
+            }
         }
     }
 
@@ -239,15 +245,17 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
         }
     }
 
-    public static long parseSecondsLeft(String timeLeft) {
+    static long parseSecondsLeft(String timeLeft) {
         if (timeLeft == null || timeLeft.isEmpty()) return -1;
         String[] p = timeLeft.split(":");
+        if (p.length < 2 || p.length > 3) return -1;
         try {
-            if (p.length == 2) return Long.parseLong(p[0].trim()) * 60 + Long.parseLong(p[1].trim());
-            if (p.length == 3) return Long.parseLong(p[0].trim()) * 3600 + Long.parseLong(p[1].trim()) * 60 + Long.parseLong(p[2].trim());
+            long total = 0;
+            for (String part : p) total = total * 60 + Long.parseLong(part.trim());
+            return total;
         } catch (NumberFormatException ignored) { // non-numeric time string — return -1
+            return -1;
         }
-        return -1;
     }
 
     private static String formatSeconds(long secs) {
@@ -278,12 +286,7 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
     }
 
     private static synchronized void log(String msg) {
-        String line = "[" + LocalDateTime.now().format(TS) + "] " + msg + System.lineSeparator();
-        try (BufferedWriter w = Files.newBufferedWriter(LOG_FILE, StandardCharsets.UTF_8,
-                StandardOpenOption.CREATE, StandardOpenOption.APPEND)) {
-            w.write(line);
-        } catch (IOException ignored) { // log write failure — non-critical, silently skip
-        }
+        System.out.println("[Auction " + LocalDateTime.now().format(TS) + "] " + msg);
     }
 
     public static class AuctionItem {
@@ -322,7 +325,7 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
 
         @Option("Auction end minute (0-59)")
         @Number(min = 0, max = 59)
-        public int auctionEndMinute = 35;
+        public int auctionEndMinute = DEFAULT_AUCTION_END_MINUTE;
 
         @Option("Fetch interval (minutes)")
         @Number(min = 1, max = 60)
@@ -332,10 +335,8 @@ public class Auction implements Task, Configurable<Auction.AuctionConfig> {
         @Number(min = 0, max = 3600)
         public int bidBeforeSeconds = 10;
 
-        @Option("Log raw HTML (debug)")
-        public boolean logRawHtml = false;
-
         java.util.Map<String, ItemBidConfig> itemConfigs = new java.util.HashMap<>();
+
 
         @Option("Available items")
         @Editor(AuctionItemsEditor.class)
