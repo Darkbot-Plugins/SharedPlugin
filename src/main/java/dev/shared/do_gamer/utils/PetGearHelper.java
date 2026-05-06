@@ -21,7 +21,7 @@ public class PetGearHelper {
     private final PetAPI pet;
     private final ConfigAPI configApi;
     private final SettingsProxy settingsProxy;
-    private final Timer resetTimer = Timer.get(2_000L);
+    private final Timer resetTimer = Timer.get(5_000L);
 
     // List of gears that restrict the use of other gears when active
     private static final List<PetGear> RESTRICTED_GEARS = List.of(
