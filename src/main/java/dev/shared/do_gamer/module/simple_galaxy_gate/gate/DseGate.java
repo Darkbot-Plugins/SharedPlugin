@@ -146,12 +146,22 @@ public final class DseGate extends GateHandler {
 
         // If we have a guardable NPC and it's the only one left, follow it.
         Npc guardableNpc = this.getGuardableNpc();
-        if (guardableNpc != null && this.module.lootModule.getNpcs().size() == 1) {
+        if (guardableNpc != null && this.npcCount() == 0) {
             StateStore.request(StateStore.State.GUARDING);
             this.module.lootModule.moveToTarget(guardableNpc);
             return true;
         }
         return false; // Allow default logic to take over
+    }
+
+    /**
+     * Counts the number of NPCs that are not guardable one
+     * and can be moved to (not blocked by barriers).
+     */
+    private long npcCount() {
+        return this.module.lootModule.getNpcs().stream()
+                .filter(n -> !this.isGuardableNpc(n) && this.module.movement.canMove(n))
+                .count();
     }
 
     @Override
