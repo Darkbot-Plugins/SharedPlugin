@@ -12,6 +12,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConf
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
+import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.items.ItemFlag;
 import eu.darkbot.api.game.items.SelectableItem;
 import eu.darkbot.api.managers.EternalBlacklightGateAPI;
@@ -22,6 +23,7 @@ public final class EternalBlacklightGate extends GateHandler {
     private HeroItemsAPI items;
 
     private boolean autoStart = false;
+    private boolean exitRequested = false;
     private static final String GUI = "eternal_blacklight";
     private static final int GATE_CYCLE_WAVES = 51;
     private static final int UBER_KRISTALLON_WAVE_IN_CYCLE = 47;
@@ -62,6 +64,16 @@ public final class EternalBlacklightGate extends GateHandler {
 
     @Override
     public boolean prepareTickModule() {
+        // If we just exited (exitOnWave reached), pause the bot.
+        // prepareTickModule is only called when OUTSIDE the gate map by
+        // SimpleGalaxyGate, so this is where we catch the post-jump state.
+        if (this.exitRequested && !this.module.hero.getMap().isGG()) {
+            this.module.bot.setRunning(false);
+            this.statusDetails = "Exit reached on configured wave — bot paused";
+            this.exitRequested = false; // reset so resuming the bot does not re-pause
+            return true;
+        }
+
         Integer gateId = this.module.getConfig().gateId;
         if (Maps.isGateAccessibleFromCurrentMap(gateId, this.module.starSystem)) {
             if (!this.module.isGateAvailable(gateId) && this.hasCpu()) {
@@ -101,9 +113,66 @@ public final class EternalBlacklightGate extends GateHandler {
         if (this.isSuicideWaveReached() && this.pauseForSuicideWave()) {
             return true;
         }
+        if (this.handleExitOnWave()) {
+            return true;
+        }
         this.updateUberKristallonCenter();
         this.showGateWave();
         return false;
+    }
+
+    /**
+     * Checks whether the configured exit wave has been reached. If so and
+     * an exit portal is visible, jump through it. Lets the bot farm up to
+     * wave X then cleanly leave the gate.
+     *
+     * @return true if we triggered the exit (caller must return)
+     */
+    private boolean handleExitOnWave() {
+        int exitWave = this.module.getConfig().eternalBlacklight.exitOnWave;
+        if (exitWave <= 0) return false;
+
+        if (this.ebgApi.getCurrentWave() >= exitWave && !this.exitRequested) {
+            this.exitRequested = true;
+        }
+        if (!this.exitRequested) return false;
+
+        // As soon as an exit portal is visible, take it.
+        Portal exit = this.findExitPortal();
+        if (exit != null) {
+            this.module.jumper.travelAndJump(exit);
+            this.statusDetails = "Exit on wave " + exitWave + " — jumping to home map";
+            return true;
+        }
+        // No exit portal visible yet: keep waiting.
+        this.statusDetails = "Exit on wave " + exitWave + " — waiting for home portal";
+        return false;
+    }
+
+    /**
+     * Looks up the gate's exit portal (Home Map).
+     * In Eternal Blacklight the API does not expose a targetMap for the
+     * visible portals, so we distinguish them by typeId:
+     *   - typeId 1  = standard portal to a map (= gate exit)
+     *   - typeId 54 = next-wave portal (to be avoided)
+     * If a targetMap is exposed and is non-GG we prefer it (covers future
+     * API versions where the info might become available).
+     */
+    private static final int EXIT_PORTAL_TYPE_ID = 1;
+
+    private Portal findExitPortal() {
+        return this.module.entities.getPortals().stream()
+                .filter(Portal::isValid)
+                .filter(p -> {
+                    // If targetMap is known: must be non-GG.
+                    if (p.getTargetMap().isPresent()) {
+                        return !p.getTargetMap().get().isGG();
+                    }
+                    // Otherwise rely on typeId.
+                    return p.getTypeId() == EXIT_PORTAL_TYPE_ID;
+                })
+                .min(Comparator.comparingDouble(p -> p.distanceTo(this.module.hero)))
+                .orElse(null);
     }
 
     /**
@@ -152,6 +221,11 @@ public final class EternalBlacklightGate extends GateHandler {
 
     @Override
     public boolean collectTickModule() {
+        // Intercept BEFORE the parent's jumpToNextMap() — otherwise
+        // findNextPortal() explicitly picks the non-Home portal (= wave portal).
+        if (this.handleExitOnWave()) {
+            return true; // prevents the default jumpToNextMap
+        }
         if (StateStore.current() == StateStore.State.COLLECTING) {
             this.showGateWave();
         } else {
@@ -204,13 +278,18 @@ public final class EternalBlacklightGate extends GateHandler {
     }
 
     /**
-     * Updates the status details to show the current wave.
+     * Updates the status details to show the current wave + CPUs in stock + exit info.
      */
     private void showGateWave() {
-        this.statusDetails = "Wave: " + this.ebgApi.getCurrentWave();
+        this.statusDetails = "Wave: " + this.ebgApi.getCurrentWave()
+                + " | CPUs: " + this.ebgApi.getCpuCount();
         int suicideWave = this.module.getConfig().eternalBlacklight.suicideOnWave;
         if (suicideWave > 0) {
             this.statusDetails += " (suicide on " + suicideWave + ")";
+        }
+        int exitWave = this.module.getConfig().eternalBlacklight.exitOnWave;
+        if (exitWave > 0) {
+            this.statusDetails += " (exit on " + exitWave + ")";
         }
     }
 
@@ -247,5 +326,7 @@ public final class EternalBlacklightGate extends GateHandler {
         if (!this.autoStart) {
             this.statusDetails = null;
         }
+        // NOTE: we do NOT reset exitRequested here. It is handled in
+        // prepareTickModule so it persists between the jump and the pause.
     }
 }

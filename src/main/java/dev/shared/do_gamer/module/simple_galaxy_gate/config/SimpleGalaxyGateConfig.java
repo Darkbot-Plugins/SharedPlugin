@@ -173,6 +173,10 @@ public final class SimpleGalaxyGateConfig {
         @Number(min = 0, max = 999, step = 1)
         public int suicideOnWave = 0;
 
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.exit_wave")
+        @Number(min = 0, max = 999, step = 1)
+        public int exitOnWave = 0;
+
         @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.try_split_uber_kristallon")
         public boolean trySplitUberKristallon = true;
 
