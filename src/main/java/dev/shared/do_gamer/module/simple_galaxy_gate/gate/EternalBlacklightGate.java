@@ -63,11 +63,9 @@ public final class EternalBlacklightGate extends GateHandler {
 
     @Override
     public boolean prepareTickModule() {
-        // prepareTickModule is only called when OUTSIDE the gate map, so
-        // this is where we catch the post-jump state and pause the bot.
+        // We just landed back home after the configured exit wave — pause.
         if (this.exitRequested) {
             this.module.bot.setRunning(false);
-            this.statusDetails = "Exit reached on configured wave — bot paused";
             this.exitRequested = false; // reset so resuming the bot does not re-pause
             return true;
         }
