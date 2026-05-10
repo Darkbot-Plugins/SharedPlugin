@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -192,7 +191,7 @@ public final class SimpleGalaxyGateConfig {
         public static class BrakeActionDropdown implements Dropdown.Options<BrakeAction> {
             @Override
             public List<BrakeAction> options() {
-                return Arrays.asList(BrakeAction.values());
+                return List.of(BrakeAction.values());
             }
 
             @Override

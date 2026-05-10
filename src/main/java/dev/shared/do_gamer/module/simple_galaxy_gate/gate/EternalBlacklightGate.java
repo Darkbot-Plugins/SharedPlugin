@@ -112,10 +112,7 @@ public final class EternalBlacklightGate extends GateHandler {
 
     @Override
     public boolean attackTickModule() {
-        if (this.isBrakeWaveReached()
-                && this.module.getConfig().eternalBlacklight.brakeAction
-                        == BrakeAction.SUICIDE
-                && this.pauseForSuicideWave()) {
+        if (this.pauseForSuicideWave()) {
             return true;
         }
         this.updateUberKristallonCenter();
@@ -273,8 +270,15 @@ public final class EternalBlacklightGate extends GateHandler {
 
     /**
      * Pauses the bot before the suicide to prevent other plugins activity.
+     * No-op unless the brake wave has been reached and the configured
+     * action is {@link BrakeAction#SUICIDE}.
      */
     private boolean pauseForSuicideWave() {
+        if (!this.isBrakeWaveReached()
+                || this.module.getConfig().eternalBlacklight.brakeAction
+                        != BrakeAction.SUICIDE) {
+            return false;
+        }
         Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);
         if (target != null) {
             this.module.petGearHelper.setPassive();
