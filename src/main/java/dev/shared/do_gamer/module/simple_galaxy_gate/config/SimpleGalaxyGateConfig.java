@@ -190,7 +190,12 @@ public final class SimpleGalaxyGateConfig {
 
             @Override
             public String getText(BrakeAction option) {
-                return option == null ? "" : option.name();
+                if (option == null) return "";
+                switch (option) {
+                    case SUICIDE: return "Suicide";
+                    case EXIT:    return "Exit";
+                    default:      return option.name();
+                }
             }
         }
 
