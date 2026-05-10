@@ -169,9 +169,36 @@ public final class SimpleGalaxyGateConfig {
      * Settings specific to the Eternal Blacklight gate.
      */
     public static class EternalBlacklightSettings {
-        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.suicide_wave")
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.brake_wave")
         @Number(min = 0, max = 999, step = 1)
-        public int suicideOnWave = 0;
+        public int brakeOnWave = 0;
+
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.brake_action")
+        @Dropdown(options = BrakeActionDropdown.class)
+        public BrakeAction brakeAction = BrakeAction.SUICIDE;
+
+        public enum BrakeAction {
+            SUICIDE("Suicide"),
+            EXIT("Exit");
+
+            public final String label;
+
+            BrakeAction(String label) {
+                this.label = label;
+            }
+        }
+
+        public static class BrakeActionDropdown implements Dropdown.Options<BrakeAction> {
+            @Override
+            public List<BrakeAction> options() {
+                return List.of(BrakeAction.values());
+            }
+
+            @Override
+            public String getText(BrakeAction option) {
+                return option == null ? "" : option.label;
+            }
+        }
 
         @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.try_split_uber_kristallon")
         public boolean trySplitUberKristallon = true;
