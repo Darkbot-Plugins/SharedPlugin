@@ -85,6 +85,9 @@ public final class SimpleGalaxyGateConfig {
     @Option("do_gamer.simple_galaxy_gate.eternal_blacklight")
     public EternalBlacklightSettings eternalBlacklight = new EternalBlacklightSettings();
 
+    @Option("do_gamer.simple_galaxy_gate.trinity_trials")
+    public TrinityTrialsSettings trinityTrials = new TrinityTrialsSettings();
+
     @Option("do_gamer.simple_galaxy_gate.kamikaze")
     public KamikazeSettings kamikaze = new KamikazeSettings();
 
@@ -323,6 +326,71 @@ public final class SimpleGalaxyGateConfig {
 
         }
 
+    }
+
+    /**
+     * Settings specific to the Trinity Trials gate.
+     */
+    public static class TrinityTrialsSettings {
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return this.buildList(null,
+                        "Gate: which available portal to enter (1st = Arène Magma slot, 2nd = next).",
+                        "Difficulty: clicked in the difficulty dropdown before launching.",
+                        "Fallback: when a run fails to start, retry one notch lower, then switch gate.");
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
+        @Option("do_gamer.simple_galaxy_gate.trinity_trials.gate_choice")
+        @Number(min = 1, max = 4, step = 1)
+        public int gateChoice = 1;
+
+        @Option("do_gamer.simple_galaxy_gate.trinity_trials.difficulty")
+        @Dropdown(options = TrinityDifficultyDropdown.class)
+        public TrinityDifficulty difficulty = TrinityDifficulty.NORMAL;
+
+        @Option("do_gamer.simple_galaxy_gate.trinity_trials.fallback_on_failure")
+        public boolean fallbackOnFailure = true;
+
+        public enum TrinityDifficulty {
+            FACILE(1, "Facile"),
+            NORMAL(2, "Normal"),
+            DIFFICILE(3, "Difficile"),
+            EXPERT(4, "Expert"),
+            CAUCHEMAR(5, "Cauchemar");
+
+            public final int dropdownIndex;
+            public final String label;
+
+            TrinityDifficulty(int dropdownIndex, String label) {
+                this.dropdownIndex = dropdownIndex;
+                this.label = label;
+            }
+
+            public TrinityDifficulty oneStepEasier() {
+                int idx = ordinal();
+                return idx > 0 ? values()[idx - 1] : null;
+            }
+        }
+
+        public static class TrinityDifficultyDropdown
+                implements Dropdown.Options<TrinityDifficulty> {
+            @Override
+            public List<TrinityDifficulty> options() {
+                return List.of(TrinityDifficulty.values());
+            }
+
+            @Override
+            public String getText(TrinityDifficulty option) {
+                return option == null ? "" : option.label;
+            }
+        }
     }
 
     /**
