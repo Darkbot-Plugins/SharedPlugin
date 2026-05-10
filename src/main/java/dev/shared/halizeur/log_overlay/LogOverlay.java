@@ -128,9 +128,7 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
     public void onDraw(MapGraphics mg) {
         if (this.config == null || !this.config.enabled) return;
 
-        long now = System.currentTimeMillis();
-        evictExpired(now);
-
+        // Eviction is handled in onTickBehavior() which runs every tick.
         List<String> snapshot;
         synchronized (this.entries) {
             if (this.entries.isEmpty()) return;

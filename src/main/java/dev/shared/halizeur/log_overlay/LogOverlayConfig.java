@@ -6,6 +6,6 @@ import eu.darkbot.api.config.annotations.Option;
 @Configuration("halizeur.log_overlay.config")
 public class LogOverlayConfig {
 
-    @Option("general.enabled")
+    @Option("halizeur.log_overlay.enabled")
     public boolean enabled = false;
 }
