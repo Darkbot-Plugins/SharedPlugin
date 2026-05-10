@@ -3,8 +3,10 @@ package dev.shared.halizeur.log_overlay;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
+import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
@@ -18,6 +20,8 @@ import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.extensions.MapGraphics;
 import eu.darkbot.api.managers.EventBrokerAPI;
 import eu.darkbot.api.managers.GameLogAPI;
+import eu.darkbot.api.managers.GameResourcesAPI;
+import eu.darkbot.api.managers.GameResourcesAPI.TranslationMatcher;
 
 /**
  * Renders the latest in-game DarkOrbit log messages as an overlay on the
@@ -27,10 +31,10 @@ import eu.darkbot.api.managers.GameLogAPI;
  * new system message. Each line disappears after DISPLAY_MS ms so the
  * canvas does not get cluttered.
  *
- * Filter: only messages matching at least one keyword from the user's
- * checked categories ({@link LogOverlayConfig.Categories}) are kept;
- * keywords cover both FR and EN forms so the filter works regardless of
- * the active game locale.
+ * Filter: per category, the overlay matches messages against translation
+ * patterns from {@link GameResourcesAPI} (the official Bigpoint flashres
+ * keys), so the filter works on every game locale without per-language
+ * keyword maintenance.
  */
 @Feature(name = "Log Overlay",
          description = "Shows the latest in-game log messages as an overlay on the canvas",
@@ -43,57 +47,117 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
     private static final int MAX_LINES = 5;
     private static final long DISPLAY_MS = 5000L;
 
-    /** Keywords (FR + EN) for "loot / reward" log messages. */
-    private static final String[] KW_GAINS = {
-            // FR
-            "gagn", "obtenu", "récup", "recup", "récompense", "recompense",
-            "collect", "ramass",
-            // EN
-            "gained", "received", "reward", "earned"
+    private enum Cat {
+        GAINS, BOOSTERS, ERRORS, COMBAT
+    }
+
+    /** flashres keys whose translation describes a generic loot / reward
+     *  message — collection, ore refining, level up, quest reward, etc. */
+    private static final String[] KEYS_GAINS = {
+            "oksammel",       // "%! collected"
+            "boxfarming",     // "Salvaging %!"
+            "farmresult",     // "You collected:"
+            "auto_ore_update",
+            "special_item_found",
+            "lvlup_msg",
+            "quest_finish_reward_s",
+            "quest_finish_reward_p"
     };
 
-    /** Keywords for in-game currencies (uri, credits, honor, XP). */
-    private static final String[] KW_CURRENCIES = {
-            "uridium", "credit", "crédit",
+    /** flashres keys for booster activation / banking-multiplier drops. */
+    private static final String[] KEYS_BOOSTERS = {
+            "booster_found",
+            "banking_doubler",
+            "banking_tripler",
+            "banking_quadruplicator",
+            "banking_multiplier_active"
+    };
+
+    /** flashres keys for action refusals: cargo full, no ammo, ability
+     *  on cooldown, ammo purchase failed, ship missing weapons, etc. */
+    private static final String[] KEYS_ERRORS = {
+            "boxtoobig",
+            "boxdisabled",
+            "resourcedisabled",
+            "outofammo",
+            "rohstoffailed",
+            "loadfull",
+            "emptybat",
+            "ammobuy_fail_uri",
+            "ammobuy_fail_cre",
+            "ammobuy_fail_space",
+            "ammobuy_fail_offer",
+            "smartbomb_failed_mines",
+            "smartbomb_failed_xenomit",
+            "instashield_failed_mines",
+            "instashield_failed_xenomit",
+            "no_lasers_on_board",
+            "msg_laser_not_equipped",
+            "msg_rocketlauncher_not_equipped",
+            "loot_theft"
+    };
+
+    /** flashres key for the "X destroyed" combat message. */
+    private static final String[] KEYS_COMBAT = {
+            "destroyed"
+    };
+
+    /** Currency names. DarkOrbit keeps these mostly untranslated across
+     *  locales, so a static list works as a substring filter against any
+     *  raw log message. Lower-cased at init time for case-insensitive
+     *  comparison. */
+    private static final String[] CURRENCY_NAMES = {
+            "uridium", "uri",
+            "credit", "crédit",
             "honor", "honour", "honneur",
-            "experience", "expérience", "xp "
+            "experience", "expérience", "exp", " xp"
     };
 
-    /** Keywords for collectable / refinable resources. */
-    private static final String[] KW_RESOURCES = {
-            "prometium", "endurium", "terbium", "prometid", "duranium",
-            "promerium", "seprom", "xenomit", "palladium"
-    };
-
-    /** Keywords for booster / drop messages. */
-    private static final String[] KW_BOOSTERS = {
-            "drop", "booster"
-    };
-
-    /** Keywords (FR + EN) for error / refusal messages. */
-    private static final String[] KW_ERRORS = {
-            // FR
-            "impossible", "erreur", "échec", "echec",
-            "refusé", "refuse", "plein", "indisponible",
-            "non disponible", "interdit",
-            // EN
-            "error", "failed", "refused", "denied",
-            "unavailable", "full", "cannot", "can't"
-    };
-
-    /** Keywords (FR + EN) for combat / kill messages. */
-    private static final String[] KW_COMBAT = {
-            // FR
-            "tué", "tue", "détruit", "detruit", "dégât", "degat",
-            // EN
-            "kill", "destroyed", "boss", "damage"
+    /** flashres keys whose translation is the localized name of an ore
+     *  / resource. Resolved at init via {@link GameResourcesAPI#findTranslation}. */
+    private static final String[] RESOURCE_KEYS = {
+            "ore_prometium", "ore_endurium", "ore_terbium",
+            "ore_prometid", "ore_duranium", "ore_promerium",
+            "ore_seprom", "ore_xenomit", "ore_palladium", "ore_osmium"
     };
 
     private final Deque<Entry> entries = new ArrayDeque<>();
+    private final Map<Cat, List<TranslationMatcher>> matchers = new EnumMap<>(Cat.class);
+    private final List<String> currencyNeedles = new ArrayList<>();
+    private final List<String> resourceNeedles = new ArrayList<>();
     private LogOverlayConfig config;
 
     public LogOverlay(PluginAPI api) {
         api.requireAPI(EventBrokerAPI.class).registerListener(this);
+
+        GameResourcesAPI res = api.requireAPI(GameResourcesAPI.class);
+        buildMatchers(res, Cat.GAINS, KEYS_GAINS);
+        buildMatchers(res, Cat.BOOSTERS, KEYS_BOOSTERS);
+        buildMatchers(res, Cat.ERRORS, KEYS_ERRORS);
+        buildMatchers(res, Cat.COMBAT, KEYS_COMBAT);
+
+        for (String name : CURRENCY_NAMES) {
+            this.currencyNeedles.add(name);
+        }
+        for (String key : RESOURCE_KEYS) {
+            res.findTranslation(key).ifPresent(t -> {
+                String lower = t.toLowerCase();
+                if (!this.resourceNeedles.contains(lower)) {
+                    this.resourceNeedles.add(lower);
+                }
+            });
+        }
+    }
+
+    /** Pre-builds {@link TranslationMatcher} instances for every key in a
+     *  category. Keys whose translation is missing in the active locale
+     *  return {@link java.util.Optional#empty()} and are skipped silently. */
+    private void buildMatchers(GameResourcesAPI res, Cat cat, String[] keys) {
+        List<TranslationMatcher> list = new ArrayList<>();
+        for (String key : keys) {
+            res.getTranslationMatcher(key).ifPresent(list::add);
+        }
+        this.matchers.put(cat, list);
     }
 
     @Override
@@ -125,23 +189,40 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
     }
 
     /**
-     * Whitelist filter: only display the message if at least one
-     * keyword from a checked category appears in it (case-insensitive).
+     * Filter: a message is kept when at least one checked category
+     * matches. Most categories use TranslationMatcher (built from the
+     * official Bigpoint translations); Currencies and Resources fall
+     * back to substring matching against localized names because the
+     * actual values appear inside the {@code %!} placeholder of the
+     * generic gain templates and are easier to detect this way.
      */
     private boolean isAllowed(String msg) {
-        String lower = msg.toLowerCase();
         LogOverlayConfig.Categories c = this.config.categories;
         if (c == null) return false;
-        if (c.gains      && containsAny(lower, KW_GAINS))      return true;
-        if (c.currencies && containsAny(lower, KW_CURRENCIES)) return true;
-        if (c.resources  && containsAny(lower, KW_RESOURCES))  return true;
-        if (c.boosters   && containsAny(lower, KW_BOOSTERS))   return true;
-        if (c.errors     && containsAny(lower, KW_ERRORS))     return true;
-        if (c.combat     && containsAny(lower, KW_COMBAT))     return true;
+
+        if (c.gains    && anyMatcherFinds(Cat.GAINS, msg))    return true;
+        if (c.boosters && anyMatcherFinds(Cat.BOOSTERS, msg)) return true;
+        if (c.errors   && anyMatcherFinds(Cat.ERRORS, msg))   return true;
+        if (c.combat   && anyMatcherFinds(Cat.COMBAT, msg))   return true;
+
+        if (c.currencies || c.resources) {
+            String lower = msg.toLowerCase();
+            if (c.currencies && containsAny(lower, this.currencyNeedles)) return true;
+            if (c.resources  && containsAny(lower, this.resourceNeedles)) return true;
+        }
         return false;
     }
 
-    private static boolean containsAny(String haystack, String[] needles) {
+    private boolean anyMatcherFinds(Cat cat, String msg) {
+        List<TranslationMatcher> list = this.matchers.get(cat);
+        if (list == null) return false;
+        for (TranslationMatcher m : list) {
+            if (m.find(msg)) return true;
+        }
+        return false;
+    }
+
+    private static boolean containsAny(String haystack, List<String> needles) {
         for (String n : needles) {
             if (haystack.contains(n)) return true;
         }
