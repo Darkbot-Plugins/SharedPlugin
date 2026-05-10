@@ -132,10 +132,8 @@ public final class EternalBlacklightGate extends GateHandler {
      * @return true if we triggered the exit (caller must return)
      */
     private boolean tryExit() {
-        int brakeWave = this.module.getConfig().eternalBlacklight.brakeOnWave;
-        if (brakeWave == 0
+        if (!this.isBrakeWaveReached()
                 || this.module.getConfig().eternalBlacklight.brakeAction != BrakeAction.EXIT
-                || this.ebgApi.getCurrentWave() < brakeWave
                 || !this.module.collectorModule.hasNoBox()) {
             return false;
         }

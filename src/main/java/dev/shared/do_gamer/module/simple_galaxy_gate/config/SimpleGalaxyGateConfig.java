@@ -179,7 +179,14 @@ public final class SimpleGalaxyGateConfig {
         public BrakeAction brakeAction = BrakeAction.SUICIDE;
 
         public enum BrakeAction {
-            SUICIDE, EXIT
+            SUICIDE("Suicide"),
+            EXIT("Exit");
+
+            public final String label;
+
+            BrakeAction(String label) {
+                this.label = label;
+            }
         }
 
         public static class BrakeActionDropdown implements Dropdown.Options<BrakeAction> {
@@ -190,12 +197,7 @@ public final class SimpleGalaxyGateConfig {
 
             @Override
             public String getText(BrakeAction option) {
-                if (option == null) return "";
-                switch (option) {
-                    case SUICIDE: return "Suicide";
-                    case EXIT:    return "Exit";
-                    default:      return option.name();
-                }
+                return option == null ? "" : option.label;
             }
         }
 
