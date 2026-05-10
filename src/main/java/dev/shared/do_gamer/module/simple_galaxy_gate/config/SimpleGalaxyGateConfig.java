@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -169,13 +170,29 @@ public final class SimpleGalaxyGateConfig {
      * Settings specific to the Eternal Blacklight gate.
      */
     public static class EternalBlacklightSettings {
-        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.suicide_wave")
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.brake_wave")
         @Number(min = 0, max = 999, step = 1)
-        public int suicideOnWave = 0;
+        public int brakeOnWave = 0;
 
-        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.exit_wave")
-        @Number(min = 0, max = 999, step = 1)
-        public int exitOnWave = 0;
+        @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.brake_action")
+        @Dropdown(options = BrakeActionDropdown.class)
+        public BrakeAction brakeAction = BrakeAction.SUICIDE;
+
+        public enum BrakeAction {
+            SUICIDE, EXIT
+        }
+
+        public static class BrakeActionDropdown implements Dropdown.Options<BrakeAction> {
+            @Override
+            public List<BrakeAction> options() {
+                return Arrays.asList(BrakeAction.values());
+            }
+
+            @Override
+            public String getText(BrakeAction option) {
+                return option == null ? "" : option.name();
+            }
+        }
 
         @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.try_split_uber_kristallon")
         public boolean trySplitUberKristallon = true;

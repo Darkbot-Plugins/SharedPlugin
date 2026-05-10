@@ -9,6 +9,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig.EternalBlacklightSettings.BoostersTable;
+import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig.EternalBlacklightSettings.BrakeAction;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
@@ -30,6 +31,11 @@ public final class EternalBlacklightGate extends GateHandler {
     private static final double UBER_KRISTALLON_CENTER_SHIFT_X = 4_000.0;
     private static final double UBER_KRISTALLON_CENTER_SHIFT_Y = 2_000.0;
     private static final double UBER_KRISTALLON_TOLERANCE_DISTANCE = 1_500.0;
+    /**
+     * Standard "to home map" portal type id. The next-wave portal uses a
+     * different type id, so filtering by this id reliably picks the exit.
+     */
+    private static final int EXIT_PORTAL_TYPE_ID = 1;
 
     public EternalBlacklightGate() {
         this.npcMap.put("-=[ Barrage Seeker Rocket ]=-", new NpcParam(600.0, -90));
@@ -106,45 +112,38 @@ public final class EternalBlacklightGate extends GateHandler {
 
     @Override
     public boolean attackTickModule() {
-        if (this.isSuicideWaveReached() && this.pauseForSuicideWave()) {
+        if (this.isBrakeWaveReached()
+                && this.module.getConfig().eternalBlacklight.brakeAction
+                        == BrakeAction.SUICIDE
+                && this.pauseForSuicideWave()) {
             return true;
         }
         this.updateUberKristallonCenter();
-        this.showGateWave();
+        this.showGateInfo();
         return false;
     }
 
     /**
-     * Standard "to home map" portal type id. The next-wave portal uses a
-     * different type id, so filtering by this id reliably picks the exit.
-     */
-    private static final int EXIT_PORTAL_TYPE_ID = 1;
-
-    /**
-     * Once the configured exit wave is reached and there are no more boxes
-     * left to collect on the current wave, travel through the exit portal.
-     * The {@code exitRequested} flag is sticky so the post-jump pause logic
-     * in {@link #prepareTickModule()} can still trigger after the jump.
+     * Once the configured brake wave is reached with the EXIT action and
+     * there are no more boxes to collect, travel through the home portal.
+     * The {@code exitRequested} flag is set after the jump starts so the
+     * post-jump pause logic in {@link #prepareTickModule()} can trigger.
      *
      * @return true if we triggered the exit (caller must return)
      */
     private boolean tryExit() {
-        int exitWave = this.module.getConfig().eternalBlacklight.exitOnWave;
-        if (exitWave <= 0) return false;
-
-        if (this.ebgApi.getCurrentWave() >= exitWave) {
-            this.exitRequested = true;
-        }
-        if (!this.exitRequested || !this.module.collectorModule.hasNoBox()) {
+        int brakeWave = this.module.getConfig().eternalBlacklight.brakeOnWave;
+        if (brakeWave == 0
+                || this.module.getConfig().eternalBlacklight.brakeAction != BrakeAction.EXIT
+                || this.ebgApi.getCurrentWave() < brakeWave
+                || !this.module.collectorModule.hasNoBox()) {
             return false;
         }
-
         if (this.handleTravelToGate(EXIT_PORTAL_TYPE_ID)) {
-            this.statusDetails = "Exit on wave " + exitWave + " — jumping to home map";
+            this.exitRequested = true;
+            StateStore.request(StateStore.State.TRAVELING_TO_GATE);
             return true;
         }
-        // No exit portal visible yet: keep waiting.
-        this.statusDetails = "Exit on wave " + exitWave + " — waiting for home portal";
         return false;
     }
 
@@ -201,7 +200,7 @@ public final class EternalBlacklightGate extends GateHandler {
             return true; // prevents the default jumpToNextMap
         }
         if (StateStore.current() == StateStore.State.COLLECTING) {
-            this.showGateWave();
+            this.showGateInfo();
         } else {
             this.reset();
         }
@@ -252,27 +251,26 @@ public final class EternalBlacklightGate extends GateHandler {
     }
 
     /**
-     * Updates the status details to show the current wave + CPUs in stock + exit info.
+     * Updates the status details with the CPUs in stock, the current wave
+     * and the optional brake wave / action hint.
      */
-    private void showGateWave() {
-        this.statusDetails = "Wave: " + this.ebgApi.getCurrentWave()
-                + " | CPUs: " + this.ebgApi.getCpuCount();
-        int suicideWave = this.module.getConfig().eternalBlacklight.suicideOnWave;
-        if (suicideWave > 0) {
-            this.statusDetails += " (suicide on " + suicideWave + ")";
-        }
-        int exitWave = this.module.getConfig().eternalBlacklight.exitOnWave;
-        if (exitWave > 0) {
-            this.statusDetails += " (exit on " + exitWave + ")";
+    private void showGateInfo() {
+        this.statusDetails = "CPU: " + this.ebgApi.getCpuCount()
+                + " | Wave: " + this.ebgApi.getCurrentWave();
+        int brakeWave = this.module.getConfig().eternalBlacklight.brakeOnWave;
+        if (brakeWave > 0) {
+            String action = this.module.getConfig().eternalBlacklight.brakeAction
+                    .name().toLowerCase();
+            this.statusDetails += " (" + action + " on " + brakeWave + ")";
         }
     }
 
     /**
-     * Checks whether the configured suicide wave has been reached or exceeded.
+     * Checks whether the configured brake wave has been reached or exceeded.
      */
-    private boolean isSuicideWaveReached() {
-        int suicideWave = this.module.getConfig().eternalBlacklight.suicideOnWave;
-        return suicideWave > 0 && this.ebgApi.getCurrentWave() >= suicideWave;
+    private boolean isBrakeWaveReached() {
+        int brakeWave = this.module.getConfig().eternalBlacklight.brakeOnWave;
+        return brakeWave > 0 && this.ebgApi.getCurrentWave() >= brakeWave;
     }
 
     /**
@@ -300,7 +298,5 @@ public final class EternalBlacklightGate extends GateHandler {
         if (!this.autoStart) {
             this.statusDetails = null;
         }
-        // NOTE: we do NOT reset exitRequested here. It is handled in
-        // prepareTickModule so it persists between the jump and the pause.
     }
 }
