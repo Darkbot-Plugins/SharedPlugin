@@ -18,6 +18,7 @@ import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.extensions.MapGraphics;
 import eu.darkbot.api.managers.EventBrokerAPI;
 import eu.darkbot.api.managers.GameLogAPI;
+import eu.darkbot.api.managers.I18nAPI;
 
 /**
  * Renders the latest in-game DarkOrbit log messages as an overlay on the
@@ -39,36 +40,45 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
     private static final long DISPLAY_MS = 5000L;
 
     /**
-     * Case-insensitive keywords that mark a log message as "interesting":
-     * resource / experience / honor gains, or error messages. Anything
-     * else (combat, movement, generic info) is filtered out.
+     * Default whitelist (English) used when the active DarkBot locale has
+     * no {@code halizeur.log_overlay.whitelist} translation. Each comma-
+     * separated entry is a case-insensitive substring; a log message is
+     * displayed only if it contains at least one of them.
+     *
+     * Translators can override this per-locale by adding the same key in
+     * their {@code strings_<locale>.properties} file.
      */
-    private static final String[] WHITELIST = {
-            // Gains (FR)
-            "gagn", "obtenu", "récup", "recup", "récompense", "recompense",
-            "collect", "ramass",
-            // Gains (EN)
-            "gained", "received", "reward", "earned",
-            // Currencies / resources
-            "uridium", "credit", "crédit", "honor", "honneur",
-            "experience", "expérience", "xp ",
-            "prometium", "endurium", "terbium", "prometid", "duranium",
-            "promerium", "seprom", "xenomit", "palladium",
-            // Boosters / drops
-            "drop", "booster",
-            // Errors (FR)
-            "impossible", "erreur", "échec", "echec", "refusé", "refuse",
-            "plein", "indisponible", "non disponible", "interdit",
-            // Errors (EN)
-            "error", "failed", "refused", "denied", "unavailable", "full",
-            "cannot", "can't"
-    };
+    private static final String DEFAULT_WHITELIST =
+            "gained,received,reward,earned,"
+            + "uridium,credit,honor,honour,experience,xp,"
+            + "prometium,endurium,terbium,prometid,duranium,"
+            + "promerium,seprom,xenomit,palladium,drop,booster,"
+            + "error,failed,refused,denied,unavailable,full,"
+            + "cannot,impossible";
 
     private final Deque<Entry> entries = new ArrayDeque<>();
+    private final List<String> whitelist;
     private LogOverlayConfig config;
 
     public LogOverlay(PluginAPI api) {
         api.requireAPI(EventBrokerAPI.class).registerListener(this);
+        I18nAPI i18n = api.requireAPI(I18nAPI.class);
+        this.whitelist = parseKeywords(i18n.getOrDefault(
+                "halizeur.log_overlay.whitelist", DEFAULT_WHITELIST));
+    }
+
+    /**
+     * Parses a comma-separated list of keywords, trimming whitespace and
+     * lower-casing each entry. Empty entries are dropped.
+     */
+    private static List<String> parseKeywords(String csv) {
+        List<String> out = new ArrayList<>();
+        if (csv == null) return out;
+        for (String s : csv.split(",")) {
+            String t = s.trim().toLowerCase();
+            if (!t.isEmpty()) out.add(t);
+        }
+        return out;
     }
 
     @Override
@@ -100,12 +110,14 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
     }
 
     /**
-     * Whitelist filter: only display the message if it matches a keyword
-     * from {@link #WHITELIST} (case-insensitive).
+     * Whitelist filter: only display the message if it contains at least
+     * one keyword from {@link #whitelist} (case-insensitive). The list
+     * comes from the i18n key {@code halizeur.log_overlay.whitelist} and
+     * thus adapts to the user's selected DarkBot locale.
      */
     private boolean isAllowed(String msg) {
         String lower = msg.toLowerCase();
-        for (String kw : WHITELIST) {
+        for (String kw : whitelist) {
             if (lower.contains(kw)) return true;
         }
         return false;
