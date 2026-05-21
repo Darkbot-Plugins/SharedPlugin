@@ -170,6 +170,7 @@ public final class SimpleGalaxyGateConfig {
      */
     public static class EternalBlacklightSettings {
         @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.brake_wave")
+        @Number.Disabled(value = 0)
         @Number(min = 0, max = 999, step = 1)
         public int brakeOnWave = 0;
 
@@ -317,7 +318,8 @@ public final class SimpleGalaxyGateConfig {
 
                 private static class SpinnerCellEditor extends AbstractCellEditor implements TableCellEditor {
                     private final JSpinner spinner = new JSpinner(
-                            new SpinnerNumberModel(BoosterPriority.MIN, BoosterPriority.MIN, BoosterPriority.MAX, BoosterPriority.STEP));
+                            new SpinnerNumberModel(BoosterPriority.MIN, BoosterPriority.MIN, BoosterPriority.MAX,
+                                    BoosterPriority.STEP));
 
                     @Override
                     public java.awt.Component getTableCellEditorComponent(JTable table, Object value,
