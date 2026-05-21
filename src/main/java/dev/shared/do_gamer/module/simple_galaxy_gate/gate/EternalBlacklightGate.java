@@ -243,8 +243,7 @@ public final class EternalBlacklightGate extends GateHandler {
         this.statusDetails = this.getCpuStatus() + " | Wave: " + this.ebgApi.getCurrentWave();
         int brakeWave = this.module.getConfig().eternalBlacklight.brakeOnWave;
         if (brakeWave > 0) {
-            String action = this.module.getConfig().eternalBlacklight.brakeAction
-                    .name().toLowerCase();
+            String action = this.module.getConfig().eternalBlacklight.brakeAction.label.toLowerCase();
             this.statusDetails += " (" + action + " on " + brakeWave + ")";
         }
     }
