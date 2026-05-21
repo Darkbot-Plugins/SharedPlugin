@@ -139,6 +139,10 @@ public final class SimpleGalaxyGate implements Module, Task,
             case REPAIRING:
                 this.appendGateStatus(status);
                 break;
+            case JUMPING:
+            case WAITING_IN_GATE:
+                this.appendWaitingInGateStatus(status);
+                break;
             case WAITING:
                 this.appendWaitingStatus(status);
                 break;
@@ -175,6 +179,13 @@ public final class SimpleGalaxyGate implements Module, Task,
         if (this.showBoxCount) {
             status.append(String.format(" | Box: %d", this.collectorModule.count()));
         }
+        // Show additional status details if provided by gate handler
+        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
+            status.append(String.format(" | %s", this.statusDetails));
+        }
+    }
+
+    private void appendWaitingInGateStatus(StringBuilder status) {
         // Show additional status details if provided by gate handler
         if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
             status.append(String.format(" | %s", this.statusDetails));
