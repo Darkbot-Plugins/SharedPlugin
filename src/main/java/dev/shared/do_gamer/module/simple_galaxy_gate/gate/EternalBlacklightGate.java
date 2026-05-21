@@ -92,7 +92,7 @@ public final class EternalBlacklightGate extends GateHandler {
                 return true; // Wait until we have a CPU before proceeding
             }
         }
-        this.reset();
+        this.statusDetails = this.getCpuStatus();
         return false;
     }
 
@@ -240,14 +240,20 @@ public final class EternalBlacklightGate extends GateHandler {
      * and the optional brake wave / action hint.
      */
     private void showGateInfo() {
-        this.statusDetails = "CPU: " + this.ebgApi.getCpuCount()
-                + " | Wave: " + this.ebgApi.getCurrentWave();
+        this.statusDetails = this.getCpuStatus() + " | Wave: " + this.ebgApi.getCurrentWave();
         int brakeWave = this.module.getConfig().eternalBlacklight.brakeOnWave;
         if (brakeWave > 0) {
             String action = this.module.getConfig().eternalBlacklight.brakeAction
                     .name().toLowerCase();
             this.statusDetails += " (" + action + " on " + brakeWave + ")";
         }
+    }
+
+    /**
+     * Status string for the current CPU count.
+     */
+    private String getCpuStatus() {
+        return "CPU: " + this.ebgApi.getCpuCount();
     }
 
     /**

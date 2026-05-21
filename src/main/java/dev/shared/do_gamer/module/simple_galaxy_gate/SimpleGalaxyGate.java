@@ -141,7 +141,7 @@ public final class SimpleGalaxyGate implements Module, Task,
                 break;
             case JUMPING:
             case WAITING_IN_GATE:
-                this.appendWaitingInGateStatus(status);
+                this.appendDetailsStatus(status);
                 break;
             case WAITING:
                 this.appendWaitingStatus(status);
@@ -160,6 +160,7 @@ public final class SimpleGalaxyGate implements Module, Task,
             status.append(": Switching Ship");
         } else {
             status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
+            this.appendDetailsStatus(status);
         }
     }
 
@@ -179,13 +180,10 @@ public final class SimpleGalaxyGate implements Module, Task,
         if (this.showBoxCount) {
             status.append(String.format(" | Box: %d", this.collectorModule.count()));
         }
-        // Show additional status details if provided by gate handler
-        if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
-            status.append(String.format(" | %s", this.statusDetails));
-        }
+        this.appendDetailsStatus(status);
     }
 
-    private void appendWaitingInGateStatus(StringBuilder status) {
+    private void appendDetailsStatus(StringBuilder status) {
         // Show additional status details if provided by gate handler
         if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
             status.append(String.format(" | %s", this.statusDetails));
