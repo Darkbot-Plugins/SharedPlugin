@@ -351,7 +351,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.deactivateStuckInGateTimer();
 
         // Handle gate completion if we have visited a gate
-        if (this.handleGateCompletion()) {
+        if (this.handleGateCompletion(gateHandler)) {
             return;
         }
 
@@ -711,8 +711,12 @@ public final class SimpleGalaxyGate implements Module, Task,
     /**
      * Handles the logic for when a gate has been visited.
      */
-    private boolean handleGateCompletion() {
+    private boolean handleGateCompletion(GateHandler gateHandler) {
         if (this.gateVisited) {
+            // Clear status details to prevent showing stale info
+            this.statusDetails = null;
+            gateHandler.clearStatusDetails();
+
             // Activate completion delay timer
             if (!this.gateCompletionDelayTimer.isArmed()) {
                 this.gateCompletionDelayTimer.activate();
