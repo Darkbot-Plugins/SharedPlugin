@@ -396,6 +396,9 @@ public final class SimpleGalaxyGateConfig {
         @Option("do_gamer.simple_galaxy_gate.kamikaze.ship_mode")
         public ShipMode shipMode = ShipMode.of(HeroAPI.Configuration.FIRST, null);
 
+        @Option("do_gamer.simple_galaxy_gate.kamikaze.use_kamikaze_corner")
+        public boolean useKamikazeCorner = false;
+
         /**
          * Enum representing cooldown levels for kamikaze behavior.
          */
