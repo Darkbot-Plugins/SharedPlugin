@@ -424,7 +424,9 @@ public final class SimpleGalaxyGate implements Module, Task,
 
         // No NPCs, collect boxes or jump to next map
         StateStore.request(StateStore.State.COLLECTING);
-        this.hero.setRunMode();
+        if (this.config.other.useRunConfig) {
+            this.hero.setRunMode();
+        }
         if (gateHandler.collectTickModule()) {
             return; // Gate handler took action, skip default collection
         }
