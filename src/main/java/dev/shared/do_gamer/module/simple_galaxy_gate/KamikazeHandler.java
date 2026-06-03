@@ -86,9 +86,7 @@ public final class KamikazeHandler {
             return true;
         }
 
-        List<Npc> validTargets = this.lootModule.getNpcs().stream()
-                .filter(npc -> this.isValidTarget(npc, cornerMode))
-                .collect(Collectors.toList());
+        List<Npc> validTargets = this.getValidTargets(cornerMode);
 
         // Check if we have enough valid targets for kamikaze strategy
         if (validTargets.size() < this.config.kamikaze.minNpcs) {
@@ -232,6 +230,15 @@ public final class KamikazeHandler {
     }
 
     /**
+     * Returns the list of valid kamikaze targets filtered by the given mode.
+     */
+    private List<Npc> getValidTargets(boolean cornerMode) {
+        return this.lootModule.getNpcs().stream()
+                .filter(npc -> this.isValidTarget(npc, cornerMode))
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Checks if all kamikaze-flagged NPCs are outside MAX_DISTANCE from the center.
      */
     private boolean areAllNpcsFarFromCenter() {
@@ -283,34 +290,37 @@ public final class KamikazeHandler {
                 || this.hero.getHealth().hpPercent() <= this.config.kamikaze.hpRange.getMin()
                 || this.hero.getHealth().shieldPercent() <= this.config.kamikaze.shieldRange.getMin()) {
             this.setCooldown();
-        } else {
-            if (cornerMode) {
-                // In corner mode, move to the target
-                if (this.lootModule.getAttacker().hasTarget()) {
-                    this.movement.moveTo(this.lootModule.getAttacker().getTarget());
-                } else {
-                    // Failback to locking closest target if no current target
-                    List<Npc> validTargets = this.lootModule.getNpcs().stream()
-                            .filter(npc -> this.isValidTarget(npc, true))
-                            .collect(Collectors.toList());
-                    if (!validTargets.isEmpty()) {
-                        this.lockClosestTarget(validTargets);
-                    }
-                }
-            } else if (this.movement.isMoving()) {
-                // In normal mode, stop movement
-                this.movement.stop(false);
-            }
-            // set pet to kamikaze gear and wait for detonation
-            this.petGearHelper.tryUse(PetGear.KAMIKAZE);
+            return;
+        }
 
-            // If the PET fails to detonate quickly, abort kamikaze state
-            if (!this.detonateTimer.isArmed()) {
-                this.detonateTimer.activate();
-            }
-            if (this.detonateTimer.isInactive()) {
-                this.setInactive();
-            }
+        if (cornerMode) {
+            this.handleCornerMovement();
+        } else if (this.movement.isMoving()) {
+            this.movement.stop(false);
+        }
+
+        // set pet to kamikaze gear and wait for detonation
+        this.petGearHelper.tryUse(PetGear.KAMIKAZE);
+
+        if (!this.detonateTimer.isArmed()) {
+            this.detonateTimer.activate();
+        }
+        if (this.detonateTimer.isInactive()) {
+            this.setInactive();
+        }
+    }
+
+    /**
+     * Handles movement in corner mode
+     */
+    private void handleCornerMovement() {
+        if (this.lootModule.getAttacker().hasTarget()) {
+            this.movement.moveTo(this.lootModule.getAttacker().getTarget());
+            return;
+        }
+        List<Npc> validTargets = this.getValidTargets(true);
+        if (!validTargets.isEmpty()) {
+            this.lockClosestTarget(validTargets);
         }
     }
 
