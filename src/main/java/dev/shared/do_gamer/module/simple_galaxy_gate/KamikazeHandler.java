@@ -288,6 +288,14 @@ public final class KamikazeHandler {
                 // In corner mode, move to the target
                 if (this.lootModule.getAttacker().hasTarget()) {
                     this.movement.moveTo(this.lootModule.getAttacker().getTarget());
+                } else {
+                    // Failback to locking closest target if no current target
+                    List<Npc> validTargets = this.lootModule.getNpcs().stream()
+                            .filter(npc -> this.isValidTarget(npc, true))
+                            .collect(Collectors.toList());
+                    if (!validTargets.isEmpty()) {
+                        this.lockClosestTarget(validTargets);
+                    }
                 }
             } else if (this.movement.isMoving()) {
                 // In normal mode, stop movement
