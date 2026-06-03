@@ -19,17 +19,7 @@ import eu.darkbot.api.extensions.MapGraphics;
 import eu.darkbot.api.managers.EventBrokerAPI;
 import eu.darkbot.api.managers.GameLogAPI;
 
-/**
- * Renders the latest in-game DarkOrbit log messages as an overlay on the
- * canvas (anchored to the top, no background, auto-fade).
- *
- * Source: {@link GameLogAPI.LogMessageEvent} emitted by DarkBot for each
- * new system message. Each line disappears after DISPLAY_MS ms so the
- * canvas does not get cluttered.
- */
-@Feature(name = "Log Overlay",
-         description = "Shows the latest in-game log messages as an overlay on the canvas",
-         enabledByDefault = false)
+@Feature(name = "Log Overlay", description = "Shows the latest in-game log messages as an overlay on the canvas", enabledByDefault = false)
 @Draw(value = Draw.Stage.OVERLAY)
 public class LogOverlay implements Behavior, Drawable, Listener, Configurable<LogOverlayConfig> {
 
@@ -84,10 +74,13 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
 
     @EventHandler
     public void onLogMessage(GameLogAPI.LogMessageEvent event) {
-        if (this.config == null || !this.config.enabled) return;
+        if (this.config == null || !this.config.enabled)
+            return;
         String msg = event.getMessage();
-        if (msg == null || msg.isEmpty()) return;
-        if (!isAllowed(msg)) return;
+        if (msg == null || msg.isEmpty())
+            return;
+        if (!isAllowed(msg))
+            return;
 
         long expiresAt = System.currentTimeMillis() + DISPLAY_MS;
         synchronized (this.entries) {
@@ -106,7 +99,8 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
     private boolean isAllowed(String msg) {
         String lower = msg.toLowerCase();
         for (String kw : WHITELIST) {
-            if (lower.contains(kw)) return true;
+            if (lower.contains(kw))
+                return true;
         }
         return false;
     }
@@ -126,14 +120,17 @@ public class LogOverlay implements Behavior, Drawable, Listener, Configurable<Lo
 
     @Override
     public void onDraw(MapGraphics mg) {
-        if (this.config == null || !this.config.enabled) return;
+        if (this.config == null || !this.config.enabled)
+            return;
 
         // Eviction is handled in onTickBehavior() which runs every tick.
         List<String> snapshot;
         synchronized (this.entries) {
-            if (this.entries.isEmpty()) return;
+            if (this.entries.isEmpty())
+                return;
             snapshot = new ArrayList<>(this.entries.size());
-            for (Entry e : this.entries) snapshot.add(e.text);
+            for (Entry e : this.entries)
+                snapshot.add(e.text);
         }
 
         int cx = mg.getWidthMiddle();

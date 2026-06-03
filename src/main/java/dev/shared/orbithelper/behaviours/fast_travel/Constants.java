@@ -126,14 +126,6 @@ public class Constants {
                 MAP_CONNECTIONS.put("4-5", List.of("1-5", "2-5", "3-5"));
         }
 
-        /**
-         * Map Levels required to fast travel to specific maps.
-         * 
-         * The key is the map identifier (e.g., "1-1", "2-3").
-         * The value is the minimum player level required to access that map.
-         * 
-         * FAQ: https://board-en.darkorbit.com/threads/levels-faq.843/
-         */
         public static final Map<String, Integer> PVP_LEVELS = Map.ofEntries(
                         Map.entry("4-1", 8),
                         Map.entry("4-2", 8),

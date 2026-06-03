@@ -170,6 +170,7 @@ public final class SimpleGalaxyGateConfig {
      */
     public static class EternalBlacklightSettings {
         @Option("do_gamer.simple_galaxy_gate.eternal_blacklight.brake_wave")
+        @Number.Disabled(value = 0)
         @Number(min = 0, max = 999, step = 1)
         public int brakeOnWave = 0;
 
@@ -317,7 +318,8 @@ public final class SimpleGalaxyGateConfig {
 
                 private static class SpinnerCellEditor extends AbstractCellEditor implements TableCellEditor {
                     private final JSpinner spinner = new JSpinner(
-                            new SpinnerNumberModel(BoosterPriority.MIN, BoosterPriority.MIN, BoosterPriority.MAX, BoosterPriority.STEP));
+                            new SpinnerNumberModel(BoosterPriority.MIN, BoosterPriority.MIN, BoosterPriority.MAX,
+                                    BoosterPriority.STEP));
 
                     @Override
                     public java.awt.Component getTableCellEditorComponent(JTable table, Object value,
@@ -393,6 +395,9 @@ public final class SimpleGalaxyGateConfig {
 
         @Option("do_gamer.simple_galaxy_gate.kamikaze.ship_mode")
         public ShipMode shipMode = ShipMode.of(HeroAPI.Configuration.FIRST, null);
+
+        @Option("do_gamer.simple_galaxy_gate.kamikaze.use_kamikaze_corner")
+        public boolean useKamikazeCorner = false;
 
         /**
          * Enum representing cooldown levels for kamikaze behavior.
@@ -633,6 +638,13 @@ public final class SimpleGalaxyGateConfig {
         @Number.Disabled(value = 0)
         @Number(min = 0, max = 5, step = 1)
         public int stuckInGateTimerMinutes = 1;
+
+        @Option("do_gamer.simple_galaxy_gate.other.use_run_config")
+        public boolean useRunConfig = true;
+
+        @Option("do_gamer.simple_galaxy_gate.other.target_switch_offset")
+        @Number(min = 0, max = 1000, step = 50)
+        public int targetSwitchOffset = 100;
 
         @Option.Ignore() // Only for dev needs, not user-facing
         @Option("do_gamer.simple_galaxy_gate.other.debug_info")

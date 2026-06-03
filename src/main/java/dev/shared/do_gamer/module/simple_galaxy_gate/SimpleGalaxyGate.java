@@ -139,6 +139,10 @@ public final class SimpleGalaxyGate implements Module, Task,
             case REPAIRING:
                 this.appendGateStatus(status);
                 break;
+            case JUMPING:
+            case WAITING_IN_GATE:
+                this.appendDetailsStatus(status);
+                break;
             case WAITING:
                 this.appendWaitingStatus(status);
                 break;
@@ -156,6 +160,7 @@ public final class SimpleGalaxyGate implements Module, Task,
             status.append(": Switching Ship");
         } else {
             status.append(String.format(": %s", Maps.mapNameForGate(this.config.gateId)));
+            this.appendDetailsStatus(status);
         }
     }
 
@@ -175,6 +180,10 @@ public final class SimpleGalaxyGate implements Module, Task,
         if (this.showBoxCount) {
             status.append(String.format(" | Box: %d", this.collectorModule.count()));
         }
+        this.appendDetailsStatus(status);
+    }
+
+    private void appendDetailsStatus(StringBuilder status) {
         // Show additional status details if provided by gate handler
         if (this.statusDetails != null && !this.statusDetails.isEmpty()) {
             status.append(String.format(" | %s", this.statusDetails));
@@ -342,7 +351,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.deactivateStuckInGateTimer();
 
         // Handle gate completion if we have visited a gate
-        if (this.handleGateCompletion()) {
+        if (this.handleGateCompletion(gateHandler)) {
             return;
         }
 
@@ -415,7 +424,9 @@ public final class SimpleGalaxyGate implements Module, Task,
 
         // No NPCs, collect boxes or jump to next map
         StateStore.request(StateStore.State.COLLECTING);
-        this.hero.setRunMode();
+        if (this.config.other.useRunConfig) {
+            this.hero.setRunMode();
+        }
         if (gateHandler.collectTickModule()) {
             return; // Gate handler took action, skip default collection
         }
@@ -702,8 +713,12 @@ public final class SimpleGalaxyGate implements Module, Task,
     /**
      * Handles the logic for when a gate has been visited.
      */
-    private boolean handleGateCompletion() {
+    private boolean handleGateCompletion(GateHandler gateHandler) {
         if (this.gateVisited) {
+            // Clear status details to prevent showing stale info
+            this.statusDetails = null;
+            gateHandler.clearStatusDetails();
+
             // Activate completion delay timer
             if (!this.gateCompletionDelayTimer.isArmed()) {
                 this.gateCompletionDelayTimer.activate();

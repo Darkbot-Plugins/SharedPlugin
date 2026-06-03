@@ -76,10 +76,13 @@ public final class CustomLootModule extends LootModule {
         this.kamikazeHandler.setGateHandler(gateHandler);
     }
 
+    private SimpleGalaxyGateConfig config;
+
     /**
      * Sets the module config reference.
      */
     public void setModuleConfig(SimpleGalaxyGateConfig config) {
+        this.config = config;
         this.kamikazeHandler.setConfig(config);
     }
 
@@ -286,7 +289,7 @@ public final class CustomLootModule extends LootModule {
         // Prefer current target if it's attacking us and best is not significantly
         // better in terms of distance to location
         if (this.hero.isAttacking(target)) {
-            double offset = 100.0;
+            double offset = this.config != null ? this.config.other.targetSwitchOffset : 100.0;
             double targetDist = target.distanceTo(location);
             double bestDist = best.distanceTo(location);
             if (targetDist < (bestDist + offset)) {
@@ -439,7 +442,7 @@ public final class CustomLootModule extends LootModule {
     }
 
     @Override
-    protected Location getBestDir(Locatable targetLoc, double angle, double angleDiff, double distance) {
+    public Location getBestDir(Locatable targetLoc, double angle, double angleDiff, double distance) {
         Npc target = this.attack.getTargetAs(Npc.class);
         if (this.approachToCenter(target)) {
             return Location.of(targetLoc, angle + angleDiff * (double) (this.backwards ? -1 : 1), distance);

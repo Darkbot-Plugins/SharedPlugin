@@ -92,6 +92,7 @@ public final class EternalBlacklightGate extends GateHandler {
                 return true; // Wait until we have a CPU before proceeding
             }
         }
+        this.statusDetails = this.getCpuStatus();
         return false;
     }
 
@@ -123,10 +124,6 @@ public final class EternalBlacklightGate extends GateHandler {
     /**
      * Once the configured brake wave is reached with the EXIT action and
      * there are no more boxes to collect, travel through the home portal.
-     * The {@code exitRequested} flag is set after the jump starts so the
-     * post-jump pause logic in {@link #prepareTickModule()} can trigger.
-     *
-     * @return true if we triggered the exit (caller must return)
      */
     private boolean tryExit() {
         if (!this.isBrakeWaveReached()
@@ -188,17 +185,10 @@ public final class EternalBlacklightGate extends GateHandler {
 
     @Override
     public boolean collectTickModule() {
-        // Intercept BEFORE the parent's jumpToNextMap() — otherwise
-        // findNextPortal() explicitly picks the non-Home portal (= wave portal).
-        // tryExit only fires once boxes are collected.
         if (this.tryExit()) {
-            return true; // prevents the default jumpToNextMap
+            return true;
         }
-        if (StateStore.current() == StateStore.State.COLLECTING) {
-            this.showGateInfo();
-        } else {
-            this.reset();
-        }
+        this.showGateInfo();
         this.selectBestBooster();
         return false;
     }
@@ -250,14 +240,19 @@ public final class EternalBlacklightGate extends GateHandler {
      * and the optional brake wave / action hint.
      */
     private void showGateInfo() {
-        this.statusDetails = "CPU: " + this.ebgApi.getCpuCount()
-                + " | Wave: " + this.ebgApi.getCurrentWave();
+        this.statusDetails = this.getCpuStatus() + " | Wave: " + this.ebgApi.getCurrentWave();
         int brakeWave = this.module.getConfig().eternalBlacklight.brakeOnWave;
         if (brakeWave > 0) {
-            String action = this.module.getConfig().eternalBlacklight.brakeAction
-                    .name().toLowerCase();
+            String action = this.module.getConfig().eternalBlacklight.brakeAction.label.toLowerCase();
             this.statusDetails += " (" + action + " on " + brakeWave + ")";
         }
+    }
+
+    /**
+     * Status string for the current CPU count.
+     */
+    private String getCpuStatus() {
+        return "CPU: " + this.ebgApi.getCpuCount();
     }
 
     /**
@@ -270,13 +265,10 @@ public final class EternalBlacklightGate extends GateHandler {
 
     /**
      * Pauses the bot before the suicide to prevent other plugins activity.
-     * No-op unless the brake wave has been reached and the configured
-     * action is {@link BrakeAction#SUICIDE}.
      */
     private boolean pauseForSuicideWave() {
         if (!this.isBrakeWaveReached()
-                || this.module.getConfig().eternalBlacklight.brakeAction
-                        != BrakeAction.SUICIDE) {
+                || this.module.getConfig().eternalBlacklight.brakeAction != BrakeAction.SUICIDE) {
             return false;
         }
         Npc target = this.module.lootModule.getAttacker().getTargetAs(Npc.class);

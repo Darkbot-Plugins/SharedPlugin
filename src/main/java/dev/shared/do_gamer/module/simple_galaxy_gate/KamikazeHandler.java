@@ -77,15 +77,16 @@ public final class KamikazeHandler {
             this.setPrimed();
         }
 
+        // "Kamikaze in corner": all NPCs are far from center
+        boolean cornerMode = this.config.kamikaze.useKamikazeCorner && this.areAllNpcsFarFromCenter();
+
         // Handle active kamikaze state if we are currently in it
         if (this.isActive()) {
-            this.handleActive();
+            this.handleActive(cornerMode);
             return true;
         }
 
-        List<Npc> validTargets = this.lootModule.getNpcs().stream()
-                .filter(this::isValidTarget)
-                .collect(Collectors.toList());
+        List<Npc> validTargets = this.getValidTargets(cornerMode);
 
         // Check if we have enough valid targets for kamikaze strategy
         if (validTargets.size() < this.config.kamikaze.minNpcs) {
@@ -100,7 +101,19 @@ public final class KamikazeHandler {
 
         // Move around center to group NPCs together
         this.petGearHelper.setPassive();
-        this.moveAroundPoint(this.centerX(), this.centerY(), RADIUS);
+        if (cornerMode) {
+            // In corner mode, keep distance from NPCs
+            Npc target = this.lootModule.getAttacker().getTargetAs(Npc.class);
+            if (target != null) {
+                this.moveAroundPoint(target.getX(), target.getY(), RADIUS, true);
+            } else {
+                // Failback to locking closest target if no current target
+                this.lockClosestTarget(validTargets);
+            }
+        } else {
+            // In normal mode, move around center to group NPCs together
+            this.moveAroundPoint(this.centerX(), this.centerY(), RADIUS, false);
+        }
         return true;
     }
 
@@ -217,10 +230,39 @@ public final class KamikazeHandler {
     }
 
     /**
+     * Returns the list of valid kamikaze targets filtered by the given mode.
+     */
+    private List<Npc> getValidTargets(boolean cornerMode) {
+        return this.lootModule.getNpcs().stream()
+                .filter(npc -> this.isValidTarget(npc, cornerMode))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Checks if all kamikaze-flagged NPCs are outside MAX_DISTANCE from the center.
+     */
+    private boolean areAllNpcsFarFromCenter() {
+        return this.lootModule.getNpcs().stream()
+                .filter(npc -> npc.getInfo().hasExtraFlag(GateNpcFlag.KAMIKAZE))
+                .allMatch(npc -> npc.distanceTo(this.centerX(), this.centerY()) > MAX_DISTANCE);
+    }
+
+    /**
      * Determines if the NPC is a valid target for the kamikaze strategy.
      */
-    private boolean isValidTarget(Npc npc) {
-        return npc.getInfo().hasExtraFlag(GateNpcFlag.KAMIKAZE) && this.recentlyAimingAtHero(npc)
+    private boolean isValidTarget(Npc npc, boolean cornerMode) {
+        if (!npc.getInfo().hasExtraFlag(GateNpcFlag.KAMIKAZE)) {
+            return false; // NPC must have the kamikaze flag
+        }
+
+        if (cornerMode) {
+            // In corner mode, we only care about NPCs that are close to the hero
+            return npc.distanceTo(this.hero) <= MAX_DISTANCE;
+        }
+
+        // In normal mode, we want NPCs that are either recently aiming at the hero
+        // and close to the center
+        return this.recentlyAimingAtHero(npc)
                 && (this.isPrimed() || npc.distanceTo(this.centerX(), this.centerY()) <= MAX_DISTANCE);
     }
 
@@ -241,27 +283,44 @@ public final class KamikazeHandler {
     /**
      * Handles active kamikaze state actions.
      */
-    private void handleActive() {
+    private void handleActive(boolean cornerMode) {
         this.enterKamikazeState();
 
         if (!this.isPetAlive()
                 || this.hero.getHealth().hpPercent() <= this.config.kamikaze.hpRange.getMin()
                 || this.hero.getHealth().shieldPercent() <= this.config.kamikaze.shieldRange.getMin()) {
             this.setCooldown();
-        } else {
-            // stop movement, set pet to kamikaze gear and wait
-            if (this.movement.isMoving()) {
-                this.movement.stop(false);
-            }
-            this.petGearHelper.tryUse(PetGear.KAMIKAZE);
+            return;
+        }
 
-            // If the PET fails to detonate quickly, abort kamikaze state
-            if (!this.detonateTimer.isArmed()) {
-                this.detonateTimer.activate();
-            }
-            if (this.detonateTimer.isInactive()) {
-                this.setInactive();
-            }
+        if (cornerMode) {
+            this.handleCornerMovement();
+        } else if (this.movement.isMoving()) {
+            this.movement.stop(false);
+        }
+
+        // set pet to kamikaze gear and wait for detonation
+        this.petGearHelper.tryUse(PetGear.KAMIKAZE);
+
+        if (!this.detonateTimer.isArmed()) {
+            this.detonateTimer.activate();
+        }
+        if (this.detonateTimer.isInactive()) {
+            this.setInactive();
+        }
+    }
+
+    /**
+     * Handles movement in corner mode
+     */
+    private void handleCornerMovement() {
+        if (this.lootModule.getAttacker().hasTarget()) {
+            this.movement.moveTo(this.lootModule.getAttacker().getTarget());
+            return;
+        }
+        List<Npc> validTargets = this.getValidTargets(true);
+        if (!validTargets.isEmpty()) {
+            this.lockClosestTarget(validTargets);
         }
     }
 
@@ -326,7 +385,7 @@ public final class KamikazeHandler {
     /**
      * Moves around a point in a circle with the given radius.
      */
-    private void moveAroundPoint(double x, double y, double radius) {
+    private void moveAroundPoint(double x, double y, double radius, boolean keepDistance) {
         Location targetLoc = Location.of(x, y);
         double distance = this.hero.distanceTo(x, y);
         double angle = targetLoc.angleTo(this.hero);
@@ -338,7 +397,12 @@ public final class KamikazeHandler {
                 + 200.0F * 0.625F
                 - this.hero.distanceTo(Location.of(targetLoc, angle, distance)), 0.0F) / distance;
 
-        Location direction = Location.of(targetLoc, angle + angleDiff, distance);
+        Location direction;
+        if (keepDistance) {
+            direction = this.lootModule.getBestDir(targetLoc, angle, angleDiff, distance);
+        } else {
+            direction = Location.of(targetLoc, angle + angleDiff, distance);
+        }
         this.lootModule.searchValidLocation(direction, targetLoc, angle, distance);
         this.movement.moveTo(direction);
     }

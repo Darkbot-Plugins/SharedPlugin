@@ -295,6 +295,13 @@ public class GateHandler {
     }
 
     /**
+     * Clears the status details, used when leaving a gate to prevent stale info.
+     */
+    public final void clearStatusDetails() {
+        this.statusDetails = null;
+    }
+
+    /**
      * Implement the attack tick logic and return true if have something to process
      */
     public boolean attackTickModule() {
