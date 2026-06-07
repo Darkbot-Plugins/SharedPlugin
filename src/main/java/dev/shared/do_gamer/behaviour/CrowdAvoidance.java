@@ -103,6 +103,11 @@ public class CrowdAvoidance implements Behavior, Configurable<CrowdAvoidanceConf
             return false;
         }
 
+        // Keep inactive if restricted to preferred zones and hero is not in one
+        if (this.config.other.onlyInPreferredZone && !this.movement.isInPreferredZone(this.hero)) {
+            return false;
+        }
+
         return this.config.consider.npcs || this.config.consider.enemies || this.config.consider.allies;
     }
 

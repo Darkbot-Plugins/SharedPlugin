@@ -43,5 +43,8 @@ public class CrowdAvoidanceConfig {
     public static class OtherConfig {
         @Option("do_gamer.crowd_avoidance.other.run_mode")
         public boolean runMode = false;
+
+        @Option("do_gamer.crowd_avoidance.other.only_in_preferred_zone")
+        public boolean onlyInPreferredZone = false;
     }
 }
