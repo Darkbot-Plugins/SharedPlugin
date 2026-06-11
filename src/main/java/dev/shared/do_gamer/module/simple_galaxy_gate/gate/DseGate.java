@@ -51,6 +51,7 @@ public final class DseGate extends GateHandler {
         this.loadDelay.disarm();
         this.petDisableDelay.disarm();
         this.resetCachedGuardableNpc();
+        this.clearStatusDetails();
     }
 
     @Override
@@ -108,8 +109,12 @@ public final class DseGate extends GateHandler {
      */
     private boolean isGuardableNpcAttackedByOtherNpc(Npc npc) {
         Npc guardableNpc = this.getGuardableNpc();
-        if (guardableNpc == null || this.shouldStickToCurrentTarget()) {
-            return false; // No guardable NPC or sticking to current target, ignore this check
+        if (guardableNpc == null) {
+            this.clearStatusDetails();
+            return false;
+        }
+        if (!this.updateGuardableNpcProtection(guardableNpc) || this.shouldStickToCurrentTarget()) {
+            return false; // Protection not active or sticking to current target
         }
         return !npc.isAttacking(guardableNpc)
                 && this.module.lootModule.getNpcs().stream()
@@ -117,14 +122,33 @@ public final class DseGate extends GateHandler {
     }
 
     /**
+     * Updates the guardable NPC protection state based on its current HP
+     */
+    private boolean updateGuardableNpcProtection(Npc guardableNpc) {
+        double threshold = this.module.getConfig().dse.guardableNpcHpPercent;
+        double hpPercent = guardableNpc.getHealth().hpPercent();
+        if (hpPercent == 0.0) {
+            this.useGuardableNpcAsSearchLocation = false;
+            this.statusDetails = null;
+            return false;
+        }
+        boolean active = hpPercent <= threshold;
+        this.useGuardableNpcAsSearchLocation = active;
+        String suffix = active ? " (protecting)" : "";
+        this.statusDetails = String.format("Guard HP: %.0f%%%s", hpPercent * 100, suffix);
+        return active;
+    }
+
+    /**
      * Checks if there is a nearby Missile-Storm NPC.
      */
     private boolean hasNearbyMissileStorm(Npc npc) {
-        if (this.npcHasMissileStormName(npc) || this.shouldStickToCurrentTarget()) {
-            return false; // NPC is Missile-Storm or sticking to current target, ignore this check
+        double distance = this.module.getConfig().dse.missileStormDistance;
+        if (distance == 0 || this.npcHasMissileStormName(npc) || this.shouldStickToCurrentTarget()) {
+            return false; // ignore this check
         }
         return this.module.lootModule.getNpcs().stream()
-                .anyMatch(n -> this.npcHasMissileStormName(n) && n.distanceTo(this.getNpcSearchLocation()) < 2_000.0);
+                .anyMatch(n -> this.npcHasMissileStormName(n) && n.distanceTo(this.getNpcSearchLocation()) <= distance);
     }
 
     @Override
