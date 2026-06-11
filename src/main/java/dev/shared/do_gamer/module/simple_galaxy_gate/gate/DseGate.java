@@ -113,7 +113,7 @@ public final class DseGate extends GateHandler {
             this.clearStatusDetails();
             return false;
         }
-        if (!this.isGuardableNpcProtectionActive(guardableNpc) || this.shouldStickToCurrentTarget()) {
+        if (!this.updateGuardableNpcProtection(guardableNpc) || this.shouldStickToCurrentTarget()) {
             return false; // Protection not active or sticking to current target
         }
         return !npc.isAttacking(guardableNpc)
@@ -124,17 +124,18 @@ public final class DseGate extends GateHandler {
     /**
      * Updates the guardable NPC protection state based on its current HP
      */
-    private boolean isGuardableNpcProtectionActive(Npc guardableNpc) {
+    private boolean updateGuardableNpcProtection(Npc guardableNpc) {
         double threshold = this.module.getConfig().dse.guardableNpcHpPercent;
         double hpPercent = guardableNpc.getHealth().hpPercent();
-        boolean active = threshold > 0.0 && hpPercent <= threshold;
-        // Switch search location to guardable NPC when protection is active
+        if (hpPercent == 0.0) {
+            this.useGuardableNpcAsSearchLocation = false;
+            this.statusDetails = null;
+            return false;
+        }
+        boolean active = hpPercent <= threshold;
         this.useGuardableNpcAsSearchLocation = active;
-        // Update status details to show guard HP
         String suffix = active ? " (protecting)" : "";
-        this.statusDetails = hpPercent > 0.0
-                ? String.format("Guard HP: %.0f%%%s", hpPercent * 100, suffix)
-                : null;
+        this.statusDetails = String.format("Guard HP: %.0f%%%s", hpPercent * 100, suffix);
         return active;
     }
 
