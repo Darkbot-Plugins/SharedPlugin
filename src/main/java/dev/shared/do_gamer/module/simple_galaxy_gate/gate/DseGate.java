@@ -120,11 +120,12 @@ public final class DseGate extends GateHandler {
      * Checks if there is a nearby Missile-Storm NPC.
      */
     private boolean hasNearbyMissileStorm(Npc npc) {
-        if (this.npcHasMissileStormName(npc) || this.shouldStickToCurrentTarget()) {
-            return false; // NPC is Missile-Storm or sticking to current target, ignore this check
+        double distance = this.module.getConfig().dse.missileStormDistance;
+        if (distance == 0 || this.npcHasMissileStormName(npc) || this.shouldStickToCurrentTarget()) {
+            return false; // ignore this check
         }
         return this.module.lootModule.getNpcs().stream()
-                .anyMatch(n -> this.npcHasMissileStormName(n) && n.distanceTo(this.getNpcSearchLocation()) < 2_000.0);
+                .anyMatch(n -> this.npcHasMissileStormName(n) && n.distanceTo(this.getNpcSearchLocation()) <= distance);
     }
 
     @Override
