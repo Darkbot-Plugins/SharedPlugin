@@ -176,6 +176,11 @@ public final class SimpleGalaxyGateConfig {
         @Number.Disabled(value = 0)
         @Number(min = 0, max = 3_000, step = 100)
         public int missileStormDistance = 2_000;
+
+        @Option("do_gamer.simple_galaxy_gate.dse.guardable_npc_hp")
+        @Number.Disabled(value = 0.0)
+        @Percentage
+        public double guardableNpcHpPercent = 0.9;
     }
 
     /**
