@@ -1,5 +1,10 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.utils;
 
+import java.util.function.BooleanSupplier;
+import java.util.function.LongConsumer;
+import java.util.function.LongSupplier;
+import java.util.function.LongUnaryOperator;
+
 import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.util.Timer;
@@ -16,6 +21,48 @@ public class ScheduledGateHelper {
 
     public boolean isAutoStart() {
         return this.autoStart;
+    }
+
+    /**
+     * Prepares the bot for waiting for a gate to open.
+     *
+     * @param module          gate module
+     * @param isAccessible    whether the gate is accessible from the current map
+     * @param isOffsetReady   whether the server time offset is available
+     * @param waitingDuration supplier of seconds until the next gate opening
+     * @param setStatus       consumer that updates the gate's status display
+     * @param stopDelayFn     maps remaining seconds to the stop-timer delay (ms)
+     * @param reset           called when the gate is ready to start (seconds == 0)
+     */
+    public boolean prepareTick(
+            SimpleGalaxyGate module,
+            BooleanSupplier isAccessible,
+            BooleanSupplier isOffsetReady,
+            LongSupplier waitingDuration,
+            LongConsumer setStatus,
+            LongUnaryOperator stopDelayFn,
+            Runnable reset) {
+        if (!isAccessible.getAsBoolean()) {
+            return false;
+        }
+        if (!isOffsetReady.getAsBoolean()) {
+            return true;
+        }
+        long seconds = waitingDuration.getAsLong();
+        if (seconds > 0) {
+            if (module.moveToRefinery()) {
+                StateStore.request(StateStore.State.MOVE_TO_SAFE_POSITION);
+            } else {
+                StateStore.request(StateStore.State.WAITING);
+                setStatus.accept(seconds);
+                if (seconds > PRE_START_WAIT_TIMEOUT) {
+                    this.handleStopping(module, stopDelayFn.applyAsLong(seconds));
+                }
+            }
+            return true;
+        }
+        reset.run();
+        return false;
     }
 
     /**

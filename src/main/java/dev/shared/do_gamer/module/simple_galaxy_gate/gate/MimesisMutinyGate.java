@@ -20,7 +20,6 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final double REPAIR_RADIUS = 900.0;
     private static final double FAR_TARGET_DISTANCE = 1_200.0;
     private static final long START_EARLY_SECONDS = 20L;
-    private static final long PRE_START_WAIT_TIMEOUT = 60L;
     private static final long EXTENDED_WAIT_THRESHOLD_SECONDS = 3_600L; // 1 hour
     private final ScheduledGateHelper scheduleHelper = new ScheduledGateHelper();
     private EscortProxy escort;
@@ -226,35 +225,14 @@ public final class MimesisMutinyGate extends GateHandler {
 
     @Override
     public boolean prepareTickModule() {
-        // Check if we're in the correct map for the gate
-        if (!this.isGateAccessibleFromCurrentMap()) {
-            return false; // Allow default map navigation logic to take over
-        }
-
-        // Ensure server time offset is updated before calculating waiting time
-        if (!ServerTimeHelper.offsetUpdated()) {
-            this.statusDetails = "fetching server time...";
-            return true; // Wait until server time offset is updated
-        }
-
-        // Calculate waiting time until the next gate opening
-        long seconds = this.getWaitingDurationInSeconds();
-        if (seconds > 0) {
-            if (this.module.moveToRefinery()) {
-                StateStore.request(StateStore.State.MOVE_TO_SAFE_POSITION);
-            } else {
-                StateStore.request(StateStore.State.WAITING);
-                this.setWaitingStatus(seconds);
-                if (seconds > PRE_START_WAIT_TIMEOUT) {
-                    long delay = seconds > EXTENDED_WAIT_THRESHOLD_SECONDS ? 180_000L : 60_000L;
-                    this.scheduleHelper.handleStopping(this.module, delay);
-                }
-            }
-            return true;
-        }
-
-        this.reset();
-        return false; // Allow default preparation logic to take over
+        return this.scheduleHelper.prepareTick(
+                this.module,
+                this::isGateAccessibleFromCurrentMap,
+                this::isServerOffsetReady,
+                this::getWaitingDurationInSeconds,
+                this::setWaitingStatus,
+                s -> s > EXTENDED_WAIT_THRESHOLD_SECONDS ? 180_000L : 60_000L,
+                this::reset);
     }
 
     @Override

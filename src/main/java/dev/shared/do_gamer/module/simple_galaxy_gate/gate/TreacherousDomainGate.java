@@ -119,31 +119,14 @@ public final class TreacherousDomainGate extends GateHandler {
 
     @Override
     public boolean prepareTickModule() {
-        if (!this.isGateAccessibleFromCurrentMap()) {
-            return false;
-        }
-
-        if (!ServerTimeHelper.offsetUpdated()) {
-            this.statusDetails = "fetching server time...";
-            return true;
-        }
-
-        long seconds = this.getWaitingDurationInSeconds();
-        if (seconds > 0) {
-            if (this.module.moveToRefinery()) {
-                StateStore.request(StateStore.State.MOVE_TO_SAFE_POSITION);
-            } else {
-                StateStore.request(StateStore.State.WAITING);
-                this.setWaitingStatus(seconds);
-                if (seconds > ScheduledGateHelper.PRE_START_WAIT_TIMEOUT) {
-                    this.scheduleHelper.handleStopping(this.module, 180_000L);
-                }
-            }
-            return true;
-        }
-
-        this.reset();
-        return false;
+        return this.scheduleHelper.prepareTick(
+                this.module,
+                this::isGateAccessibleFromCurrentMap,
+                this::isServerOffsetReady,
+                this::getWaitingDurationInSeconds,
+                this::setWaitingStatus,
+                s -> 180_000L,
+                this::reset);
     }
 
     @Override
