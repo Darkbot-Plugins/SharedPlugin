@@ -8,11 +8,11 @@ import com.github.manolo8.darkbot.core.utils.ByteUtils;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.ScheduledGateHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Npc;
-import eu.darkbot.util.Timer;
 
 public final class MimesisMutinyGate extends GateHandler {
     private static final double TOLERANCE_DISTANCE = 1_200.0;
@@ -22,8 +22,7 @@ public final class MimesisMutinyGate extends GateHandler {
     private static final long START_EARLY_SECONDS = 20L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
     private static final long EXTENDED_WAIT_THRESHOLD_SECONDS = 3_600L; // 1 hour
-    private final Timer stopTimer = Timer.get();
-    private boolean autoStart = false;
+    private final ScheduledGateHelper scheduleHelper = new ScheduledGateHelper();
     private EscortProxy escort;
 
     public MimesisMutinyGate() {
@@ -47,6 +46,7 @@ public final class MimesisMutinyGate extends GateHandler {
         this.jumpToNextMap = false;
         this.safeRefreshInGate = false;
         this.skipFarTargets = false;
+        this.showCompletedGates = false;
         this.fetchServerOffset = true;
         this.useGuardableNpcAsSearchLocation = true;
         this.toleranceDistance = TOLERANCE_DISTANCE;
@@ -246,7 +246,8 @@ public final class MimesisMutinyGate extends GateHandler {
                 StateStore.request(StateStore.State.WAITING);
                 this.setWaitingStatus(seconds);
                 if (seconds > PRE_START_WAIT_TIMEOUT) {
-                    this.handleStopping(seconds);
+                    long delay = seconds > EXTENDED_WAIT_THRESHOLD_SECONDS ? 180_000L : 60_000L;
+                    this.scheduleHelper.handleStopping(this.module, delay);
                 }
             }
             return true;
@@ -256,45 +257,16 @@ public final class MimesisMutinyGate extends GateHandler {
         return false; // Allow default preparation logic to take over
     }
 
-    /**
-     * Handles stopping the bot when waiting for the gate to open.
-     */
-    private void handleStopping(long seconds) {
-        // Activate the delay to allow bot refresh is needed
-        if (!this.stopTimer.isArmed()) {
-            // Use 1m delay normally, 3m when wait exceeds extended threshold.
-            long delay = seconds > EXTENDED_WAIT_THRESHOLD_SECONDS ? 180_000L : 60_000L;
-            this.stopTimer.activate(delay);
-            return;
-        }
-        if (this.stopTimer.isInactive()) {
-            // Pause the bot until it's time to start preparing for the gate
-            this.module.bot.setRunning(false);
-            this.autoStart = true;
-        }
-    }
-
     @Override
     public void stoppedTickModule() {
-        if (!this.autoStart) {
-            return; // Only handle auto-start scenario
-        }
-        StateStore.request(StateStore.State.WAITING);
         long seconds = this.getWaitingDurationInSeconds();
-        this.setWaitingStatus(seconds);
-        if (seconds <= PRE_START_WAIT_TIMEOUT) {
-            // Time to start preparing for the gate, resume the bot
-            this.module.bot.handleRefresh();
-            this.module.bot.setRunning(true);
-            this.autoStart = false;
-        }
-        this.stopTimer.disarm();
+        this.scheduleHelper.stoppedTick(this.module, seconds, () -> this.setWaitingStatus(seconds));
     }
 
     @Override
     public void reset() {
         this.resetCachedGuardableNpc();
-        if (!this.autoStart) {
+        if (!this.scheduleHelper.isAutoStart()) {
             this.statusDetails = null; // reset status details
         }
     }

@@ -4,16 +4,14 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.ScheduledGateHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.game.entities.Npc;
-import eu.darkbot.util.Timer;
 
 public final class TreacherousDomainGate extends GateHandler {
     private static final long START_EARLY_SECONDS = 10L;
-    private static final long PRE_START_WAIT_TIMEOUT = 60L;
-    private final Timer stopTimer = Timer.get();
-    private boolean autoStart = false;
     private static final int OPEN_WINDOW_DURATION_MINUTES = 7;
+    private final ScheduledGateHelper scheduleHelper = new ScheduledGateHelper();
     private static final int[] OPEN_WINDOWS = { 9, 11, 16, 19, 20, 22 };
 
     private enum NPC_MAP {
@@ -137,8 +135,8 @@ public final class TreacherousDomainGate extends GateHandler {
             } else {
                 StateStore.request(StateStore.State.WAITING);
                 this.setWaitingStatus(seconds);
-                if (seconds > PRE_START_WAIT_TIMEOUT) {
-                    this.handleStopping();
+                if (seconds > ScheduledGateHelper.PRE_START_WAIT_TIMEOUT) {
+                    this.scheduleHelper.handleStopping(this.module, 180_000L);
                 }
             }
             return true;
@@ -150,19 +148,8 @@ public final class TreacherousDomainGate extends GateHandler {
 
     @Override
     public void stoppedTickModule() {
-        if (!this.autoStart) {
-            return;
-        }
-
-        StateStore.request(StateStore.State.WAITING);
         long seconds = this.getWaitingDurationInSeconds();
-        this.setWaitingStatus(seconds);
-        if (seconds <= PRE_START_WAIT_TIMEOUT) {
-            this.module.bot.handleRefresh();
-            this.module.bot.setRunning(true);
-            this.autoStart = false;
-        }
-        this.stopTimer.disarm();
+        this.scheduleHelper.stoppedTick(this.module, seconds, () -> this.setWaitingStatus(seconds));
     }
 
     /**
@@ -196,23 +183,9 @@ public final class TreacherousDomainGate extends GateHandler {
         this.statusDetails = String.format("start in %s", ServerTimeHelper.remainingTimeFormat(seconds));
     }
 
-    /**
-     * Stops the bot temporarily while waiting for the gate opening.
-     */
-    private void handleStopping() {
-        if (!this.stopTimer.isArmed()) {
-            this.stopTimer.activate(180_000L);
-            return;
-        }
-        if (this.stopTimer.isInactive()) {
-            this.module.bot.setRunning(false);
-            this.autoStart = true;
-        }
-    }
-
     @Override
     public void reset() {
-        if (!this.autoStart) {
+        if (!this.scheduleHelper.isAutoStart()) {
             this.statusDetails = null;
         }
     }
