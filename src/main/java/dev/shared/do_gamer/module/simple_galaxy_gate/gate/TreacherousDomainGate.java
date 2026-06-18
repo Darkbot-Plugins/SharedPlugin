@@ -13,7 +13,7 @@ public final class TreacherousDomainGate extends GateHandler {
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
     private final Timer stopTimer = Timer.get();
     private boolean autoStart = false;
-    private static final int OPEN_WINDOW_DURATION_MINUTES = 10;
+    private static final int OPEN_WINDOW_DURATION_MINUTES = 7;
     private static final int[] OPEN_WINDOWS = { 9, 11, 16, 19, 20, 22 };
 
     private enum NPC_MAP {
@@ -54,7 +54,7 @@ public final class TreacherousDomainGate extends GateHandler {
     @Override
     public boolean collectTickModule() {
         this.statusDetails = null;
-        return false;
+        return (this.getWaitingDurationInSeconds() == 0 && this.module.collectorModule.hasNoBox());
     }
 
     /**
