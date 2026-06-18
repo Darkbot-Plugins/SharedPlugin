@@ -9,9 +9,8 @@ import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.util.Timer;
 
 public final class TreacherousDomainGate extends GateHandler {
-    private static final long START_EARLY_SECONDS = 20L;
+    private static final long START_EARLY_SECONDS = 10L;
     private static final long PRE_START_WAIT_TIMEOUT = 60L;
-    private static final long EXTENDED_WAIT_THRESHOLD_SECONDS = 3_600L; // 1 hour
     private final Timer stopTimer = Timer.get();
     private boolean autoStart = false;
     private static final int OPEN_WINDOW_DURATION_MINUTES = 10;
@@ -34,7 +33,6 @@ public final class TreacherousDomainGate extends GateHandler {
 
     public TreacherousDomainGate() {
         this.defaultNpcParam = new NpcParam(500.0);
-        this.jumpToNextMap = false;
         this.moveToCenter = false;
         this.approachToCenter = false;
         this.skipFarTargets = false;
@@ -45,7 +43,6 @@ public final class TreacherousDomainGate extends GateHandler {
 
     @Override
     public boolean attackTickModule() {
-        this.jumpToNextMap = false;
         // Prioritize attacking Tower first, then Boss
         if (this.handleTowerAttack() || this.handleBossAttack()) {
             return true;
@@ -57,7 +54,6 @@ public final class TreacherousDomainGate extends GateHandler {
     @Override
     public boolean collectTickModule() {
         this.statusDetails = null;
-        this.jumpToNextMap = true;
         return false;
     }
 
@@ -142,7 +138,7 @@ public final class TreacherousDomainGate extends GateHandler {
                 StateStore.request(StateStore.State.WAITING);
                 this.setWaitingStatus(seconds);
                 if (seconds > PRE_START_WAIT_TIMEOUT) {
-                    this.handleStopping(seconds);
+                    this.handleStopping();
                 }
             }
             return true;
@@ -203,10 +199,9 @@ public final class TreacherousDomainGate extends GateHandler {
     /**
      * Stops the bot temporarily while waiting for the gate opening.
      */
-    private void handleStopping(long seconds) {
+    private void handleStopping() {
         if (!this.stopTimer.isArmed()) {
-            long delay = seconds > EXTENDED_WAIT_THRESHOLD_SECONDS ? 180_000L : 60_000L;
-            this.stopTimer.activate(delay);
+            this.stopTimer.activate(180_000L);
             return;
         }
         if (this.stopTimer.isInactive()) {
@@ -220,6 +215,5 @@ public final class TreacherousDomainGate extends GateHandler {
         if (!this.autoStart) {
             this.statusDetails = null;
         }
-        this.jumpToNextMap = false;
     }
 }
