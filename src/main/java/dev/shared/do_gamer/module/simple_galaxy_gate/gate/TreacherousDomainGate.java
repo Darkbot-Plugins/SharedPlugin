@@ -10,7 +10,7 @@ import eu.darkbot.api.game.entities.Npc;
 
 public final class TreacherousDomainGate extends GateHandler {
     private static final long START_EARLY_SECONDS = 10L;
-    private static final int OPEN_WINDOW_DURATION_MINUTES = 7;
+    private static final long OPEN_WINDOW_DURATION_MINUTES = 10L;
     private final ScheduledGateHelper scheduleHelper = new ScheduledGateHelper();
     private static final int[] OPEN_WINDOWS = { 9, 11, 16, 19, 20, 22 };
 
