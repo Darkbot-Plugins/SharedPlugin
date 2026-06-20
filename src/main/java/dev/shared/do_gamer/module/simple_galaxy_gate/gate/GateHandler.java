@@ -12,6 +12,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Defaults;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
+import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.entities.Box;
@@ -472,6 +473,17 @@ public class GateHandler {
      */
     protected final boolean handleTravelToGate(int portalTypeId) {
         return this.handleTravelToGate(List.of(portalTypeId));
+    }
+
+    /**
+     * Checks if the server offset is ready for use.
+     */
+    protected final boolean isServerOffsetReady() {
+        if (!ServerTimeHelper.offsetUpdated()) {
+            this.statusDetails = "fetching server time...";
+            return false;
+        }
+        return true;
     }
 
     /**
