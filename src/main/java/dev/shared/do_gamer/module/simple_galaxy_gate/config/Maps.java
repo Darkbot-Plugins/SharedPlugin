@@ -32,7 +32,7 @@ public final class Maps {
         // Prevent instantiation
     }
 
-    public static final List<Integer> ABG_IDS = List.of(51, 52, 53); // Alpha, Beta, Gamma gate IDs
+    public static final List<Integer> ABG_IDS = List.of(53, 52, 51); // Gamma, Beta, Alpha gate IDs
     private static List<MapInfo> ggMaps;
     private static double mapCenterX = Defaults.MAP_CENTER_X;
     private static double mapCenterY = Defaults.MAP_CENTER_Y;
@@ -108,7 +108,7 @@ public final class Maps {
      * Finds mapInfo by gate ID.
      */
     private static MapInfo findMapInfo(int id) {
-        // Map ID 0 represents Alpha/Beta/Gamma group
+        // Map ID 0 is a special case for ABG gates, so we treat it as a wildcard.
         int actualId = ABG_IDS.contains(id) ? 0 : id;
         return ggMaps.stream().filter(mi -> mi.id == actualId).findFirst().orElse(null);
     }

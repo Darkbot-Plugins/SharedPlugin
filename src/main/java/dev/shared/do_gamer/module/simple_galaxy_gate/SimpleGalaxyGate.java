@@ -590,7 +590,7 @@ public final class SimpleGalaxyGate implements Module, Task,
 
         // Handle ABG gate ID
         if (gateId == 0) {
-            // Try Alpha, Beta, Gamma in order
+            // Check if any ABG gate is accessible from current map
             for (int id : Maps.ABG_IDS) {
                 if (this.isGateAvailable(id)) {
                     return this.starSystem.getOrCreateMap(id); // Found existing gate
