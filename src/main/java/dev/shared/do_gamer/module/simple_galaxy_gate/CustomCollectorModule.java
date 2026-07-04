@@ -18,7 +18,6 @@ import eu.darkbot.shared.modules.CollectorModule;
 public final class CustomCollectorModule extends CollectorModule {
 
     private static final long FAKE_BOX_TIMEOUT_MS = 300_000L; // 5 minutes in milliseconds
-    private static final long CARGO_BOX_TIMEOUT_MS = 30_000L; // 30 seconds in milliseconds
 
     private final EntitiesAPI entities;
     private final Map<String, FakeEntity.FakeBox> fakeBoxes = new HashMap<>();
@@ -83,13 +82,12 @@ public final class CustomCollectorModule extends CollectorModule {
             }
 
             String hash = box.getHash();
-            boolean isCargoBox = this.isResource(box.getTypeName());
             FakeEntity.FakeBox fake = this.fakeBoxes.get(hash);
 
             if (fake == null || !fake.isValid()) {
-                this.fakeBoxes.put(hash, this.createFakeBox(box, isCargoBox));
+                this.fakeBoxes.put(hash, this.createFakeBox(box));
             } else {
-                this.updateFakeBox(fake, isCargoBox, box);
+                this.updateFakeBox(fake, box);
             }
         }
 
@@ -100,22 +98,19 @@ public final class CustomCollectorModule extends CollectorModule {
         return box == null
                 || FakeEntity.isFakeEntity(box)
                 || !box.isValid()
-                || box.isCollected();
+                || box.isCollected()
+                || this.isResource(box.getTypeName()); // Skip cargo boxes (they despawn in 30 seconds)
     }
 
-    private FakeEntity.FakeBox createFakeBox(Box box, boolean isCargoBox) {
+    private FakeEntity.FakeBox createFakeBox(Box box) {
         return this.entities.fakeEntityBuilder()
                 .location(box.getLocationInfo())
-                .keepAlive(isCargoBox ? CARGO_BOX_TIMEOUT_MS : FAKE_BOX_TIMEOUT_MS)
+                .keepAlive(FAKE_BOX_TIMEOUT_MS)
                 .removeOnSelect(true)
                 .box(box.getInfo());
     }
 
-    private void updateFakeBox(FakeEntity.FakeBox fake, boolean isCargoBox, Box box) {
-        if (isCargoBox) {
-            return; // Skip updating cargo boxes to avoid resetting their timeout
-        }
-
+    private void updateFakeBox(FakeEntity.FakeBox fake, Box box) {
         fake.setLocation(box.getLocationInfo());
         fake.setTimeout(FAKE_BOX_TIMEOUT_MS);
     }
