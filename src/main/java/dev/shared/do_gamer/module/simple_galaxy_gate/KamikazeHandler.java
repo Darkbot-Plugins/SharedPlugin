@@ -148,7 +148,11 @@ public final class KamikazeHandler {
      * Checks if the PET HP is low enough for the kamikaze strategy.
      */
     private boolean isPetHpLow() {
-        return this.pet.getHealth().getHp() < PET_LOW_HP;
+        int maxHp = this.pet.getHealth().getMaxHp();
+        int lowHpThreshold = maxHp > 0
+                ? (int) (maxHp * 0.19) // 19% of max HP (required below 20% for kamikaze)
+                : PET_LOW_HP; // Fallback to a fixed low HP threshold if max HP is not available
+        return this.pet.getHealth().getHp() < lowHpThreshold;
     }
 
     /**
