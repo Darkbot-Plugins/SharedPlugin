@@ -18,6 +18,7 @@ import eu.darkbot.shared.modules.CollectorModule;
 public final class CustomCollectorModule extends CollectorModule {
 
     private static final long FAKE_BOX_TIMEOUT_MS = 300_000L; // 5 minutes in milliseconds
+    private static final long CARGO_BOX_TIMEOUT_MS = 30_000L; // 30 seconds in milliseconds
 
     private final EntitiesAPI entities;
     private final Map<String, FakeEntity.FakeBox> fakeBoxes = new HashMap<>();
@@ -80,24 +81,24 @@ public final class CustomCollectorModule extends CollectorModule {
             if (box == null
                     || FakeEntity.isFakeEntity(box)
                     || !box.isValid()
-                    || box.isCollected()
-                    || this.isResource(box.getTypeName())) {
-                continue; // Skip invalid, fake, collected boxes or cargo boxes
+                    || box.isCollected()) {
+                continue; // Skip invalid, fake, or collected boxes
             }
 
             String hash = box.getHash();
             FakeEntity.FakeBox fake = this.fakeBoxes.get(hash);
+            long timeout = this.isResource(box.getTypeName()) ? CARGO_BOX_TIMEOUT_MS : FAKE_BOX_TIMEOUT_MS;
 
             if (fake == null || !fake.isValid()) {
                 fake = this.entities.fakeEntityBuilder()
                         .location(box.getLocationInfo())
-                        .keepAlive(FAKE_BOX_TIMEOUT_MS)
+                        .keepAlive(timeout)
                         .removeOnSelect(true)
                         .box(box.getInfo());
                 this.fakeBoxes.put(hash, fake);
             } else {
                 fake.setLocation(box.getLocationInfo());
-                fake.setTimeout(FAKE_BOX_TIMEOUT_MS);
+                fake.setTimeout(timeout);
             }
         }
 
