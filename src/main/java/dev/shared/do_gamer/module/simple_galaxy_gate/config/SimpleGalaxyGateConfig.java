@@ -657,6 +657,10 @@ public final class SimpleGalaxyGateConfig {
         @Number(min = 0, max = 5, step = 1)
         public int stuckInGateTimerMinutes = 1;
 
+        @Option("do_gamer.simple_galaxy_gate.other.fake_box_timeout")
+        @Number(min = 5, max = 60, step = 1)
+        public int fakeBoxTimeoutMinutes = 5;
+
         @Option("do_gamer.simple_galaxy_gate.other.use_run_config")
         public boolean useRunConfig = true;
 
