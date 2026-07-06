@@ -94,6 +94,9 @@ public final class CustomCollectorModule extends CollectorModule {
         this.cleanupFakeBoxes();
     }
 
+    /**
+     * Determines if a box should be skipped (not marked as fake)
+     */
     private boolean shouldSkip(Box box) {
         return box == null
                 || FakeEntity.isFakeEntity(box)
@@ -102,6 +105,9 @@ public final class CustomCollectorModule extends CollectorModule {
                 || this.isResource(box.getTypeName()); // Skip cargo boxes (they despawn in 30 seconds)
     }
 
+    /**
+     * How long a fake box should remain alive before being removed
+     */
     private long getFakeBoxTimeoutMs() {
         if (this.config == null) {
             return DEFAULT_FAKE_BOX_TIMEOUT_MS;
@@ -109,6 +115,9 @@ public final class CustomCollectorModule extends CollectorModule {
         return this.config.other.fakeBoxTimeoutMinutes * 60_000L;
     }
 
+    /**
+     * Creates a fake box entity to represent a real box in the game map
+     */
     private FakeEntity.FakeBox createFakeBox(Box box) {
         return this.entities.fakeEntityBuilder()
                 .location(box.getLocationInfo())
@@ -117,11 +126,18 @@ public final class CustomCollectorModule extends CollectorModule {
                 .box(box.getInfo());
     }
 
+    /**
+     * Updates the location and timeout of an existing fake box to match the real
+     * box
+     */
     private void updateFakeBox(FakeEntity.FakeBox fake, Box box) {
         fake.setLocation(box.getLocationInfo());
         fake.setTimeout(this.getFakeBoxTimeoutMs());
     }
 
+    /**
+     * Cleans up fake boxes that are no longer valid or have been collected
+     */
     private void cleanupFakeBoxes() {
         Iterator<Map.Entry<String, FakeEntity.FakeBox>> iterator = this.fakeBoxes.entrySet().iterator();
         while (iterator.hasNext()) {

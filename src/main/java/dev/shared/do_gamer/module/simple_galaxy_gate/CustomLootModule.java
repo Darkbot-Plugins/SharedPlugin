@@ -160,7 +160,8 @@ public final class CustomLootModule extends LootModule {
 
         double radius = this.collectRadius.getValue();
         double boxDistance = this.hero.distanceTo(box);
-        return boxDistance <= radius || this.hero.distanceTo(npc) >= (2.0 * boxDistance);
+        return boxDistance <= radius // Within collection radius
+                || this.hero.distanceTo(npc) >= (2.0 * boxDistance); // NPC is far enough compared to box (2x distance)
     }
 
     /**
