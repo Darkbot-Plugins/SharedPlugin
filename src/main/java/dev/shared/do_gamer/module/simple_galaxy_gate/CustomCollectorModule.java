@@ -106,7 +106,7 @@ public final class CustomCollectorModule extends CollectorModule {
         if (this.config == null) {
             return DEFAULT_FAKE_BOX_TIMEOUT_MS;
         }
-        return (long) this.config.other.fakeBoxTimeoutMinutes * 60_000L;
+        return this.config.other.fakeBoxTimeoutMinutes * 60_000L;
     }
 
     private FakeEntity.FakeBox createFakeBox(Box box) {
