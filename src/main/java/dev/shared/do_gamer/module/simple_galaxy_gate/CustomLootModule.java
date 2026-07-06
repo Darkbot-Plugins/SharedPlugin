@@ -154,8 +154,14 @@ public final class CustomLootModule extends LootModule {
      * Determines if the bot should try to collect the box while attacking the NPC.
      */
     private boolean shouldCollectWhileAttacking(Npc npc, Box box) {
+        if (npc == null || this.shouldIgnoreBox(npc, box)) {
+            return false;
+        }
+
         double radius = this.collectRadius.getValue();
-        return npc != null && !this.shouldIgnoreBox(npc, box) && box.distanceTo(this.hero) <= radius;
+        double boxDistance = this.hero.distanceTo(box);
+        return boxDistance <= radius // Within collection radius
+                || this.hero.distanceTo(npc) >= (2.0 * boxDistance); // NPC is far enough compared to box (2x distance)
     }
 
     /**

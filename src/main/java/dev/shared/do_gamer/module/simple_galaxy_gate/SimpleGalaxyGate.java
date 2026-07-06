@@ -40,7 +40,7 @@ import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
-@Feature(name = "Simple Galaxy Gate", description = "Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Trinity, DSE, Mimesis and EBG.")
+@Feature(name = "Simple Galaxy Gate", description = "Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Treacherous, Trinity, DSE, Mimesis and EBG.")
 public final class SimpleGalaxyGate implements Module, Task,
         Configurable<SimpleGalaxyGateConfig>,
         NpcExtraProvider {
@@ -590,7 +590,7 @@ public final class SimpleGalaxyGate implements Module, Task,
 
         // Handle ABG gate ID
         if (gateId == 0) {
-            // Try Alpha, Beta, Gamma in order
+            // Check if any ABG gate is accessible from current map
             for (int id : Maps.ABG_IDS) {
                 if (this.isGateAvailable(id)) {
                     return this.starSystem.getOrCreateMap(id); // Found existing gate
