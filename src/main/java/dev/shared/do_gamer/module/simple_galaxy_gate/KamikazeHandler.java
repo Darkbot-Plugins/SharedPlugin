@@ -327,13 +327,10 @@ public final class KamikazeHandler {
             currentTarget = closestTarget;
         }
 
-        if (currentTarget != null) {
+        if (currentTarget != null
+                && currentTarget.isValid()
+                && this.isValidTarget(currentTarget, true)) {
             this.movement.moveTo(currentTarget);
-            return;
-        }
-
-        if (closestTarget != null) {
-            this.lockTarget(closestTarget);
         }
     }
 
