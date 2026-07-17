@@ -116,11 +116,7 @@ public final class GopGate extends GateHandler {
             return false;
         }
 
-        if (this.moveToHealGenerator() || this.handleRocketOrTurretAttack()) {
-            return true;
-        }
-
-        return false;
+        return this.moveToHealGenerator() || this.handleRocketOrTurretAttack();
     }
 
     /**
