@@ -112,7 +112,7 @@ public final class GopGate extends GateHandler {
             Npc rocketNpc = this.getRocketNpc();
             if (rocketNpc != null) {
                 npc = rocketNpc; // Prioritize attacking rockets over turrets
-            } else if (this.hasOtherNpc(npc.getInfo().getPriority())) {
+            } else if (npc.distanceTo(this.module.hero) > 1000.0 && this.hasOtherNpc(npc.getInfo().getPriority())) {
                 return false; // If there are other NPCs, don't attack the turret
             }
             this.module.lootModule.moveToTarget(npc);
