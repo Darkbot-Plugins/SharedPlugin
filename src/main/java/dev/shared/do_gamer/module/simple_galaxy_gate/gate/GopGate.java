@@ -69,8 +69,14 @@ public final class GopGate extends GateHandler {
         return this.nameContains(npc, SEEKER_ROCKET_NAME) || this.nameContains(npc, WARHEAD_NAME);
     }
 
-    private boolean isRocketPresent() {
-        return this.module.lootModule.getNpcs().stream().anyMatch(this::isRocket);
+    /**
+     * Gets the nearest Rocket NPC to the hero.
+     */
+    private Npc getRocketNpc() {
+        return this.module.lootModule.getNpcs().stream()
+                .filter(this::isRocket)
+                .min(Comparator.comparingDouble(npc -> npc.distanceTo(this.module.hero)))
+                .orElse(null);
     }
 
     private boolean isTurret(Npc npc) {
@@ -88,14 +94,14 @@ public final class GopGate extends GateHandler {
     }
 
     /**
-     * Handles the attack on the turret if it is present and no rockets are present.
+     * Handles attacking the nearest rocket or turret NPC if one is present.
      */
-    private boolean handleTurretAttack() {
-        if (this.isRocketPresent()) {
-            return false;
+    private boolean handleRocketOrTurretAttack() {
+        // Attack the rocket first
+        Npc npc = this.getRocketNpc();
+        if (npc == null) {
+            npc = this.getTurretNpc();
         }
-
-        Npc npc = this.getTurretNpc();
         if (npc != null) {
             this.module.lootModule.moveToTarget(npc);
             this.module.lootModule.getAttacker().tryLockAndAttack();
@@ -110,11 +116,11 @@ public final class GopGate extends GateHandler {
             return false;
         }
 
-        if (this.handleTurretAttack()) {
+        if (this.moveToHealGenerator() || this.handleRocketOrTurretAttack()) {
             return true;
         }
 
-        return this.moveToHealGenerator();
+        return false;
     }
 
     /**
