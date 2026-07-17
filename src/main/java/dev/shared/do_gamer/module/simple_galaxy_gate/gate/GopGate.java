@@ -1,9 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.util.Comparator;
-import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.PluginAPI;
@@ -124,7 +122,10 @@ public final class GopGate extends GateHandler {
      * Moves the hero to the nearest heal generator if one is present.
      */
     private boolean moveToHealGenerator() {
-        PlutusGenerator healGenerator = this.getGenerators().stream()
+        PlutusGenerator healGenerator = this.module.entities.getStaticEntities().stream()
+                .filter(Objects::nonNull)
+                .filter(PlutusGenerator.class::isInstance)
+                .map(PlutusGenerator.class::cast)
                 .filter(PlutusGenerator::isHealType)
                 .min(Comparator.comparingDouble(g -> g.distanceTo(this.module.hero)))
                 .orElse(null);
@@ -134,16 +135,5 @@ public final class GopGate extends GateHandler {
             return true;
         }
         return false;
-    }
-
-    /**
-     * Gets a list of all generators in the map.
-     */
-    private List<PlutusGenerator> getGenerators() {
-        return this.module.entities.getStaticEntities().stream()
-                .filter(Objects::nonNull)
-                .filter(PlutusGenerator.class::isInstance)
-                .map(PlutusGenerator.class::cast)
-                .collect(Collectors.toList());
     }
 }
