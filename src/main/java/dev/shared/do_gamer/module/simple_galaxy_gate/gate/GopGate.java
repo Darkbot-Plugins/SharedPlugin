@@ -1,7 +1,6 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.util.Comparator;
-import java.util.Objects;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.PluginAPI;
@@ -123,7 +122,6 @@ public final class GopGate extends GateHandler {
      */
     private boolean moveToHealGenerator() {
         PlutusGenerator healGenerator = this.module.entities.getStaticEntities().stream()
-                .filter(Objects::nonNull)
                 .filter(PlutusGenerator.class::isInstance)
                 .map(PlutusGenerator.class::cast)
                 .filter(PlutusGenerator::isHealType)
