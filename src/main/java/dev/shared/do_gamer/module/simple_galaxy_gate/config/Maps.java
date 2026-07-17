@@ -16,6 +16,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DseGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EpsilonGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EternalBlacklightGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GopGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.InvasionGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.KuiperGate;
@@ -100,6 +101,8 @@ public final class Maps {
         list.add(new MapInfo(-3, "Mimesis Mutiny", null, StarSystemAPI.BASE_MAPS, MimesisMutinyGate::new));
         list.add(new MapInfo(-4, "Eternal Blacklight", null, StarSystemAPI.BLACK_LIGHT_MAPS,
                 EternalBlacklightGate::new));
+        list.add(new MapInfo(410, "Gauntlet Of Plutus (Normal)", null, StarSystemAPI.OUTPOST_HOME_MAPS, GopGate::new));
+        list.add(new MapInfo(450, "Gauntlet Of Plutus (Easy)", null, StarSystemAPI.HOME_MAPS, GopGate::new));
 
         ggMaps = Collections.unmodifiableList(list);
     }
