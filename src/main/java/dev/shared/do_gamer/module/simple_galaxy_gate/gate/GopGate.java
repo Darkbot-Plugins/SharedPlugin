@@ -95,11 +95,11 @@ public final class GopGate extends GateHandler {
                 .orElse(null);
     }
 
-    private boolean hasOtherNpc(int proiority) {
+    private boolean hasOtherNpc(int priority) {
         return this.module.lootModule.getNpcs().stream()
                 .anyMatch(n -> !this.isTurret(n) && !this.isPlutus(n)
                         && !n.getInfo().hasExtraFlag(NpcFlag.PASSIVE) // Ignore passive NPCs
-                        && n.getInfo().getPriority() <= proiority // Ignore NPCs with lower priority
+                        && n.getInfo().getPriority() <= priority // Ignore NPCs with higest priority
                 );
     }
 
