@@ -4,6 +4,7 @@ import java.util.Comparator;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.PluginAPI;
+import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.StaticEntity.PlutusGenerator;
 import eu.darkbot.api.managers.GauntletPlutusAPI;
@@ -21,7 +22,6 @@ public final class GopGate extends GateHandler {
         this.npcMap.put(WARHEAD_NAME, new NpcParam(600.0, -80));
         this.npcMap.put(PLUTUS_NAME, new NpcParam(600.0));
         this.defaultNpcParam = new NpcParam(580.0);
-        this.moveToCenter = false;
         this.showCompletedGates = false;
     }
 
@@ -93,9 +93,12 @@ public final class GopGate extends GateHandler {
                 .orElse(null);
     }
 
-    private boolean hasOtherNpc() {
+    private boolean hasOtherNpc(int proiority) {
         return this.module.lootModule.getNpcs().stream()
-                .anyMatch(n -> !this.isTurret(n) && !this.isPlutus(n));
+                .anyMatch(n -> !this.isTurret(n) && !this.isPlutus(n)
+                        && !n.getInfo().hasExtraFlag(NpcFlag.PASSIVE) // Ignore passive NPCs
+                        && n.getInfo().getPriority() <= proiority // Ignore NPCs with lower priority
+                );
     }
 
     /**
@@ -107,8 +110,8 @@ public final class GopGate extends GateHandler {
             Npc rocketNpc = this.getRocketNpc();
             if (rocketNpc != null) {
                 npc = rocketNpc; // Prioritize attacking rockets over turrets
-            } else if (this.hasOtherNpc()) {
-                return false; // If there are other NPCs present, don't attack turrets
+            } else if (npc.distanceTo(this.module.hero) > 1000.0 && this.hasOtherNpc(npc.getInfo().getPriority())) {
+                return false; // If there are other NPCs, don't attack the turret
             }
             this.module.lootModule.moveToTarget(npc);
             this.module.lootModule.getAttacker().tryLockAndAttack();
