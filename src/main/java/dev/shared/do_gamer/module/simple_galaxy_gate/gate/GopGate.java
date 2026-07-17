@@ -23,6 +23,8 @@ public final class GopGate extends GateHandler {
         this.npcMap.put(PLUTUS_NAME, new NpcParam(600.0));
         this.defaultNpcParam = new NpcParam(580.0);
         this.showCompletedGates = false;
+        this.approachToCenter = false;
+        this.skipFarTargets = false;
     }
 
     @Override
@@ -110,7 +112,7 @@ public final class GopGate extends GateHandler {
             Npc rocketNpc = this.getRocketNpc();
             if (rocketNpc != null) {
                 npc = rocketNpc; // Prioritize attacking rockets over turrets
-            } else if (npc.distanceTo(this.module.hero) > 1000.0 && this.hasOtherNpc(npc.getInfo().getPriority())) {
+            } else if (this.hasOtherNpc(npc.getInfo().getPriority())) {
                 return false; // If there are other NPCs, don't attack the turret
             }
             this.module.lootModule.moveToTarget(npc);
