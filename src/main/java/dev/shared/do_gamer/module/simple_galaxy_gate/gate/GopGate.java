@@ -19,7 +19,7 @@ public final class GopGate extends GateHandler {
     public GopGate() {
         this.npcMap.put(SEEKER_ROCKET_NAME, new NpcParam(600.0, -80));
         this.npcMap.put(WARHEAD_NAME, new NpcParam(600.0, -80));
-        this.npcMap.put(PLUTUS_NAME, new NpcParam(600.0, -20));
+        this.npcMap.put(PLUTUS_NAME, new NpcParam(600.0));
         this.defaultNpcParam = new NpcParam(580.0);
         this.moveToCenter = false;
         this.showCompletedGates = false;
@@ -93,16 +93,23 @@ public final class GopGate extends GateHandler {
                 .orElse(null);
     }
 
+    private boolean hasOtherNpc() {
+        return this.module.lootModule.getNpcs().stream()
+                .anyMatch(n -> !this.isTurret(n) && !this.isPlutus(n));
+    }
+
     /**
      * Handles attacking the nearest rocket or turret NPC if one is present.
      */
     private boolean handleRocketOrTurretAttack() {
-        // Attack the rocket first
-        Npc npc = this.getRocketNpc();
-        if (npc == null) {
-            npc = this.getTurretNpc();
-        }
+        Npc npc = this.getTurretNpc();
         if (npc != null) {
+            Npc rocketNpc = this.getRocketNpc();
+            if (rocketNpc != null) {
+                npc = rocketNpc; // Prioritize attacking rockets over turrets
+            } else if (this.hasOtherNpc()) {
+                return false; // If there are other NPCs present, don't attack turrets
+            }
             this.module.lootModule.moveToTarget(npc);
             this.module.lootModule.getAttacker().tryLockAndAttack();
             return true;
