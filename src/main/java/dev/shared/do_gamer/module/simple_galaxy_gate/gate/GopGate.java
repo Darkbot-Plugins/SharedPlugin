@@ -158,6 +158,13 @@ public final class GopGate extends GateHandler {
 
         if (healGenerator != null) {
             this.module.movement.moveTo(healGenerator);
+
+            // Kill the nearest rocket if one is present while moving to the heal generator
+            Npc rocketNpc = this.getRocketNpc();
+            if (rocketNpc != null) {
+                this.module.lootModule.getAttacker().setTarget(rocketNpc);
+                this.module.lootModule.getAttacker().tryLockAndAttack();
+            }
             return true;
         }
         return false;
