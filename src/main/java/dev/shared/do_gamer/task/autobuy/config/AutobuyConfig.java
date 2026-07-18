@@ -291,6 +291,7 @@ public final class AutobuyConfig {
         public static final String SLUG_THS_D01 = "ammunition_slug_ths-d01";
         public static final String SLUG_COS_D01 = "ammunition_slug_cos-d01";
         public static final String SLUG_ELS_D01 = "ammunition_slug_els-d01";
+        public static final String SPOOL_GSP_30 = "ammunition_spool_gsp-30";
 
         // Shared default purchase configuration for unknown ammo IDs.
         private static final PurchaseConfig DEFAULT_PURCHASE_CONFIG = new PurchaseConfig(0);
@@ -299,7 +300,7 @@ public final class AutobuyConfig {
             this.itemIds = new String[] {
                     LCB_10, MCB_25, MCB_50, SAB_50, RSB_75, JOB_100,
                     PLT_2026, PLT_2021, EMP_01, ECO_10, SLUG_THS_D01,
-                    SLUG_COS_D01, SLUG_ELS_D01
+                    SLUG_COS_D01, SLUG_ELS_D01, SPOOL_GSP_30
             };
         }
 
@@ -363,6 +364,9 @@ public final class AutobuyConfig {
         @Option("do_gamer.autobuy.ammo.slugElsD01")
         public PurchaseConfig slugElsD01 = new PurchaseConfig(1_000);
 
+        @Option("do_gamer.autobuy.ammo.spoolGsp30")
+        public PurchaseConfig spoolGsp30 = new PurchaseConfig(1_000);
+
         public boolean isEnabled(String itemId) {
             return this.getAmountOfItem(itemId) > 0;
         }
@@ -403,6 +407,8 @@ public final class AutobuyConfig {
                     return this.slugCosD01;
                 case SLUG_ELS_D01:
                     return this.slugElsD01;
+                case SPOOL_GSP_30:
+                    return this.spoolGsp30;
                 default:
                     return DEFAULT_PURCHASE_CONFIG;
             }
