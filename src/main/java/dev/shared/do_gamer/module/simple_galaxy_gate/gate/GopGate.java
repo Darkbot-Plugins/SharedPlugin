@@ -18,6 +18,13 @@ public final class GopGate extends GateHandler {
 
     private GauntletPlutusAPI gopApi;
 
+    // Per-tick cache for Plutus/Turret presence, to avoid scanning the NPC
+    // list multiple times when shouldKillNpc/getTargetRadius are called
+    // repeatedly (once per candidate NPC) within the same tick.
+    private boolean presenceCacheDirty = true;
+    private boolean plutusPresentCache;
+    private boolean turretPresentCache;
+
     public GopGate() {
         this.npcMap.put(SEEKER_ROCKET_NAME, new NpcParam(600.0, -80));
         this.npcMap.put(WARHEAD_NAME, new NpcParam(600.0, -80));
@@ -58,6 +65,7 @@ public final class GopGate extends GateHandler {
     @Override
     public void reset() {
         this.statusDetails = null;
+        this.presenceCacheDirty = true;
     }
 
     /**
@@ -68,10 +76,37 @@ public final class GopGate extends GateHandler {
     }
 
     /**
+     * Refreshes the cached Plutus/Turret presence flags with a single pass
+     * over the NPC list, instead of streaming over it once per flag.
+     */
+    private void refreshPresenceCache() {
+        boolean plutus = false;
+        boolean turret = false;
+        for (Npc npc : this.module.lootModule.getNpcs()) {
+            if (!plutus && this.isPlutus(npc)) {
+                plutus = true;
+            }
+            if (!turret && this.isTurret(npc)) {
+                turret = true;
+            }
+            if (plutus && turret) {
+                break;
+            }
+        }
+        this.plutusPresentCache = plutus;
+        this.turretPresentCache = turret;
+        this.presenceCacheDirty = false;
+    }
+
+    /**
      * Checks if there are Plutus present.
+     * The result is cached per tick, see {@link #refreshPresenceCache()}.
      */
     private boolean isPlutusPresent() {
-        return this.module.lootModule.getNpcs().stream().anyMatch(this::isPlutus);
+        if (this.presenceCacheDirty) {
+            this.refreshPresenceCache();
+        }
+        return this.plutusPresentCache;
     }
 
     /**
@@ -100,9 +135,13 @@ public final class GopGate extends GateHandler {
 
     /**
      * Checks if there are any Turret present.
+     * The result is cached per tick, see {@link #refreshPresenceCache()}.
      */
     private boolean isTurretPresent() {
-        return this.module.lootModule.getNpcs().stream().anyMatch(this::isTurret);
+        if (this.presenceCacheDirty) {
+            this.refreshPresenceCache();
+        }
+        return this.turretPresentCache;
     }
 
     /**
@@ -138,6 +177,10 @@ public final class GopGate extends GateHandler {
 
     @Override
     public boolean attackTickModule() {
+        // Invalidate the presence cache at the start of each tick, since it's
+        // called before shouldKillNpc/getTargetRadius are evaluated per NPC.
+        this.presenceCacheDirty = true;
+
         if (!this.isPlutusPresent()) {
             return false;
         }
