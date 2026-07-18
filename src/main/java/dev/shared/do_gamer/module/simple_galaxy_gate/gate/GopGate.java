@@ -25,6 +25,12 @@ public final class GopGate extends GateHandler {
     private boolean plutusPresentCache;
     private boolean turretPresentCache;
 
+    // Per-tick cache for the nearest Rocket NPC, to avoid repeating the
+    // stream/filter/min lookup when getRocketNpc() is called more than once
+    // within the same tick.
+    private boolean rocketNpcCacheDirty = true;
+    private Npc rocketNpcCache;
+
     public GopGate() {
         this.npcMap.put(SEEKER_ROCKET_NAME, new NpcParam(600.0, -80));
         this.npcMap.put(WARHEAD_NAME, new NpcParam(600.0, -80));
@@ -66,6 +72,7 @@ public final class GopGate extends GateHandler {
     public void reset() {
         this.statusDetails = null;
         this.presenceCacheDirty = true;
+        this.rocketNpcCacheDirty = true;
     }
 
     /**
@@ -118,12 +125,17 @@ public final class GopGate extends GateHandler {
 
     /**
      * Gets the nearest Rocket NPC to the hero.
+     * The result is cached per tick, invalidated at the start of each tick.
      */
     private Npc getRocketNpc() {
-        return this.module.lootModule.getNpcs().stream()
-                .filter(this::isRocket)
-                .min(Comparator.comparingDouble(npc -> npc.distanceTo(this.module.hero)))
-                .orElse(null);
+        if (this.rocketNpcCacheDirty) {
+            this.rocketNpcCache = this.module.lootModule.getNpcs().stream()
+                    .filter(this::isRocket)
+                    .min(Comparator.comparingDouble(npc -> npc.distanceTo(this.module.hero)))
+                    .orElse(null);
+            this.rocketNpcCacheDirty = false;
+        }
+        return this.rocketNpcCache;
     }
 
     /**
@@ -177,9 +189,10 @@ public final class GopGate extends GateHandler {
 
     @Override
     public boolean attackTickModule() {
-        // Invalidate the presence cache at the start of each tick, since it's
+        // Invalidate the per-tick caches at the start of each tick, since it's
         // called before shouldKillNpc/getTargetRadius are evaluated per NPC.
         this.presenceCacheDirty = true;
+        this.rocketNpcCacheDirty = true;
 
         if (!this.isPlutusPresent()) {
             return false;
