@@ -3,6 +3,7 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 import com.github.manolo8.darkbot.core.entities.Npc;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
 import eu.darkbot.api.config.types.NpcFlag;
 
 public final class ZetaGate extends GateHandler {

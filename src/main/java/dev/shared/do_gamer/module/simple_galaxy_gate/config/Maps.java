@@ -15,7 +15,6 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DeltaGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DseGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EpsilonGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EternalBlacklightGate;
-import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GopGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.InvasionGate;
@@ -26,6 +25,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.TreacherousDomainGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.TrinityTrialsGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.VoyagersAscentGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.ZetaGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
 import eu.darkbot.api.game.galaxy.GalaxyGate;
 import eu.darkbot.api.managers.StarSystemAPI;
 

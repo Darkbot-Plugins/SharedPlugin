@@ -9,7 +9,7 @@ import java.util.stream.Collectors;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
-import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.game.entities.Npc;

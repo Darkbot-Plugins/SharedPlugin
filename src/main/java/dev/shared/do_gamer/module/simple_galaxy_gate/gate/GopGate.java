@@ -3,6 +3,7 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 import java.util.Comparator;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;

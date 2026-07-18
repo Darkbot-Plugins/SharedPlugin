@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.utils.ScheduledGateHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.game.entities.Npc;
