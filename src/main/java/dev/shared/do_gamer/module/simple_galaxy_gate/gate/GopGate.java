@@ -7,6 +7,7 @@ import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Npc;
 import eu.darkbot.api.game.entities.StaticEntity.PlutusGenerator;
+import eu.darkbot.api.game.other.Lockable;
 import eu.darkbot.api.managers.GauntletPlutusAPI;
 
 public final class GopGate extends GateHandler {
@@ -178,5 +179,17 @@ public final class GopGate extends GateHandler {
             return true;
         }
         return false;
+    }
+
+    @Override
+    public double getTargetRadius(Lockable target) {
+        if (this.isPlutusPresent()) {
+            Npc npc = (target instanceof Npc) ? (Npc) target : null;
+            if (npc != null && !this.isPlutus(npc) && !this.isRocket(npc) && !this.isTurret(npc)) {
+                // Reduce radius for other NPCs when Plutus is present
+                return npc.getInfo().getRadius() * 0.65;
+            }
+        }
+        return super.getTargetRadius(target);
     }
 }
