@@ -38,14 +38,12 @@ public final class AutobuyConfig {
         public static final String HON_B01 = "HON-B01";
         public static final String HON_B02 = "HON-B02";
 
-        private static final String[] ITEM_IDS = {
-                CD_B01, CD_B02, DMG_B01, DMG_B02, DMG_H01, DMG_PVP01,
-                HP_B01, HP_B02, SHD_B01, SHD_B02, EP_B01, EP_B02, HON_B01, HON_B02,
-        };
-
         @Override
         public String[] getItemIds() {
-            return ITEM_IDS;
+            return new String[] {
+                    CD_B01, CD_B02, DMG_B01, DMG_B02, DMG_H01, DMG_PVP01,
+                    HP_B01, HP_B02, SHD_B01, SHD_B02, EP_B01, EP_B02, HON_B01, HON_B02,
+            };
         }
 
         @Option("do_gamer.autobuy.checkInterval")
@@ -168,14 +166,12 @@ public final class AutobuyConfig {
         public static final String LOG_FILE = "resource_logfile";
         public static final String PIRATE_KEY_GREEN = "resource_booty-key";
 
-        private static final String[] ITEM_IDS = {
-                LUMINAFLUX_ALLOY, DSE_KEY_ACCESS, DSE_KEY_GREEN, DSE_KEY_BLUE,
-                DSE_KEY_PURPLE, LOG_FILE, PIRATE_KEY_GREEN,
-        };
-
         @Override
         public String[] getItemIds() {
-            return ITEM_IDS;
+            return new String[] {
+                    LUMINAFLUX_ALLOY, DSE_KEY_ACCESS, DSE_KEY_GREEN, DSE_KEY_BLUE,
+                    DSE_KEY_PURPLE, LOG_FILE, PIRATE_KEY_GREEN,
+            };
         }
 
         @Option("do_gamer.autobuy.checkInterval")
@@ -302,15 +298,13 @@ public final class AutobuyConfig {
         // Shared default purchase configuration for unknown ammo IDs.
         private static final PurchaseConfig DEFAULT_PURCHASE_CONFIG = new PurchaseConfig(0);
 
-        private static final String[] ITEM_IDS = {
-                LCB_10, MCB_25, MCB_50, SAB_50, RSB_75, JOB_100,
-                PLT_2026, PLT_2021, EMP_01, ECO_10, SLUG_THS_D01,
-                SLUG_COS_D01, SLUG_ELS_D01, SPOOL_GSP_30,
-        };
-
         @Override
         public String[] getItemIds() {
-            return ITEM_IDS;
+            return new String[] {
+                    LCB_10, MCB_25, MCB_50, SAB_50, RSB_75, JOB_100,
+                    PLT_2026, PLT_2021, EMP_01, ECO_10, SLUG_THS_D01,
+                    SLUG_COS_D01, SLUG_ELS_D01, SPOOL_GSP_30,
+            };
         }
 
         @Option("do_gamer.autobuy.checkInterval")
