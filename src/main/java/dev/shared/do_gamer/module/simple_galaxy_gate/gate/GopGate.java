@@ -59,14 +59,23 @@ public final class GopGate extends GateHandler {
         this.statusDetails = null;
     }
 
+    /**
+     * Checks if the given NPC is a Plutus.
+     */
     private boolean isPlutus(Npc npc) {
         return this.nameContains(npc, PLUTUS_NAME);
     }
 
+    /**
+     * Checks if there are Plutus present.
+     */
     private boolean isPlutusPresent() {
         return this.module.lootModule.getNpcs().stream().anyMatch(this::isPlutus);
     }
 
+    /**
+     * Checks if the given NPC is a Rocket.
+     */
     private boolean isRocket(Npc npc) {
         return this.nameContains(npc, SEEKER_ROCKET_NAME) || this.nameContains(npc, WARHEAD_NAME);
     }
@@ -81,8 +90,18 @@ public final class GopGate extends GateHandler {
                 .orElse(null);
     }
 
+    /**
+     * Checks if the given NPC is a Turret.
+     */
     private boolean isTurret(Npc npc) {
         return this.nameContains(npc, TURRET_NAME);
+    }
+
+    /**
+     * Checks if there are any Turret present.
+     */
+    private boolean isTurretPresent() {
+        return this.module.lootModule.getNpcs().stream().anyMatch(this::isTurret);
     }
 
     /**
@@ -95,31 +114,24 @@ public final class GopGate extends GateHandler {
                 .orElse(null);
     }
 
+    /**
+     * Checks if there are any other NPCs present.
+     */
     private boolean hasOtherNpc(int priority) {
         return this.module.lootModule.getNpcs().stream()
-                .anyMatch(n -> !this.isTurret(n) && !this.isPlutus(n)
+                .anyMatch(n -> !this.isTurret(n) && !this.isPlutus(n) // Ignore Turrets and Plutus
                         && !n.getInfo().hasExtraFlag(NpcFlag.PASSIVE) // Ignore passive NPCs
                         && n.getInfo().getPriority() <= priority // Ignore NPCs with higest priority
                 );
     }
 
-    /**
-     * Handles attacking the nearest rocket or turret NPC if one is present.
-     */
-    private boolean handleRocketOrTurretAttack() {
-        Npc npc = this.getTurretNpc();
-        if (npc != null) {
-            Npc rocketNpc = this.getRocketNpc();
-            if (rocketNpc != null) {
-                npc = rocketNpc; // Prioritize attacking rockets over turrets
-            } else if (npc.distanceTo(this.module.hero) > 1000.0 && this.hasOtherNpc(npc.getInfo().getPriority())) {
-                return false; // If there are other NPCs, don't attack the turret
-            }
-            this.module.lootModule.moveToTarget(npc);
-            this.module.lootModule.getAttacker().tryLockAndAttack();
-            return true;
+    @Override
+    public KillDecision shouldKillNpc(Npc npc) {
+        // Never attack the Plutus if a turret is present
+        if (this.isPlutus(npc) && this.isTurretPresent()) {
+            return KillDecision.NO;
         }
-        return false;
+        return KillDecision.YES;
     }
 
     @Override
@@ -144,6 +156,25 @@ public final class GopGate extends GateHandler {
 
         if (healGenerator != null) {
             this.module.movement.moveTo(healGenerator);
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Handles attacking the nearest rocket or turret NPC if one is present.
+     */
+    private boolean handleRocketOrTurretAttack() {
+        Npc npc = this.getTurretNpc();
+        if (npc != null) {
+            Npc rocketNpc = this.getRocketNpc();
+            if (rocketNpc != null) {
+                npc = rocketNpc; // Prioritize attacking rockets over turrets
+            } else if (this.hasOtherNpc(npc.getInfo().getPriority())) {
+                return false; // If there are other NPCs, don't attack the turret
+            }
+            this.module.lootModule.moveToTarget(npc);
+            this.module.lootModule.getAttacker().tryLockAndAttack();
             return true;
         }
         return false;
