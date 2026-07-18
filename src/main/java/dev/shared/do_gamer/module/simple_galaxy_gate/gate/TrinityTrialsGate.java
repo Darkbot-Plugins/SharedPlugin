@@ -78,6 +78,6 @@ public final class TrinityTrialsGate extends DifficultySelectGateHandler {
 
     private boolean isSunday() {
         LocalDateTime now = ServerTimeHelper.currentDateTime();
-        return now.getDayOfWeek().equals(DayOfWeek.SUNDAY);
+        return now.getDayOfWeek() == DayOfWeek.SUNDAY;
     }
 }

@@ -69,6 +69,7 @@ public abstract class DifficultySelectGateHandler extends GateHandler {
         if (this.clickTimer.isArmed()) {
             this.clickTimer.disarm();
         }
+        super.reset();
     }
 
     @Override
