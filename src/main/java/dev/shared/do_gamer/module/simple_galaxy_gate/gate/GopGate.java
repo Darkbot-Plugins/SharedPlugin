@@ -191,11 +191,11 @@ public final class GopGate extends GateHandler {
 
     @Override
     public double getTargetRadius(Lockable target) {
-        if (this.isPlutusPresent()) {
+        if (this.isPlutusPresent() && this.isTurretPresent()) {
             Npc npc = (target instanceof Npc) ? (Npc) target : null;
             if (npc != null && !this.isPlutus(npc) && !this.isRocket(npc) && !this.isTurret(npc)) {
                 // Reduce radius for other NPCs when Plutus is present
-                return npc.getInfo().getRadius() * 0.65;
+                return npc.getInfo().getRadius() * 0.75;
             }
         }
         return super.getTargetRadius(target);
