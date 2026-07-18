@@ -40,7 +40,7 @@ import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
-@Feature(name = "Simple Galaxy Gate", description = "Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Treacherous, Trinity, DSE, Mimesis and EBG.")
+@Feature(name = "Simple Galaxy Gate", description = "Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Treacherous, Trinity, DSE, Mimesis, EBG and GoP.")
 public final class SimpleGalaxyGate implements Module, Task,
         Configurable<SimpleGalaxyGateConfig>,
         NpcExtraProvider {

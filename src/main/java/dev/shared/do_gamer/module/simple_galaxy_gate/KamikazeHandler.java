@@ -318,14 +318,30 @@ public final class KamikazeHandler {
      * Handles movement in corner mode
      */
     private void handleCornerMovement() {
-        if (this.lootModule.getAttacker().hasTarget()) {
-            this.movement.moveTo(this.lootModule.getAttacker().getTarget());
-            return;
-        }
         List<Npc> validTargets = this.getValidTargets(true);
-        if (!validTargets.isEmpty()) {
-            this.lockClosestTarget(validTargets);
+        Npc currentTarget = this.lootModule.getAttacker().getTargetAs(Npc.class);
+        Npc closestTarget = this.getClosestTarget(validTargets);
+
+        if (closestTarget != null && this.shouldSwitchCornerTarget(currentTarget, closestTarget)) {
+            this.lockTarget(closestTarget);
+            currentTarget = closestTarget;
         }
+
+        if (currentTarget != null
+                && currentTarget.isValid()
+                && this.isValidTarget(currentTarget, true)) {
+            this.movement.moveTo(currentTarget);
+        }
+    }
+
+    /**
+     * Determines if corner mode should switch away from the current target.
+     */
+    private boolean shouldSwitchCornerTarget(Npc currentTarget, Npc closestTarget) {
+        if (currentTarget == null || !currentTarget.isValid() || !this.isValidTarget(currentTarget, true)) {
+            return true;
+        }
+        return closestTarget.distanceTo(this.hero) < currentTarget.distanceTo(this.hero);
     }
 
     /**
@@ -359,14 +375,28 @@ public final class KamikazeHandler {
      * Lock the closest NPC to the hero
      */
     private void lockClosestTarget(List<Npc> validTargets) {
-        Npc closest = validTargets.stream()
-                .min(Comparator.comparingDouble(n -> n.distanceTo(this.hero)))
-                .orElse(null);
+        Npc closest = this.getClosestTarget(validTargets);
 
         if (closest != null) {
-            this.lootModule.getAttacker().setTarget(closest);
-            this.lootModule.getAttacker().tryLockTarget();
+            this.lockTarget(closest);
         }
+    }
+
+    /**
+     * Returns the closest valid target to the hero.
+     */
+    private Npc getClosestTarget(List<Npc> validTargets) {
+        return validTargets.stream()
+                .min(Comparator.comparingDouble(n -> n.distanceTo(this.hero)))
+                .orElse(null);
+    }
+
+    /**
+     * Locks the given target.
+     */
+    private void lockTarget(Npc target) {
+        this.lootModule.getAttacker().setTarget(target);
+        this.lootModule.getAttacker().tryLockTarget();
     }
 
     /**
