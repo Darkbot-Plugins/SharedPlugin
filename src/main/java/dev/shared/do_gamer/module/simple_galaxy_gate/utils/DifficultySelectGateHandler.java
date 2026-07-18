@@ -2,7 +2,6 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.utils;
 
 import java.util.regex.Pattern;
 
-import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
 import eu.darkbot.util.Timer;
