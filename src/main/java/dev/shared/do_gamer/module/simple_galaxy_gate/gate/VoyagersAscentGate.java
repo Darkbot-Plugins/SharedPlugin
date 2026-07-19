@@ -10,7 +10,7 @@ public final class VoyagersAscentGate extends DifficultySelectGateHandler {
 
     public VoyagersAscentGate() {
         super(DIFFICULTY_SELECT_GUI, PORTAL_TYPE_ID, GO_BUTTON_X, GO_BUTTON_Y);
-        this.defaultNpcParam = new NpcParam(580.0);
+        this.defaultNpcParam = new NpcParam(600.0);
         this.jumpToNextMap = false;
         this.safeRefreshInGate = false;
     }
