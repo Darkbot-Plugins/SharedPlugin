@@ -207,7 +207,8 @@ public final class GopGate extends GateHandler {
      */
     private Npc getNearestNpcExcludingPlutus() {
         return this.module.lootModule.getNpcs().stream()
-                .filter(n -> n != null && n.isValid() && n.isSelectable() && !this.isPlutus(n))
+                .filter(n -> n != null && n.isValid() && n.isSelectable()
+                        && !this.isPlutus(n) && n.distanceTo(this.module.hero) <= 800.0)
                 .min(Comparator.comparingDouble(npc -> npc.distanceTo(this.module.hero)))
                 .orElse(null);
     }
