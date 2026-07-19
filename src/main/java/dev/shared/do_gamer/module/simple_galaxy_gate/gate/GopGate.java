@@ -33,10 +33,14 @@ public final class GopGate extends GateHandler {
     private Npc rocketNpcCache;
 
     public GopGate() {
-        this.npcMap.put(SEEKER_ROCKET_NAME, new NpcParam(620.0, -80));
-        this.npcMap.put(WARHEAD_NAME, new NpcParam(620.0, -80));
-        this.npcMap.put(PLUTUS_NAME, new NpcParam(620.0));
-        this.defaultNpcParam = new NpcParam(590.0);
+        this.npcMap.put(SEEKER_ROCKET_NAME, new NpcParam(600.0, -80));
+        this.npcMap.put(WARHEAD_NAME, new NpcParam(600.0, -80));
+        this.npcMap.put(PLUTUS_NAME, new NpcParam(580.0));
+        this.npcMap.put("-=[ Kristallon ]=-", new NpcParam(580.0));
+        this.npcMap.put("( UberLordakium )", new NpcParam(590.0));
+        this.npcMap.put("=^(Natal Nap)^=", new NpcParam(520.0));
+        this.npcMap.put("=^(Kodkod)^=", new NpcParam(580.0));
+        this.defaultNpcParam = new NpcParam(560.0);
         this.showCompletedGates = false;
         this.approachToCenter = false;
         this.skipFarTargets = false;
