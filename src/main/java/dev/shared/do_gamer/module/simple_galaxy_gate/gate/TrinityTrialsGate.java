@@ -21,7 +21,7 @@ public final class TrinityTrialsGate extends DifficultySelectGateHandler {
         super(DIFFICULTY_SELECT_GUI, PORTAL_TYPE_ID, GO_BUTTON_X, GO_BUTTON_Y);
         this.npcMap.put("..::{ Pyrospire }::..", new NpcParam(620.0));
         this.npcMap.put("..::{ Vinespire }::..", new NpcParam(620.0));
-        this.defaultNpcParam = new NpcParam(600.0);
+        this.defaultNpcParam = new NpcParam(580.0);
         this.jumpToNextMap = false;
         this.safeRefreshInGate = false;
         this.fetchServerOffset = true;
