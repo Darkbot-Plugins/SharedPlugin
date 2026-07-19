@@ -203,6 +203,16 @@ public final class GopGate extends GateHandler {
     }
 
     /**
+     * Gets the nearest selectable, non-Plutus NPC to the hero.
+     */
+    private Npc getNearestNpcExcludingPlutus() {
+        return this.module.lootModule.getNpcs().stream()
+                .filter(n -> n != null && n.isValid() && n.isSelectable() && !this.isPlutus(n))
+                .min(Comparator.comparingDouble(npc -> npc.distanceTo(this.module.hero)))
+                .orElse(null);
+    }
+
+    /**
      * Moves the hero to the nearest heal generator if one is present.
      */
     private boolean moveToHealGenerator() {
@@ -217,10 +227,7 @@ public final class GopGate extends GateHandler {
             this.module.movement.moveTo(healGenerator);
 
             // Kill the nearest NPC if one is present while moving to the heal generator
-            Npc nearestNpc = this.module.lootModule.getNpcs().stream()
-                    .filter(n -> n != null && n.isValid() && n.isSelectable() && !this.isPlutus(n))
-                    .min(Comparator.comparingDouble(npc -> npc.distanceTo(this.module.hero)))
-                    .orElse(null);
+            Npc nearestNpc = this.getNearestNpcExcludingPlutus();
             if (nearestNpc != null) {
                 this.module.lootModule.getAttacker().setTarget(nearestNpc);
                 this.module.lootModule.getAttacker().tryLockAndAttack();
