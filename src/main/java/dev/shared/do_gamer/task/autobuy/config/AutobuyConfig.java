@@ -56,7 +56,7 @@ public final class AutobuyConfig {
         public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
-                return this.buildList(null,
+                return buildList(null,
                         "Checks boosters every X minutes.",
                         "Buys selected boosters if expired.");
             }
@@ -184,7 +184,7 @@ public final class AutobuyConfig {
         public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
-                return this.buildList(null,
+                return buildList(null,
                         "Checks special items every X minutes.",
                         "Buys special items when available.");
             }
@@ -317,7 +317,7 @@ public final class AutobuyConfig {
         public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
-                return this.buildList(null,
+                return buildList(null,
                         "Checks ammo every X minutes.",
                         "Buys ammo when inventory is low.");
             }

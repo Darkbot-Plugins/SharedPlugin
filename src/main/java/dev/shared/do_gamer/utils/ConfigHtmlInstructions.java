@@ -20,7 +20,7 @@ public abstract class ConfigHtmlInstructions implements OptionEditor<String> {
         return editor;
     }
 
-    protected String buildList(String title, String... items) {
+    public static String buildList(String title, String... items) {
         StringBuilder html = new StringBuilder();
         int size = items.length;
         if (title != null) {
@@ -36,5 +36,14 @@ public abstract class ConfigHtmlInstructions implements OptionEditor<String> {
             }
         }
         return html.toString();
+    }
+
+    /**
+     * Joins multiple {@link #buildList} blocks (or any HTML fragments) with a
+     * blank line between them, avoiding a manual {@code StringBuilder} in every
+     * {@code getEditorValue()} override that needs more than one block.
+     */
+    public static String joinSections(String... sections) {
+        return String.join("<br><br>", sections);
     }
 }
