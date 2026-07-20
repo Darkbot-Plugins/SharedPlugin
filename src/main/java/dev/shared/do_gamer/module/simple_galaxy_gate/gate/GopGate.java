@@ -132,10 +132,13 @@ public final class GopGate extends GateHandler {
      * Gets the nearest Rocket NPC to the hero.
      * The result is cached per tick, invalidated at the start of each tick.
      */
-    private Npc getRocketNpc() {
+    private Npc getRocketNpc(int priority) {
         if (this.rocketNpcCacheDirty) {
             this.rocketNpcCache = this.module.lootModule.getNpcs().stream()
-                    .filter(this::isRocket)
+                    .filter(n -> this.isRocket(n)
+                            && n.getInfo().getPriority() <= priority // Ignore NPCs with lower priority than the turret
+                            && n.getInfo().hasExtraFlag(NpcFlag.PASSIVE) // Ignore passive NPCs
+                    )
                     .min(Comparator.comparingDouble(npc -> npc.distanceTo(this.module.hero)))
                     .orElse(null);
             this.rocketNpcCacheDirty = false;
@@ -178,8 +181,9 @@ public final class GopGate extends GateHandler {
         return this.module.lootModule.getNpcs().stream()
                 .anyMatch(n -> n != null && n.isValid() && n.isSelectable()
                         && !this.isTurret(n) && !this.isPlutus(n) // Ignore Turrets and Plutus
+                        && !this.isRocket(n) // Ignore Rockets
                         && !n.getInfo().hasExtraFlag(NpcFlag.PASSIVE) // Ignore passive NPCs
-                        && n.getInfo().getPriority() <= priority // Ignore NPCs with higest priority
+                        && n.getInfo().getPriority() <= priority // Ignore NPCs with lower priority
                 );
     }
 
@@ -246,19 +250,37 @@ public final class GopGate extends GateHandler {
      * Handles attacking the nearest rocket or turret NPC if one is present.
      */
     private boolean handleRocketOrTurretAttack() {
-        Npc npc = this.getTurretNpc();
-        if (npc != null) {
-            Npc rocketNpc = this.getRocketNpc();
-            if (rocketNpc != null) {
-                npc = rocketNpc; // Prioritize attacking rockets over turrets
-            } else if (this.hasOtherNpc(npc.getInfo().getPriority())) {
-                return false; // If there are other NPCs, don't attack the turret
-            }
-            this.module.lootModule.moveToTarget(npc);
-            this.module.lootModule.getAttacker().tryLockAndAttack();
-            return true;
+        Npc turretNpc = this.getTurretNpc();
+        if (turretNpc == null) {
+            return false;
         }
-        return false;
+
+        Npc targetNpc = this.selectRocketOrTurretTarget(turretNpc);
+        if (targetNpc == null) {
+            return false;
+        }
+
+        this.module.lootModule.moveToTarget(targetNpc);
+        this.module.lootModule.getAttacker().tryLockAndAttack();
+        return true;
+    }
+
+    /**
+     * Chooses the NPC to attack between the given turret and any rocket
+     * threatening it, prioritizing rockets. Returns {@code null} if the
+     * turret shouldn't be attacked yet because other higher-priority NPCs
+     * are still present.
+     */
+    private Npc selectRocketOrTurretTarget(Npc turretNpc) {
+        int turretPriority = turretNpc.getInfo().getPriority();
+        Npc rocketNpc = this.getRocketNpc(turretPriority);
+        if (rocketNpc != null) {
+            return rocketNpc; // Prioritize attacking rockets over turrets
+        }
+        if (this.hasOtherNpc(turretPriority)) {
+            return null; // If there are other NPCs, don't attack the turret
+        }
+        return turretNpc;
     }
 
     @Override
