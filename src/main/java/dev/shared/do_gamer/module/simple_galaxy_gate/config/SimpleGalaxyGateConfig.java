@@ -658,10 +658,6 @@ public final class SimpleGalaxyGateConfig {
         @Option("do_gamer.simple_galaxy_gate.other.stick_to_any_target")
         public boolean stickToAnyTarget = false;
 
-        @Option("do_gamer.simple_galaxy_gate.other.target_switch_offset")
-        @Number(min = 0, max = 1000, step = 50)
-        public int targetSwitchOffset = 100;
-
         @Option("do_gamer.simple_galaxy_gate.other.pet_collect")
         @Dropdown(options = PetCollectDropdown.class)
         public PetCollectType petCollect = PetCollectType.NONE;
@@ -669,6 +665,10 @@ public final class SimpleGalaxyGateConfig {
         @Option("do_gamer.simple_galaxy_gate.other.fake_box_timeout")
         @Number(min = 5, max = 60, step = 1)
         public int fakeBoxTimeoutMinutes = 5;
+
+        @Option("do_gamer.simple_galaxy_gate.other.target_switch_offset")
+        @Number(min = 0, max = 1000, step = 50)
+        public int targetSwitchOffset = 100;
 
         @Option("do_gamer.simple_galaxy_gate.other.stuck_in_gate_timer")
         @Number.Disabled(value = 0)
