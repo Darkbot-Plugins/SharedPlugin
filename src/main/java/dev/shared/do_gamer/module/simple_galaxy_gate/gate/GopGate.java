@@ -127,8 +127,8 @@ public final class GopGate extends GateHandler {
     private Npc getRocketNpc(int priority) {
         return this.module.lootModule.getNpcs().stream()
                 .filter(n -> this.isRocket(n)
-                        && n.getInfo().getPriority() <= priority // Ignore NPCs with lower priority than the turret
-                        && n.getInfo().hasExtraFlag(NpcFlag.PASSIVE) // Ignore passive NPCs
+                        && !n.getInfo().hasExtraFlag(NpcFlag.PASSIVE) // Ignore passive NPCs
+                        && n.getInfo().getPriority() <= priority // Ignore NPCs with lower priority
                 )
                 .min(Comparator.comparingDouble(npc -> npc.distanceTo(this.module.hero)))
                 .orElse(null);
