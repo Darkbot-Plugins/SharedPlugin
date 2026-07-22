@@ -6,9 +6,10 @@ import com.github.manolo8.darkbot.Main;
 import com.github.manolo8.darkbot.core.objects.facades.EscortProxy;
 import com.github.manolo8.darkbot.core.utils.ByteUtils;
 
-import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.utils.ScheduledGateHelper;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.StateStore;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.config.types.NpcFlag;
 import eu.darkbot.api.game.entities.Box;

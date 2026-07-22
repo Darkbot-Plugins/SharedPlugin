@@ -14,7 +14,9 @@ import com.github.manolo8.darkbot.core.itf.NpcExtraProvider;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.GateNpcFlag;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
-import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateBuilder;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.StateStore;
 import dev.shared.do_gamer.utils.BackpageHelper;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
@@ -40,7 +42,7 @@ import eu.darkbot.shared.utils.MapTraveler;
 import eu.darkbot.shared.utils.PortalJumper;
 import eu.darkbot.util.Timer;
 
-@Feature(name = "Simple Galaxy Gate", description = "Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Treacherous, Trinity, DSE, Mimesis, EBG and GoP.")
+@Feature(name = "Simple Galaxy Gate", description = "Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Mimesis, EBG, GoP, Treacherous, DSE, Trinity and Voyagers.")
 public final class SimpleGalaxyGate implements Module, Task,
         Configurable<SimpleGalaxyGateConfig>,
         NpcExtraProvider {

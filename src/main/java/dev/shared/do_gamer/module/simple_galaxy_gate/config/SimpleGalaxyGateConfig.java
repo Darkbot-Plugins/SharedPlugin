@@ -39,7 +39,6 @@ import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.shared.config.ProfileNames;
 
 public final class SimpleGalaxyGateConfig {
-    private static final String LINE_BREAK = "<br><br>";
 
     /**
      * Instructions and explanations for the player,
@@ -48,25 +47,14 @@ public final class SimpleGalaxyGateConfig {
     public static class Instructions extends ConfigHtmlInstructions {
         @Override
         public String getEditorValue() {
-            StringBuilder html = new StringBuilder();
-            html.append(buildList("Ship config and formation:",
-                    "Offensive config: used for attacking NPCs in the gate.",
-                    "Roam config: used for moving between far targets.",
-                    "Run config: used at the <b>end of wave / gate</b> when there are no NPCs."));
-            html.append(LINE_BREAK);
-            html.append(buildList("NPC auto populate:",
-                    "NPCs may be <b>automatically</b> configured using built-in gate presets.",
-                    "Auto-populated values: radius, and optionally priority and flags.",
-                    "NPCs with the <b>Kill</b> checkbox enabled are never overridden."));
-            html.append(LINE_BREAK);
-            html.append(buildList("NPC extra flags:",
-                    "Kamikaze: allows Kamikaze for this NPC when the feature is enabled.",
-                    "Stick to Target: to stick to the current target, don't switch away.",
-                    "Finish Off: Switch to <b>Run config</b> below 25% HP until destroyed."));
-            html.append(LINE_BREAK);
-            html.append(buildList("Gate-specific notes:",
-                    "DSE gate requires <b>manual</b> action to select ship and reset waves."));
-            return html.toString();
+            return joinSections(
+                    buildList("Ship config:",
+                            "Offensive config: used for attacking NPCs in the gate.",
+                            "Roam config: used for moving between far targets."),
+                    buildList("NPC auto populate:",
+                            "NPCs may be <b>automatically</b> configured using built-in gate presets.",
+                            "Auto-populated values: radius, and optionally priority and flags.",
+                            "NPCs with the <b>Kill</b> checkbox enabled are never overridden."));
         }
     }
 
@@ -172,6 +160,18 @@ public final class SimpleGalaxyGateConfig {
      * Settings specific to the DSE gate.
      */
     public static class DseSettings {
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return "DSE gate requires <b>manual</b> action to select ship and reset waves.";
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
         @Option("do_gamer.simple_galaxy_gate.dse.missile_storm_distance")
         @Number.Disabled(value = 0)
         @Number(min = 0, max = 3_000, step = 100)
@@ -379,7 +379,7 @@ public final class SimpleGalaxyGateConfig {
         public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
-                return this.buildList(null,
+                return buildList(null,
                         "Kamikaze is only used for NPCs marked with the <b>Kamikaze</b> flag.",
                         "PET <b>must</b> have equipped Kamikaze gear in <b>both</b> configs.",
                         "Kamikaze will only trigger if PET HP is below <b>20%</b>.",
@@ -626,10 +626,17 @@ public final class SimpleGalaxyGateConfig {
         public static class Instructions extends ConfigHtmlInstructions {
             @Override
             public String getEditorValue() {
-                return this.buildList(null,
+                return joinSections(
                         "These settings affect general features, not specific gates.",
-                        "Stick to any target: don't switch away from any gate target.",
-                        "Switch profile: after the gate ends or when no resources remain.");
+                        buildList("Switch profile:",
+                                "<b>Bot profile</b>: profile to switch to once the gate ends.",
+                                "<b>Only when not available</b>: switch only when resources run out."),
+                        buildList("Run config:",
+                                "Used at the <b>end of wave / gate</b> when there are no NPCs.",
+                                "NPC flag <b>Finish Off</b>: switches to <b>Run config</b> below 25% HP."),
+                        buildList("Target switching:",
+                                "Stick to any target: don't switch away from any gate target.",
+                                "NPC flag <b>Stick to Target</b>: like above, but only for that NPC."));
             }
         }
 
@@ -638,13 +645,6 @@ public final class SimpleGalaxyGateConfig {
         @Editor(Instructions.class)
         public String instructions = null;
 
-        @Option("do_gamer.simple_galaxy_gate.other.stick_to_any_target")
-        public boolean stickToAnyTarget = false;
-
-        @Option("do_gamer.simple_galaxy_gate.other.pet_collect")
-        @Dropdown(options = PetCollectDropdown.class)
-        public PetCollectType petCollect = PetCollectType.NONE;
-
         @Option("do_gamer.simple_galaxy_gate.other.bot_profile")
         @Dropdown(options = ProfileOptions.class)
         public String botProfile = null;
@@ -652,21 +652,28 @@ public final class SimpleGalaxyGateConfig {
         @Option("do_gamer.simple_galaxy_gate.other.only_when_not_available")
         public boolean onlyWhenNotAvailable = false;
 
-        @Option("do_gamer.simple_galaxy_gate.other.stuck_in_gate_timer")
-        @Number.Disabled(value = 0)
-        @Number(min = 0, max = 5, step = 1)
-        public int stuckInGateTimerMinutes = 1;
+        @Option("do_gamer.simple_galaxy_gate.other.use_run_config")
+        public boolean useRunConfig = true;
+
+        @Option("do_gamer.simple_galaxy_gate.other.stick_to_any_target")
+        public boolean stickToAnyTarget = false;
+
+        @Option("do_gamer.simple_galaxy_gate.other.pet_collect")
+        @Dropdown(options = PetCollectDropdown.class)
+        public PetCollectType petCollect = PetCollectType.NONE;
 
         @Option("do_gamer.simple_galaxy_gate.other.fake_box_timeout")
         @Number(min = 5, max = 60, step = 1)
         public int fakeBoxTimeoutMinutes = 5;
 
-        @Option("do_gamer.simple_galaxy_gate.other.use_run_config")
-        public boolean useRunConfig = true;
-
         @Option("do_gamer.simple_galaxy_gate.other.target_switch_offset")
         @Number(min = 0, max = 1000, step = 50)
         public int targetSwitchOffset = 100;
+
+        @Option("do_gamer.simple_galaxy_gate.other.stuck_in_gate_timer")
+        @Number.Disabled(value = 0)
+        @Number(min = 0, max = 5, step = 1)
+        public int stuckInGateTimerMinutes = 1;
 
         @Option.Ignore() // Only for dev needs, not user-facing
         @Option("do_gamer.simple_galaxy_gate.other.debug_info")

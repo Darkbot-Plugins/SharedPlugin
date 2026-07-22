@@ -1,4 +1,4 @@
-package dev.shared.do_gamer.module.simple_galaxy_gate;
+package dev.shared.do_gamer.module.simple_galaxy_gate.utils;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,5 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
+
 public final class EpsilonGate extends GateHandler {
 
     public EpsilonGate() {

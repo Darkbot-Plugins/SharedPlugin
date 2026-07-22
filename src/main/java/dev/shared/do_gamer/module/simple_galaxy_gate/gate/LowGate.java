@@ -7,7 +7,8 @@ import java.util.stream.Collectors;
 
 import com.github.manolo8.darkbot.config.types.suppliers.BrowserApi;
 
-import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.StateStore;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.config.types.NpcFlag;

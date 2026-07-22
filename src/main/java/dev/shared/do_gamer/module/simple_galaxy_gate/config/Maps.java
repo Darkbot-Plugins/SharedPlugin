@@ -15,7 +15,6 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DeltaGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DseGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EpsilonGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EternalBlacklightGate;
-import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GopGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.InvasionGate;
@@ -24,7 +23,9 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.LowGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.MimesisMutinyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.TreacherousDomainGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.TrinityTrialsGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.VoyagersAscentGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.ZetaGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
 import eu.darkbot.api.game.galaxy.GalaxyGate;
 import eu.darkbot.api.managers.StarSystemAPI;
 
@@ -95,14 +96,15 @@ public final class Maps {
         list.add(new MapInfo(300, "Kuiper", GalaxyGate.KUIPER, StarSystemAPI.HOME_MAPS, KuiperGate::new));
         list.add(new MapInfo(200, "LoW", null, List.of("1-3", "2-3", "3-3"), LowGate::new));
         list.add(new MapInfo(61, "Invasion", null, List.of("1-5", "2-5", "3-5"), InvasionGate::new));
-        list.add(new MapInfo(482, "Treacherous Domain", null, StarSystemAPI.BASE_MAPS, TreacherousDomainGate::new));
-        list.add(new MapInfo(499, "Trinity Trials", null, StarSystemAPI.BASE_MAPS, TrinityTrialsGate::new));
-        list.add(new MapInfo(473, "DSE", null, StarSystemAPI.HOME_MAPS, DseGate::new));
         list.add(new MapInfo(-3, "Mimesis Mutiny", null, StarSystemAPI.BASE_MAPS, MimesisMutinyGate::new));
         list.add(new MapInfo(-4, "Eternal Blacklight", null, StarSystemAPI.BLACK_LIGHT_MAPS,
                 EternalBlacklightGate::new));
         list.add(new MapInfo(410, "Gauntlet Of Plutus (Normal)", null, StarSystemAPI.OUTPOST_HOME_MAPS, GopGate::new));
         list.add(new MapInfo(450, "Gauntlet Of Plutus (Easy)", null, StarSystemAPI.HOME_MAPS, GopGate::new));
+        list.add(new MapInfo(482, "Treacherous Domain", null, StarSystemAPI.BASE_MAPS, TreacherousDomainGate::new));
+        list.add(new MapInfo(473, "DSE", null, StarSystemAPI.HOME_MAPS, DseGate::new));
+        list.add(new MapInfo(499, "Trinity Trials", null, StarSystemAPI.BASE_MAPS, TrinityTrialsGate::new));
+        list.add(new MapInfo(509, "Voyagers Ascent", null, StarSystemAPI.BASE_MAPS, VoyagersAscentGate::new));
 
         ggMaps = Collections.unmodifiableList(list);
     }

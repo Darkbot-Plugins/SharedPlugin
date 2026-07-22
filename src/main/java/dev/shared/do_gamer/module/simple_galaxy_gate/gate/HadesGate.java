@@ -1,7 +1,8 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
-import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.StateStore;
 
 public final class HadesGate extends GateHandler {
 

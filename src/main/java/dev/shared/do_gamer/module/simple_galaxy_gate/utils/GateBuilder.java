@@ -1,7 +1,8 @@
-package dev.shared.do_gamer.module.simple_galaxy_gate;
+package dev.shared.do_gamer.module.simple_galaxy_gate.utils;
 
 import java.util.List;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.SimpleGalaxyGateConfig;
 import eu.darkbot.api.PluginAPI;

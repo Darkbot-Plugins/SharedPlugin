@@ -1,5 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
+
 public final class DeltaGate extends GateHandler {
 
     public DeltaGate() {

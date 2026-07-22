@@ -2,26 +2,23 @@ package dev.shared.do_gamer.module.simple_galaxy_gate.gate;
 
 import java.time.DayOfWeek;
 import java.time.LocalDateTime;
-import java.util.regex.Pattern;
 
-import dev.shared.do_gamer.module.simple_galaxy_gate.StateStore;
+import dev.shared.do_gamer.module.simple_galaxy_gate.utils.DifficultySelectGateHandler;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
-import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
 import eu.darkbot.util.Timer;
 
-public final class TrinityTrialsGate extends GateHandler {
+public final class TrinityTrialsGate extends DifficultySelectGateHandler {
     private static final String DIFFICULTY_SELECT_GUI = "trinitytrials_difficultyselect";
     private static final int PORTAL_TYPE_ID = 304; // Portal type ID for Trinity Trials
-    private static final Pattern MAP_PATTERN = Pattern.compile("^[1-5]-[1-4]$");
-    private Timer clickTimer = Timer.get(10_000L);
-    private int clickCount = 0;
+    private static final int GO_BUTTON_X = 305;
+    private static final int GO_BUTTON_Y = 345;
     private boolean trySelectSecondGate = false;
     private Timer selectTimer = Timer.get(1_000L);
     private int selectStep = 0;
-    private boolean setFlags = false;
 
     public TrinityTrialsGate() {
+        super(DIFFICULTY_SELECT_GUI, PORTAL_TYPE_ID, GO_BUTTON_X, GO_BUTTON_Y);
         this.npcMap.put("..::{ Pyrospire }::..", new NpcParam(620.0));
         this.npcMap.put("..::{ Vinespire }::..", new NpcParam(620.0));
         this.defaultNpcParam = new NpcParam(580.0);
@@ -31,37 +28,21 @@ public final class TrinityTrialsGate extends GateHandler {
     }
 
     @Override
-    public boolean prepareTickModule() {
-        // Max clicks reached
-        if (this.clickCount >= 3) {
-            if (this.isSunday() && !this.trySelectSecondGate) {
-                // Set flag to try selecting second gate and reset counters
-                this.trySelectSecondGate = true;
-                this.clickCount = 0;
-                this.selectStep = 0;
-                return true; // Try selecting second gate
-            }
-            if (!this.setFlags) {
-                this.setFlags = true; // Ensure flags are only set once
-                this.module.setShouldMoveToRefinery(true);
-                this.module.setCanSwitchProfile(true);
-            }
-            this.closeGui(DIFFICULTY_SELECT_GUI);
-            return false; // Allow default logic to take over
-        }
-        // Handle GUI interaction or traveling to gate
-        if (this.handleGui() || this.handleTravelToGate(PORTAL_TYPE_ID)) {
-            StateStore.request(StateStore.State.TRAVELING_TO_GATE);
-            return true;
+    protected boolean onMaxClicksReached() {
+        if (this.isSunday() && !this.trySelectSecondGate) {
+            // Set flag to try selecting second gate and reset counters
+            this.trySelectSecondGate = true;
+            this.clickCount = 0;
+            this.selectStep = 0;
+            return true; // Try selecting second gate
         }
         return false;
     }
 
     @Override
-    public boolean collectTickModule() {
-        this.reset();
-        this.closeGui(DIFFICULTY_SELECT_GUI);
-        return false;
+    protected boolean beforeGoClick(Gui gui) {
+        // Selecting second gate
+        return this.trySelectSecondGate && this.selectGateType(gui, 2);
     }
 
     @Override
@@ -69,43 +50,7 @@ public final class TrinityTrialsGate extends GateHandler {
         // Reset states
         this.trySelectSecondGate = false;
         this.selectStep = 0;
-        this.clickCount = 0;
-        this.setFlags = false;
-        if (this.clickTimer.isArmed()) {
-            this.clickTimer.disarm();
-        }
-    }
-
-    @Override
-    public GameMap getMapForTravel() {
-        String currentMapName = this.module.starSystem.getCurrentMap().getShortName();
-        // Check if current map x-4 (include PvP and Pirates)
-        boolean toLowMap = MAP_PATTERN.matcher(currentMapName).matches();
-        return this.getFactionMapForTravel(toLowMap ? 1 : 8); // travel to map x-1 or x-8
-    }
-
-    /**
-     * Handles the gate select GUI interaction
-     */
-    private boolean handleGui() {
-        return this.getVisibleGui(DIFFICULTY_SELECT_GUI).map(gui -> {
-            // Initial timer, wait for preloading the GUI
-            if (!this.clickTimer.isArmed()) {
-                this.clickTimer.activate(3_000L);
-                return true;
-            }
-            // Selecting second gate
-            if (this.trySelectSecondGate && this.selectGateType(gui, 2)) {
-                return true;
-            }
-            // Click "Go" button if timer allows
-            if (this.clickTimer.isInactive()) {
-                gui.click(305, 345);
-                this.clickTimer.activate();
-                this.clickCount++;
-            }
-            return true;
-        }).orElse(false);
+        super.reset();
     }
 
     /**
