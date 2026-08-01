@@ -1,0 +1,1220 @@
+package dev.shared.berke.dailytaskapi;
+
+import eu.darkbot.api.PluginAPI;
+import eu.darkbot.api.config.ConfigSetting;
+import eu.darkbot.api.extensions.Configurable;
+import eu.darkbot.api.extensions.Feature;
+import eu.darkbot.api.extensions.Module;
+import eu.darkbot.api.game.entities.Box;
+import eu.darkbot.api.game.entities.Portal;
+import eu.darkbot.api.game.entities.Station;
+import eu.darkbot.api.game.other.GameMap;
+import eu.darkbot.api.game.other.Gui;
+import eu.darkbot.api.managers.AttackAPI;
+import eu.darkbot.api.managers.BotAPI;
+import eu.darkbot.api.managers.EntitiesAPI;
+import eu.darkbot.api.managers.GameScreenAPI;
+import eu.darkbot.api.managers.HeroAPI;
+import eu.darkbot.api.managers.MovementAPI;
+import eu.darkbot.api.managers.OreAPI;
+import eu.darkbot.api.managers.QuestAPI;
+import eu.darkbot.api.managers.StarSystemAPI;
+
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+
+/**
+ * Standalone daily-quest module.
+ *
+ * <p>This class deliberately does not extend LootCollectorModule and never
+ * reads or writes the user's working-map, NPC-selection, box-selection or
+ * ore-selling settings. Selecting another DarkBot module therefore leaves
+ * that module's saved settings untouched.</p>
+ */
+@Feature(name = "DailyTaskAPI", description = "Yalnızca 24 saatlik günlük görevleri tamamlar")
+public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig> {
+    private static final String QUEST_BASE_MAP = "1-8";
+    private static final double QUEST_STATION_DISTANCE = 300d;
+    private static final Set<Integer> SPECIAL_DAILY_QUEST_IDS = Set.of(318001);
+
+    private enum State {
+        STARTING, DISCOVERING, WAITING_FOR_DISCOVERY,
+        SELECTING, WAITING_FOR_SELECTION, RUNNING,
+        OPENING_GIVER, WAITING_GIVER_OPEN,
+        SELECTING_DAILY_TAB, WAITING_DAILY_TAB,
+        SELECTING_GIVER_ROW, WAITING_GIVER_ROW,
+        ACCEPTING_GIVER_QUEST, WAITING_GIVER_ACCEPT,
+        CLOSING_GIVER, PAUSED, DONE
+    }
+
+    private static final class QuestChoice {
+        private final int id;
+        private final String title;
+        private final QuestMenuSource.Selector selector;
+
+        private QuestChoice(int id, String title, QuestMenuSource.Selector selector) {
+            this.id = id;
+            this.title = title;
+            this.selector = selector;
+        }
+
+        private int id() {
+            return id;
+        }
+
+        private String title() {
+            return title;
+        }
+
+        private QuestMenuSource.Selector selector() {
+            return selector;
+        }
+    }
+
+    private final QuestAPI quests;
+    private final BotAPI bot;
+    private final GameScreenAPI gameScreen;
+    private final StarSystemAPI starSystem;
+    private final OreAPI ores;
+    private final EntitiesAPI entities;
+    private final MovementAPI movement;
+    private final AttackAPI attack;
+    private final HeroAPI hero;
+    private final Gui questGui;
+    private final QuestMenuSource questMenuSource;
+    private final QuestGiverSource questGiverSource;
+    private final DailyNpcCombat npcCombat;
+
+    private DailyTaskConfig settings = new DailyTaskConfig();
+    private State state = State.STARTING;
+    private int selectionRetries;
+    private int menuScanPass;
+    private int selectorIndex;
+    private int questIdBeforeSelection = -1;
+    private int currentQuestId = -1;
+    private String currentQuestTitle = "";
+    private long nextActionAt;
+    private long nextRoamAt;
+    private String status = "Başlatılıyor";
+    private String targetNpcDescription;
+    private String targetMapName;
+    private OreAPI.Ore oreToSell;
+    private boolean collectBonus;
+    private boolean collectCargo;
+    private final Set<Integer> completedQuestIds = new HashSet<>();
+    private final Set<Integer> knownDailyQuestIds = new HashSet<>();
+    private final Set<Integer> scannedQuestIds = new LinkedHashSet<>();
+    private final Map<Integer, QuestChoice> dailyChoices = new LinkedHashMap<>();
+    private List<QuestMenuSource.Selector> selectors = List.of();
+    private QuestChoice pendingChoice;
+    private boolean offerScanNeeded = true;
+    private int giverOpenAttempts;
+    private int dailyTabRetries;
+    private int giverScrollPage;
+    private boolean giverPageHadNewId;
+    private int giverRowIndex = 1;
+    private int giverRowRetries;
+    private int selectedOfferId = -1;
+    private String selectedOfferTitle = "";
+    private int acceptRetries;
+    private final Set<Integer> reviewedOfferIds = new LinkedHashSet<>();
+    private final Set<Integer> seenGiverOfferIds = new LinkedHashSet<>();
+    private final Set<Integer> acceptedOfferIds = new LinkedHashSet<>();
+    private final Set<Integer> skippedTetrathrinOfferIds = new LinkedHashSet<>();
+
+    public DailyTaskAPI(PluginAPI api) {
+        this.quests = api.requireAPI(QuestAPI.class);
+        this.bot = api.requireAPI(BotAPI.class);
+        this.gameScreen = api.requireAPI(GameScreenAPI.class);
+        this.starSystem = api.requireAPI(StarSystemAPI.class);
+        this.ores = api.requireAPI(OreAPI.class);
+        this.entities = api.requireAPI(EntitiesAPI.class);
+        this.movement = api.requireAPI(MovementAPI.class);
+        this.attack = api.requireAPI(AttackAPI.class);
+        this.hero = api.requireAPI(HeroAPI.class);
+        this.questGui = gameScreen.getGui("quests");
+        this.questMenuSource = new QuestMenuSource(questGui);
+        this.questGiverSource = new QuestGiverSource(gameScreen);
+        this.npcCombat = new DailyNpcCombat(api);
+    }
+
+    @Override
+    public void setConfig(ConfigSetting<DailyTaskConfig> setting) {
+        DailyTaskConfig configured = setting.getValue();
+        if (configured != null) settings = configured;
+        setting.addListener(updated -> {
+            if (updated != null) settings = updated;
+        });
+    }
+
+    @Override
+    public void onTickModule() {
+        long now = System.currentTimeMillis();
+        if (state == State.DONE) {
+            // Keep the completed state for the rest of the local day. Pressing
+            // Start again must not scan the same finished quests repeatedly.
+            // After midnight a deliberate new start begins a fresh daily run.
+            if (nextActionAt > now) {
+                npcCombat.stopCombat();
+                boolean petStillActive = true;
+                try {
+                    java.lang.reflect.Field petField = null;
+                    for (Class<?> type = npcCombat.getClass(); type != null; type = type.getSuperclass()) {
+                        try {
+                            petField = type.getDeclaredField("pet");
+                            break;
+                        } catch (NoSuchFieldException ignored) {
+                            // Continue through the exact runtime class hierarchy.
+                        }
+                    }
+                    if (petField != null) {
+                        petField.setAccessible(true);
+                        petStillActive = ((eu.darkbot.api.managers.PetAPI) petField.get(npcCombat)).isActive();
+                    }
+                } catch (Throwable ignored) {
+                    // Do not stop before PET shutdown can be confirmed.
+                }
+                if (petStillActive || now < nextRoamAt) {
+                    status = "TÜM GÜNLÜK GÖREVLER TAMAMLANDI | Bugün yeniden taranmayacak" +
+                            " | PET kapatılıyor | Bot PET kapanınca duracak";
+                    return;
+                }
+                status = "TÜM GÜNLÜK GÖREVLER TAMAMLANDI | Bugün yeniden taranmayacak" +
+                        " | Tamamlanan: " + completedQuestIds.size() +
+                        " | PET kapalı | Bot durduruldu";
+                if (bot.isRunning()) bot.setRunning(false);
+                return;
+            }
+            state = State.STARTING;
+        }
+        if (state == State.STARTING) {
+            resetSession();
+            if (quests.isQuestGiverOpen()) {
+                questGiverSource.close();
+                nextActionAt = now + settings.questSwitchDelayMs;
+            }
+            state = State.DISCOVERING;
+            if (nextActionAt < now) nextActionAt = now;
+        }
+
+        // Active quests can be discovered and selected from the quest menu on
+        // any map. Travel to the 1-8 station only after no active daily quest
+        // remains and the quest-giver offers must be inspected.
+        if (isGiverState(state)) {
+            if (!ensureQuestStation()) return;
+            if (now >= nextActionAt) tickQuestGiver();
+            return;
+        }
+
+        if (state == State.DISCOVERING) {
+            if (now >= nextActionAt) discoverOrScanNext();
+            return;
+        }
+        if (state == State.WAITING_FOR_DISCOVERY) {
+            if (now >= nextActionAt) inspectDiscoveredSelector();
+            return;
+        }
+        if (state == State.SELECTING) {
+            if (now >= nextActionAt) selectPendingDaily();
+            return;
+        }
+        if (state == State.WAITING_FOR_SELECTION) {
+            if (now >= nextActionAt) inspectPendingSelection();
+            return;
+        }
+        if (state == State.PAUSED) return;
+
+        QuestAPI.Quest quest = quests.getDisplayedQuest();
+        if (quest == null) {
+            // Completing a quest (and slow server responses) can leave the
+            // displayed quest empty for a few ticks. Wait for the next source
+            // snapshot instead of entering a permanent paused state.
+            attack.stopAttack();
+            movement.stop(false);
+            hero.setRoamMode();
+            status = "Görev verisi yenileniyor; mevcut plan korunuyor";
+            return;
+        }
+
+        if (currentQuestId >= 0 && quest.getId() != currentQuestId) {
+            completedQuestIds.add(currentQuestId);
+            stopCurrentAction();
+            currentQuestId = -1;
+            currentQuestTitle = "__PARK_AFTER_DAILY__";
+            prepareNewScan();
+            nextActionAt = now + settings.questSwitchDelayMs;
+            status = "Görev değişti; görev menüsü kaynaktan yeniden taranıyor";
+            return;
+        }
+
+        if (!isVerifiedDaily(quest)) {
+            stopCurrentAction();
+            prepareNewScan();
+            nextActionAt = now + settings.questSwitchDelayMs;
+            status = "Görev günlük değil; kaynak menü yeniden taranıyor";
+            return;
+        }
+
+        double progress = DailyTaskPlanner.progress(quest);
+        if (quest.isCompleted() || progress >= 0.9999d) {
+            completedQuestIds.add(quest.getId());
+            status = "Tamamlandı: " + safeTitle(quest);
+            stopCurrentAction();
+            currentQuestId = -1;
+            currentQuestTitle = "__PARK_AFTER_DAILY__";
+            prepareNewScan();
+            nextActionAt = now + settings.questSwitchDelayMs;
+            return;
+        }
+
+        buildPlanFromSource(quest);
+        boolean standardNpcCombatOwnsSafety = targetNpcDescription != null &&
+                (targetMapName == null || isOnMap(targetMapName));
+        if (!standardNpcCombatOwnsSafety && runLocalSafety()) return;
+        executePlan(quest, progress);
+    }
+
+    private void resetSession() {
+        selectionRetries = 0;
+        menuScanPass = 0;
+        selectorIndex = 0;
+        questIdBeforeSelection = -1;
+        currentQuestId = -1;
+        currentQuestTitle = "";
+        pendingChoice = null;
+        completedQuestIds.clear();
+        knownDailyQuestIds.clear();
+        scannedQuestIds.clear();
+        dailyChoices.clear();
+        selectors = List.of();
+        offerScanNeeded = true;
+        giverOpenAttempts = 0;
+        dailyTabRetries = 0;
+        giverScrollPage = 0;
+        giverPageHadNewId = false;
+        giverRowIndex = 1;
+        giverRowRetries = 0;
+        selectedOfferId = -1;
+        selectedOfferTitle = "";
+        acceptRetries = 0;
+        reviewedOfferIds.clear();
+        seenGiverOfferIds.clear();
+        acceptedOfferIds.clear();
+        skippedTetrathrinOfferIds.clear();
+        clearPlan();
+        status = "Görev menüsü kaynaktan taranıyor";
+    }
+
+    private void discoverOrScanNext() {
+        if ("__PARK_AFTER_DAILY__".equals(currentQuestTitle)) {
+            Optional<? extends Portal> nearestPortal = entities.getPortals().stream()
+                    .filter(Portal::isValid)
+                    .min(Comparator.comparingDouble(hero::distanceTo));
+            if (nearestPortal.isEmpty()) {
+                attack.stopAttack();
+                status = "GÃ¶rev sonu iÃ§in en yakÄ±n portal verisi bekleniyor";
+                nextActionAt = System.currentTimeMillis() + 1_000L;
+                return;
+            }
+            double portalDistance = hero.distanceTo(nearestPortal.get());
+            if (portalDistance > 300d) {
+                attack.stopAttack();
+                hero.setRunMode();
+                movement.moveTo(nearestPortal.get());
+                status = "GÃ¶rev tamamlandÄ±; en yakÄ±n portala gidiliyor: " +
+                        (int) Math.round(portalDistance);
+                nextActionAt = System.currentTimeMillis() + 1_000L;
+                return;
+            }
+            movement.stop(false);
+            hero.setRoamMode();
+            currentQuestTitle = "";
+            status = "GÃ¶rev tamamlandÄ±; en yakÄ±n portalda gÃ¼venli konum alÄ±ndÄ±";
+        }
+
+        if (questGui == null) {
+            pauseSafely("DarkBot görev penceresi nesnesi bulunamadı");
+            return;
+        }
+        if (!questGui.isVisible()) {
+            if (!settings.autoOpenQuestWindow) {
+                status = "Görev penceresini aç";
+                nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+                return;
+            }
+            questGui.setVisible(true);
+            status = "Görev penceresi açılıyor";
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+
+        if (selectors.isEmpty()) {
+            refreshDailyCatalog();
+            selectors = questMenuSource.discoverSelectors();
+            if (selectors.isEmpty()) {
+                retryMenuScan(questMenuSource.getLastError());
+                return;
+            }
+            menuScanPass++;
+            selectorIndex = 0;
+            selectionRetries = 0;
+            if (menuScanPass == 1) {
+                scannedQuestIds.clear();
+                dailyChoices.clear();
+            }
+            QuestAPI.Quest displayed = quests.getDisplayedQuest();
+            recordQuest(displayed, null);
+            if (displayed != null && dailyChoices.containsKey(displayed.getId()) && !isFinished(displayed)) {
+                startDaily(displayed);
+                return;
+            }
+        }
+
+        if (selectorIndex >= selectors.size()) {
+            finishMenuScan();
+            return;
+        }
+
+        QuestMenuSource.Selector selector = selectors.get(selectorIndex);
+        QuestAPI.Quest before = quests.getDisplayedQuest();
+        questIdBeforeSelection = before == null ? -1 : before.getId();
+        questGui.click(selector.x(), selector.y());
+        state = State.WAITING_FOR_DISCOVERY;
+        status = "Görev menüsü taranıyor: " + (selectorIndex + 1) + "/" + selectors.size();
+        nextActionAt = System.currentTimeMillis() + 500L;
+    }
+
+    private void inspectDiscoveredSelector() {
+        QuestAPI.Quest quest = quests.getDisplayedQuest();
+        if (quest == null) {
+            retryDiscoveredSelector("Sunucudan görev verisi bekleniyor");
+            return;
+        }
+
+        QuestMenuSource.Selector selector = selectors.get(selectorIndex);
+        if (quest.getId() == questIdBeforeSelection) {
+            selectorIndex++;
+            selectionRetries = 0;
+            state = State.DISCOVERING;
+            status = "Görev satırı yanıt vermedi; tek taramada sonraki satıra geçiliyor";
+            nextActionAt = System.currentTimeMillis() + 250L;
+            return;
+        }
+
+        recordQuest(quest, selector);
+        if (dailyChoices.containsKey(quest.getId()) && !isFinished(quest)) {
+            startDaily(quest);
+            return;
+        }
+        selectorIndex++;
+        selectionRetries = 0;
+        state = State.DISCOVERING;
+        nextActionAt = System.currentTimeMillis() + 250L;
+    }
+
+    private void finishMenuScan() {
+        QuestAPI.Quest displayed = quests.getDisplayedQuest();
+        recordQuest(displayed, selectorIndex > 0 && selectorIndex <= selectors.size()
+                ? selectors.get(selectorIndex - 1) : null);
+
+        QuestChoice current = displayed == null ? null : dailyChoices.get(displayed.getId());
+        if (current != null && !isFinished(displayed)) {
+            startDaily(displayed);
+            return;
+        }
+
+        pendingChoice = dailyChoices.values().stream()
+                .filter(choice -> !completedQuestIds.contains(choice.id()))
+                .filter(choice -> choice.selector() != null)
+                .findFirst()
+                .orElse(null);
+        if (pendingChoice != null) {
+            selectionRetries = 0;
+            state = State.SELECTING;
+            nextActionAt = System.currentTimeMillis() + 250L;
+            status = scanSummary() + " | Günlük seçiliyor: " + pendingChoice.title();
+            return;
+        }
+
+        if (offerScanNeeded) {
+            beginQuestOfferScan();
+            return;
+        }
+        finishAll();
+    }
+
+    private boolean isGiverState(State value) {
+        return value == State.OPENING_GIVER || value == State.WAITING_GIVER_OPEN ||
+                value == State.SELECTING_DAILY_TAB || value == State.WAITING_DAILY_TAB ||
+                value == State.SELECTING_GIVER_ROW || value == State.WAITING_GIVER_ROW ||
+                value == State.ACCEPTING_GIVER_QUEST || value == State.WAITING_GIVER_ACCEPT ||
+                value == State.CLOSING_GIVER;
+    }
+
+    private void beginQuestOfferScan() {
+        stopCurrentAction();
+        if (questGui != null && questGui.isVisible()) questGui.setVisible(false);
+        // This set represents offers accepted by the current station scan.
+        // Keeping ids from an earlier scan made CLOSING_GIVER believe that new
+        // quests had been accepted forever, causing an active-menu scan loop.
+        acceptedOfferIds.clear();
+        giverOpenAttempts = 0;
+        dailyTabRetries = 0;
+        giverScrollPage = 0;
+        giverPageHadNewId = false;
+        giverRowIndex = 1;
+        giverRowRetries = 0;
+        selectedOfferId = -1;
+        selectedOfferTitle = "";
+        acceptRetries = 0;
+        seenGiverOfferIds.clear();
+        state = State.OPENING_GIVER;
+        nextActionAt = System.currentTimeMillis() + 500L;
+        status = "İstasyondaki günlük teklifler kaynak verisiyle taranacak";
+    }
+
+    private void tickQuestGiver() {
+        if (state == State.CLOSING_GIVER) {
+            if (quests.isQuestGiverOpen()) {
+                questGiverSource.close();
+                status = "Görev verici kapatılıyor";
+                nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+                return;
+            }
+            if (acceptedOfferIds.isEmpty()) {
+                finishAll();
+                return;
+            }
+            prepareNewScan();
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            status = "Kabul edilen günlükler aktif menüden doğrulanıyor";
+            return;
+        }
+
+        if (state == State.OPENING_GIVER || state == State.WAITING_GIVER_OPEN) {
+            if (quests.isQuestGiverOpen()) {
+                giverOpenAttempts = 0;
+                state = State.SELECTING_DAILY_TAB;
+                nextActionAt = System.currentTimeMillis() + 300L;
+                status = "Günlük görev sekmesi açılıyor";
+                return;
+            }
+            Optional<? extends Station> station = findQuestStation();
+            if (station.isPresent() && hero.distanceTo(station.get()) <= QUEST_STATION_DISTANCE) {
+                station.get().trySelect(false);
+            }
+            giverOpenAttempts++;
+            state = State.WAITING_GIVER_OPEN;
+            status = "Görev vericinin sunucu yanıtı bekleniyor (" + giverOpenAttempts + ")";
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+
+        if (!quests.isQuestGiverOpen()) {
+            state = State.OPENING_GIVER;
+            nextActionAt = System.currentTimeMillis() + 500L;
+            status = "Görev verici kapandı; yeniden açılıyor";
+            return;
+        }
+
+        if (state == State.SELECTING_DAILY_TAB) {
+            questGiverSource.selectDailyTab();
+            state = State.WAITING_DAILY_TAB;
+            status = "Günlük sekmesinin kaynak verisi bekleniyor";
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+        if (state == State.WAITING_DAILY_TAB) {
+            giverRowIndex = 1;
+            giverRowRetries = 0;
+            state = State.SELECTING_GIVER_ROW;
+            nextActionAt = System.currentTimeMillis() + 250L;
+            return;
+        }
+        if (state == State.SELECTING_GIVER_ROW) {
+            if (giverRowIndex > QuestGiverSource.MAX_ROWS) {
+                if ((giverScrollPage > 0 && !giverPageHadNewId) ||
+                        giverScrollPage >= QuestGiverSource.MAX_SCROLL_PAGES) {
+                    finishQuestOfferScan();
+                    return;
+                }
+                giverScrollPage++;
+                giverPageHadNewId = false;
+                giverRowIndex = 1;
+                giverRowRetries = 0;
+                questGiverSource.scrollDailyListDown();
+                state = State.WAITING_DAILY_TAB;
+                nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+                return;
+            }
+            questGiverSource.selectRow(giverRowIndex);
+            state = State.WAITING_GIVER_ROW;
+            status = "Günlük teklif okunuyor: satır " + giverRowIndex;
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+        if (state == State.WAITING_GIVER_ROW) {
+            inspectGiverRow();
+            return;
+        }
+        if (state == State.ACCEPTING_GIVER_QUEST) {
+            acceptSelectedOffer();
+            return;
+        }
+        if (state == State.WAITING_GIVER_ACCEPT) verifyAcceptedOffer();
+    }
+
+    private void inspectGiverRow() {
+        QuestAPI.QuestListItem info = quests.getSelectedQuestInfo();
+        QuestAPI.Quest selected = quests.getSelectedQuest();
+        boolean matchingSource = info != null && selected != null && info.getId() == selected.getId();
+        if (!matchingSource) {
+            retryOrAdvanceGiverRow("Teklif ayrıntısı sunucudan bekleniyor");
+            return;
+        }
+        if (seenGiverOfferIds.add(info.getId())) giverPageHadNewId = true;
+        boolean dailyOffer = DailyTaskPlanner.isDailyType(info.getType()) || DailyTaskPlanner.isDaily(selected);
+        if (!dailyOffer) {
+            advanceGiverRow();
+            return;
+        }
+
+        boolean protegitKill = false;
+        for (QuestAPI.Requirement requirement : DailyTaskPlanner.actionable(selected)) {
+            if (isNpcRequirement(requirement) &&
+                    DailyTaskPlanner.normalizeNpcName(requirement.getDescription()).contains("protegit")) {
+                protegitKill = true;
+                break;
+            }
+        }
+        if (protegitKill) {
+            reviewedOfferIds.add(info.getId());
+            status = "Protegit öldürme görevi pas geçildi: " + safeTitle(selected);
+            advanceGiverRow();
+            return;
+        }
+
+        int id = info.getId();
+        if (reviewedOfferIds.contains(id) || info.isCompleted() || !info.isActivable()) {
+            reviewedOfferIds.add(id);
+            advanceGiverRow();
+            return;
+        }
+        if (selected.getRewards() == null || selected.getRewards().isEmpty()) {
+            retryOrAdvanceGiverRow("Teklif ödülleri kaynaktan bekleniyor");
+            return;
+        }
+        if (!DailyTaskPlanner.hasUridiumReward(selected.getRewards())) {
+            reviewedOfferIds.add(id);
+            status = "Uridium ödülü olmayan günlük pas geçildi: " + safeTitle(selected);
+            advanceGiverRow();
+            return;
+        }
+
+        selectedOfferId = id;
+        selectedOfferTitle = safeTitle(selected);
+        acceptRetries = 0;
+        state = State.ACCEPTING_GIVER_QUEST;
+        nextActionAt = System.currentTimeMillis() + 250L;
+        status = "Kaynak verisi doğrulandı; günlük kabul edilecek: " + selectedOfferTitle;
+    }
+
+    private void retryOrAdvanceGiverRow(String reason) {
+        giverRowRetries++;
+        if (giverRowRetries < Math.max(2, settings.maxSelectionRetries)) {
+            state = State.SELECTING_GIVER_ROW;
+            status = reason + " (" + giverRowRetries + ")";
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+        advanceGiverRow();
+    }
+
+    private void advanceGiverRow() {
+        giverRowIndex++;
+        giverRowRetries = 0;
+        state = State.SELECTING_GIVER_ROW;
+        nextActionAt = System.currentTimeMillis() + 300L;
+    }
+
+    private void acceptSelectedOffer() {
+        QuestAPI.QuestListItem info = quests.getSelectedQuestInfo();
+        QuestAPI.Quest selected = quests.getSelectedQuest();
+        boolean protegitKill = false;
+        if (selected != null) {
+            for (QuestAPI.Requirement requirement : DailyTaskPlanner.actionable(selected)) {
+                if (isNpcRequirement(requirement) &&
+                        DailyTaskPlanner.normalizeNpcName(requirement.getDescription()).contains("protegit")) {
+                    protegitKill = true;
+                    break;
+                }
+            }
+        }
+        boolean safe = info != null && selected != null && info.getId() == selectedOfferId &&
+                selected.getId() == selectedOfferId &&
+                (DailyTaskPlanner.isDailyType(info.getType()) || DailyTaskPlanner.isDaily(selected)) &&
+                !protegitKill &&
+                info.isActivable() && !info.isCompleted() &&
+                selected.getRewards() != null && !selected.getRewards().isEmpty() &&
+                DailyTaskPlanner.hasUridiumReward(selected.getRewards());
+        if (!safe) {
+            int skippedId = selectedOfferId;
+            String skippedTitle = selectedOfferTitle;
+            if (skippedId > 0) reviewedOfferIds.add(skippedId);
+            selectedOfferId = -1;
+            selectedOfferTitle = "";
+            status = info != null && info.getId() == skippedId && !info.isActivable()
+                    ? "Günlük artık alınabilir değil; pas geçildi: " + skippedTitle
+                    : "Günlük kaynak doğrulaması değişti; güvenle pas geçildi: " + skippedTitle;
+            advanceGiverRow();
+            return;
+        }
+        questGiverSource.acceptSelected();
+        state = State.WAITING_GIVER_ACCEPT;
+        status = "Günlük kabulü sunucudan doğrulanıyor: " + selectedOfferTitle;
+        nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+    }
+
+    private void verifyAcceptedOffer() {
+        QuestAPI.QuestListItem catalog = findQuestItem(selectedOfferId).orElse(null);
+        boolean accepted = catalog != null && !catalog.isActivable();
+        if (accepted) {
+            acceptedOfferIds.add(selectedOfferId);
+            reviewedOfferIds.add(selectedOfferId);
+            status = "Günlük kabul edildi: " + selectedOfferTitle;
+            selectedOfferId = -1;
+            selectedOfferTitle = "";
+            giverRowIndex = 1;
+            giverRowRetries = 0;
+            dailyTabRetries = 0;
+            giverPageHadNewId = false;
+            state = quests.isQuestGiverOpen() ? State.SELECTING_GIVER_ROW : State.OPENING_GIVER;
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+        if (acceptRetries++ < Math.max(2, settings.maxSelectionRetries)) {
+            state = State.ACCEPTING_GIVER_QUEST;
+            status = "Günlük kabul yanıtı gecikti; kaynak yeniden doğrulanacak";
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+        pauseSafely("Günlük kabulü sunucudan doğrulanamadı: " + selectedOfferTitle);
+    }
+
+    private Optional<QuestAPI.QuestListItem> findQuestItem(int id) {
+        try {
+            return quests.getCurrestQuests().stream()
+                    .filter(item -> item != null && item.getId() == id)
+                    .findFirst()
+                    .map(item -> (QuestAPI.QuestListItem) item);
+        } catch (Throwable ignored) {
+            return Optional.empty();
+        }
+    }
+
+    private void finishQuestOfferScan() {
+        offerScanNeeded = false;
+        state = State.CLOSING_GIVER;
+        status = "İstasyon taraması tamamlandı | Kabul: " + acceptedOfferIds.size() +
+                " | Tetrathrin pas: " + skippedTetrathrinOfferIds.size();
+        nextActionAt = System.currentTimeMillis() + 300L;
+    }
+
+    private void selectPendingDaily() {
+        if (pendingChoice == null || pendingChoice.selector() == null) {
+            prepareNewScan();
+            return;
+        }
+        QuestAPI.Quest displayed = quests.getDisplayedQuest();
+        if (displayed != null && displayed.getId() == pendingChoice.id() && isVerifiedDaily(displayed)) {
+            startDaily(displayed);
+            return;
+        }
+        questIdBeforeSelection = displayed == null ? -1 : displayed.getId();
+        questGui.click(pendingChoice.selector().x(), pendingChoice.selector().y());
+        state = State.WAITING_FOR_SELECTION;
+        status = "Günlük görev kaynaktan seçiliyor: " + pendingChoice.title();
+        nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+    }
+
+    private void inspectPendingSelection() {
+        QuestAPI.Quest quest = quests.getDisplayedQuest();
+        if (quest != null && pendingChoice != null && quest.getId() == pendingChoice.id() && isVerifiedDaily(quest)) {
+            startDaily(quest);
+            return;
+        }
+
+        selectionRetries++;
+        if (selectionRetries >= Math.max(1, settings.maxSelectionRetries)) {
+            prepareNewScan();
+            status = "Günlük seçim doğrulanamadı; görev menüsü yeniden taranıyor";
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+        state = State.SELECTING;
+        status = "Sunucudan günlük görev seçimi bekleniyor (" + selectionRetries + "/" +
+                settings.maxSelectionRetries + ")";
+        nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+    }
+
+    private void startDaily(QuestAPI.Quest quest) {
+        currentQuestId = quest.getId();
+        currentQuestTitle = safeTitle(quest);
+        selectionRetries = 0;
+        state = State.RUNNING;
+        buildPlanFromSource(quest);
+        status = "Günlük görev doğrulandı: " + currentQuestTitle;
+    }
+
+    private void retryDiscoveredSelector(String reason) {
+        selectionRetries++;
+        if (selectionRetries >= Math.max(1, settings.maxSelectionRetries)) {
+            selectorIndex++;
+            selectionRetries = 0;
+            state = State.DISCOVERING;
+            status = reason + "; sıradaki kaynak seçici deneniyor";
+            nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+            return;
+        }
+        state = State.DISCOVERING;
+        status = reason + " (" + selectionRetries + "/" + settings.maxSelectionRetries + ")";
+        nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
+    }
+
+    private void retryMenuScan(String reason) {
+        status = reason + "; tek tarama tamamlandı";
+        if (offerScanNeeded) beginQuestOfferScan();
+        else finishAll();
+    }
+
+    private void prepareNewScan() {
+        state = State.DISCOVERING;
+        menuScanPass = 0;
+        selectorIndex = 0;
+        selectionRetries = 0;
+        questIdBeforeSelection = -1;
+        pendingChoice = null;
+        selectors = List.of();
+        scannedQuestIds.clear();
+        dailyChoices.clear();
+    }
+
+    private void refreshDailyCatalog() {
+        try {
+            for (QuestAPI.QuestListItem item : quests.getCurrestQuests()) {
+                if (item != null && DailyTaskPlanner.isDailyType(item.getType())) {
+                    knownDailyQuestIds.add(item.getId());
+                }
+            }
+        } catch (Throwable ignored) {
+            // The quest-giver catalog can be unavailable when its window has
+            // never been opened. The 24-hour requirement remains authoritative.
+        }
+    }
+
+    private void recordQuest(QuestAPI.Quest quest, QuestMenuSource.Selector selector) {
+        if (quest == null || quest.getId() <= 0) return;
+        scannedQuestIds.add(quest.getId());
+        if (!isVerifiedDaily(quest)) return;
+        if (isFinished(quest)) {
+            completedQuestIds.add(quest.getId());
+            return;
+        }
+        boolean supported = false;
+        for (QuestAPI.Requirement requirement : DailyTaskPlanner.actionable(quest)) {
+            QuestAPI.Requirement.RequirementType type = requirement.getRequirementType();
+            if (isNpcRequirement(requirement) ||
+                    DailyTaskPlanner.findMap(requirement.getDescription()).isPresent() ||
+                    type == QuestAPI.Requirement.RequirementType.SELL_ORE ||
+                    type == QuestAPI.Requirement.RequirementType.COLLECT_BONUS_BOX ||
+                    type == QuestAPI.Requirement.RequirementType.COLLECT_BONUS_BOX_TYPE ||
+                    type == QuestAPI.Requirement.RequirementType.SALVAGE ||
+                    type == QuestAPI.Requirement.RequirementType.COLLECT_LOOT ||
+                    type == QuestAPI.Requirement.RequirementType.CARGO ||
+                    type == QuestAPI.Requirement.RequirementType.COLLECT) {
+                supported = true;
+                break;
+            }
+        }
+        if (!supported) return;
+        QuestChoice choice = new QuestChoice(quest.getId(), safeTitle(quest), selector);
+        QuestChoice existing = dailyChoices.get(quest.getId());
+        if (existing == null || (existing.selector() == null && selector != null)) {
+            dailyChoices.put(quest.getId(), choice);
+        }
+    }
+
+    private boolean isVerifiedDaily(QuestAPI.Quest quest) {
+        return quest != null && (SPECIAL_DAILY_QUEST_IDS.contains(quest.getId()) ||
+                acceptedOfferIds.contains(quest.getId()) || knownDailyQuestIds.contains(quest.getId()) ||
+                DailyTaskPlanner.isDaily(quest));
+    }
+
+    private boolean isFinished(QuestAPI.Quest quest) {
+        return quest == null || quest.isCompleted() || DailyTaskPlanner.progress(quest) >= 0.9999d;
+    }
+
+    private String scanSummary() {
+        return "Menü: " + scannedQuestIds.size() + " görev, " + dailyChoices.size() + " günlük";
+    }
+
+    private void buildPlanFromSource(QuestAPI.Quest quest) {
+        clearPlan();
+        List<QuestAPI.Requirement> requirements = DailyTaskPlanner.actionable(quest);
+        targetMapName = requirements.stream()
+                .map(QuestAPI.Requirement::getDescription)
+                .map(DailyTaskPlanner::findMap)
+                .flatMap(Optional::stream)
+                .findFirst()
+                .orElse(null);
+
+        targetNpcDescription = requirements.stream()
+                .filter(this::isNpcRequirement)
+                .map(QuestAPI.Requirement::getDescription)
+                .findFirst()
+                .orElse(null);
+
+        if (targetMapName == null && targetNpcDescription != null) {
+            targetMapName = DailyTaskPlanner.preferredMapForNpc(targetNpcDescription, "1").orElse(null);
+        }
+
+        oreToSell = requirements.stream()
+                .filter(r -> r.getRequirementType() == QuestAPI.Requirement.RequirementType.SELL_ORE)
+                .map(QuestAPI.Requirement::getDescription)
+                .map(DailyTaskPlanner::findOre)
+                .flatMap(Optional::stream)
+                .findFirst()
+                .orElse(null);
+
+        collectBonus = requirements.stream().anyMatch(r ->
+                r.getRequirementType() == QuestAPI.Requirement.RequirementType.COLLECT_BONUS_BOX ||
+                        r.getRequirementType() == QuestAPI.Requirement.RequirementType.COLLECT_BONUS_BOX_TYPE);
+        collectCargo = requirements.stream().anyMatch(r ->
+                r.getRequirementType() == QuestAPI.Requirement.RequirementType.SALVAGE ||
+                        r.getRequirementType() == QuestAPI.Requirement.RequirementType.COLLECT_LOOT ||
+                        r.getRequirementType() == QuestAPI.Requirement.RequirementType.CARGO ||
+                        r.getRequirementType() == QuestAPI.Requirement.RequirementType.COLLECT);
+
+        if (oreToSell != null && !ores.canSellOres() && targetMapName == null) {
+            targetMapName = homeBaseMapName();
+        }
+    }
+
+    private void executePlan(QuestAPI.Quest quest, double progress) {
+        if (targetMapName != null && !isOnMap(targetMapName)) {
+            navigateTo(targetMapName);
+            updateProgressStatus(quest, progress, "Haritaya gidiliyor: " + targetMapName);
+            return;
+        }
+
+        if (oreToSell != null) {
+            if (ores.canSellOres() && ores.getAmount(oreToSell) > 0) {
+                ores.sellOre(oreToSell);
+                updateProgressStatus(quest, progress, "Maden satılıyor: " + oreToSell.getName());
+                return;
+            }
+            if (!ores.canSellOres()) {
+                String base = homeBaseMapName();
+                if (!isOnMap(base)) navigateTo(base);
+                updateProgressStatus(quest, progress, "Maden satışı için üsse gidiliyor");
+                return;
+            }
+            // When the requested raw ore is absent, collect cargo from a small
+            // NPC without changing LootCollector's saved NPC/box settings.
+            if (ores.getAmount(oreToSell) <= 0 && targetNpcDescription == null) {
+                targetNpcDescription = "Streuner";
+                collectCargo = true;
+            }
+        }
+
+        if ((collectBonus || collectCargo) && tryCollectRequiredBox()) {
+            updateProgressStatus(quest, progress, collectBonus ? "Bonus kutusu toplanıyor" : "NPC yükü toplanıyor");
+            return;
+        }
+
+        if (targetNpcDescription != null) {
+            npcCombat.tick(targetNpcDescription);
+            // Shared combat safety can occasionally skip its internal target
+            // scan for a tick. Never leave a daily hunter parked after it has
+            // reached the last route point: MovementAPI follows configured
+            // preferred zones, or chooses a random point when none exist.
+            if (attack.getTarget() == null && !movement.isMoving()) movement.moveRandom();
+            updateProgressStatus(quest, progress, "NPC Kill and Collect: " + npcCombat.getStatus() +
+                    " | Hedef: " + cleanedRequirement(targetNpcDescription));
+            return;
+        }
+
+        if (collectBonus || collectCargo) {
+            roamIfNeeded();
+            updateProgressStatus(quest, progress, "Toplanacak kutu aranıyor");
+            return;
+        }
+
+        if (targetMapName != null && isOnMap(targetMapName)) {
+            updateProgressStatus(quest, progress, "Hedef haritaya ulaşıldı");
+            return;
+        }
+
+        pauseSafely("Desteklenmeyen günlük hedef: " + firstRequirement(quest));
+    }
+
+    private boolean runLocalSafety() {
+        double hp = hero.getHealth().hpPercent();
+        if (hp >= settings.minimumHpPercent) return false;
+        attack.stopAttack();
+        hero.setRunMode();
+        entities.getPortals().stream()
+                .filter(Portal::isValid)
+                .min(Comparator.comparingDouble(hero::distanceTo))
+                .ifPresent(portal -> movement.moveTo(portal));
+        status = "Yerel güvenlik: HP %" + (int) Math.round(hp * 100d) + "; portal yanında bekleniyor";
+        return true;
+    }
+
+    private boolean ensureQuestStation() {
+        if (!isOnMap(QUEST_BASE_MAP)) {
+            if (!selectors.isEmpty() || state != State.DISCOVERING) prepareNewScan();
+            if (questGui != null && questGui.isVisible()) questGui.setVisible(false);
+            navigateToQuestBase();
+            return false;
+        }
+
+        Optional<? extends Station> station = findQuestStation();
+        if (station.isEmpty()) {
+            attack.stopAttack();
+            hero.setRoamMode();
+            status = QUEST_BASE_MAP + " ana istasyon verisi bekleniyor";
+            return false;
+        }
+
+        double distance = hero.distanceTo(station.get());
+        if (distance > QUEST_STATION_DISTANCE) {
+            attack.stopAttack();
+            hero.setRoamMode();
+            movement.moveTo(station.get());
+            status = QUEST_BASE_MAP + " ana görev istasyonuna yaklaşılıyor: " + (int) Math.round(distance);
+            return false;
+        }
+
+        if (movement.isMoving()) movement.stop(false);
+        return true;
+    }
+
+    private Optional<? extends Station> findQuestStation() {
+        Optional<? extends Station> questGiver = entities.getStations().stream()
+                .filter(Station::isValid)
+                .filter(station -> station instanceof Station.QuestGiver)
+                .min(Comparator.comparingDouble(hero::distanceTo));
+        if (questGiver.isPresent()) return questGiver;
+
+        Optional<? extends Station> homeBase = entities.getStations().stream()
+                .filter(Station::isValid)
+                .filter(station -> station instanceof Station.HomeBase)
+                .min(Comparator.comparingDouble(hero::distanceTo));
+        if (homeBase.isPresent()) return homeBase;
+
+        return entities.getStations().stream()
+                .filter(Station::isValid)
+                .min(Comparator.comparingDouble(hero::distanceTo));
+    }
+
+    private void navigateToQuestBase() {
+        Optional<GameMap> destination = starSystem.findMap(QUEST_BASE_MAP);
+        if (destination.isEmpty() || !starSystem.isAccessible(destination.get())) {
+            attack.stopAttack();
+            status = "Görev merkezi harita verisi bekleniyor: " + QUEST_BASE_MAP;
+            return;
+        }
+
+        Portal portal = starSystem.findNext(destination.get());
+        if (portal == null || !portal.isValid()) {
+            // Map changes briefly clear the portal collection. This is a
+            // normal loading state, so wait for the next tick instead of
+            // entering a permanent safe pause.
+            attack.stopAttack();
+            status = "Görev merkezi rotası yükleniyor: " + QUEST_BASE_MAP;
+            return;
+        }
+
+        attack.stopAttack();
+        hero.setRoamMode();
+        if (hero.distanceTo(portal) > 220d) movement.moveTo(portal);
+        else movement.jumpPortal(portal);
+        status = "Görev merkezi için " + QUEST_BASE_MAP + " haritasına gidiliyor";
+    }
+
+    private void navigateTo(String mapName) {
+        Optional<GameMap> destination = starSystem.findMap(mapName);
+        if (destination.isEmpty() || !starSystem.isAccessible(destination.get())) {
+            // Map/route data can be temporarily unavailable while a portal jump is
+            // loading. Keep the daily plan intact and retry on the next tick.
+            attack.stopAttack();
+            status = "Harita rotası yükleniyor: " + mapName;
+            return;
+        }
+        Portal portal = starSystem.findNext(destination.get());
+        if (portal == null || !portal.isValid()) {
+            // The portal collection is briefly empty during map transitions. This
+            // is not a permanent navigation failure and must not clear the plan.
+            attack.stopAttack();
+            status = "Sonraki portal bekleniyor: " + mapName;
+            return;
+        }
+        attack.stopAttack();
+        hero.setRoamMode();
+        if (hero.distanceTo(portal) > 220d) movement.moveTo(portal);
+        else movement.jumpPortal(portal);
+    }
+
+    private boolean tryCollectRequiredBox() {
+        Optional<? extends Box> nearest = entities.getBoxes().stream()
+                .filter(Box::isValid)
+                .filter(box -> !box.isCollected())
+                .filter(this::matchesRequiredBox)
+                .min(Comparator.comparingDouble(hero::distanceTo));
+        if (nearest.isEmpty()) return false;
+        Box box = nearest.get();
+        attack.stopAttack();
+        hero.setRoamMode();
+        if (hero.distanceTo(box) > 180d) movement.moveTo(box);
+        else box.tryCollect();
+        return true;
+    }
+
+    private boolean matchesRequiredBox(Box box) {
+        String type = ((box.getTypeName() == null ? "" : box.getTypeName()) + " " +
+                (box.getHash() == null ? "" : box.getHash())).toUpperCase(Locale.ROOT);
+        if (collectBonus && type.contains("BONUS")) return true;
+        return collectCargo && (type.contains("FROM_SHIP") || type.contains("CARGO"));
+    }
+
+    private void roamIfNeeded() {
+        long now = System.currentTimeMillis();
+        if (movement.isMoving() && now < nextRoamAt) return;
+        movement.moveRandom();
+        nextRoamAt = now + 2500L;
+    }
+
+    private boolean isNpcRequirement(QuestAPI.Requirement requirement) {
+        QuestAPI.Requirement.RequirementType type = requirement.getRequirementType();
+        return type == QuestAPI.Requirement.RequirementType.KILL_NPC ||
+                type == QuestAPI.Requirement.RequirementType.KILL_NPCS ||
+                type == QuestAPI.Requirement.RequirementType.DAMAGE_NPCS ||
+                type == QuestAPI.Requirement.RequirementType.DAMAGE;
+    }
+
+    private boolean isOnMap(String mapName) {
+        GameMap current = starSystem.getCurrentMap();
+        return current != null && current.getName().equalsIgnoreCase(mapName);
+    }
+
+    private String homeBaseMapName() {
+        GameMap current = starSystem.getCurrentMap();
+        String prefix = current == null ? "1" : current.getName().split("-")[0];
+        if (!prefix.matches("[1-3]")) prefix = "1";
+        return prefix + "-1";
+    }
+
+    private void updateProgressStatus(QuestAPI.Quest quest, double progress, String action) {
+        int percent = (int) Math.round(progress * 100d);
+        status = "Günlük görev | Tamamlanan: " + completedQuestIds.size() +
+                " | " + safeTitle(quest) + " | %" + percent + " | " + action;
+    }
+
+    private void pauseSafely(String reason) {
+        stopCurrentAction();
+        state = State.PAUSED;
+        status = "Güvenli duraklama: " + reason;
+    }
+
+    private void finishAll() {
+        stopCurrentAction();
+        state = State.DONE;
+        nextActionAt = java.time.LocalDate.now().plusDays(1)
+                .atStartOfDay(java.time.ZoneId.systemDefault())
+                .toInstant().toEpochMilli();
+        // Keep DarkBot ticking briefly so PetManager can send and observe the
+        // actual PET deactivation before the bot's running flag is cleared.
+        nextRoamAt = System.currentTimeMillis() + 5_000L;
+        status = "TÜM GÜNLÜK GÖREVLER TAMAMLANDI | Bugün yeniden taranmayacak" +
+                " | Tamamlanan: " + completedQuestIds.size() +
+                " | PET kapatılıyor | Bot PET kapanınca duracak";
+    }
+
+    private void stopCurrentAction() {
+        npcCombat.stopCombat();
+        attack.stopAttack();
+        movement.stop(false);
+        hero.setRoamMode();
+        clearPlan();
+    }
+
+    private void clearPlan() {
+        targetNpcDescription = null;
+        targetMapName = null;
+        oreToSell = null;
+        collectBonus = false;
+        collectCargo = false;
+    }
+
+    String getNpcLocatorTargetDescription() {
+        if (state != State.RUNNING || targetNpcDescription == null) return null;
+        if (targetMapName != null && !isOnMap(targetMapName)) return null;
+        return targetNpcDescription;
+    }
+
+    private String safeTitle(QuestAPI.Quest quest) {
+        String title = quest == null ? null : quest.getTitle();
+        if (title == null || title.isBlank() || title.equalsIgnoreCase("ERROR")) {
+            return quest == null ? "Görev" : "Görev #" + quest.getId();
+        }
+        return title;
+    }
+
+    private String firstRequirement(QuestAPI.Quest quest) {
+        return DailyTaskPlanner.actionable(quest).stream()
+                .map(QuestAPI.Requirement::getDescription)
+                .findFirst()
+                .orElse("etkin hedef yok");
+    }
+
+    private String cleanedRequirement(String value) {
+        return value == null ? "" : value.replaceAll("\\s+", " ").trim();
+    }
+
+    @Override
+    public void onTickStopped() {
+        // DarkBot also invokes this callback during short disconnects and map-load
+        // gaps. Stop active movement/attack, but retain the selected quest and its
+        // plan so a slow server does not force another trip to the quest station.
+        npcCombat.stopCombat();
+        attack.stopAttack();
+        movement.stop(false);
+        hero.setRoamMode();
+        if (state != State.PAUSED && state != State.DONE) {
+            status = "DarkBot beklemede; günlük görev planı korundu";
+        }
+    }
+
+    @Override
+    public String getStatus() {
+        return "DailyTaskAPI | " + status;
+    }
+
+    @Override
+    public String getStoppedStatus() {
+        return "DailyTaskAPI durduruldu | " + status;
+    }
+
+    @Override
+    public boolean canRefresh() {
+        return true;
+    }
+}
