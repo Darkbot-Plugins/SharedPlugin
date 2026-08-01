@@ -1,7 +1,7 @@
 {
 	"name": "SharedPlugin",
 	"author": "Several Devs",
-	"version": "0.12.20",
+	"version": "0.12.21",
 	"minVersion": "1.131.6 beta 3",
 	"supportedVersion": "1.132.0 alpha 2",
 	"basePackage": "dev.shared",
@@ -19,7 +19,9 @@
 		"dev.shared.orbithelper.behaviours.fast_travel.FastTravel",
 		"dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate",
 		"dev.shared.do_gamer.task.autobuy.Autobuy",
-		"dev.shared.halizeur.log_overlay.LogOverlay"
+		"dev.shared.halizeur.log_overlay.LogOverlay",
+		"dev.shared.berke.dailytaskapi.DailyTaskAPI",
+		"dev.shared.berke.dailytaskapi.DailyNpcPetLocator"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
 	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/latest/download/SharedPlugin.jar"
