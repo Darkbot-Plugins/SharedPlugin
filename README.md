@@ -23,6 +23,7 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - Simple Galaxy Gate: Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Mimesis, EBG, GoP, Treacherous, DSE, Trinity and Voyagers. By @do-gamer
 - Autobuy: Automatically buys boosters and special items from the shop at a configured interval. By @do-gamer
 - Log Overlay: Displays the latest in-game log messages on the canvas (top-center, auto-fade after 5s). Built-in keyword whitelist limits the displayed lines to gains and errors so the canvas does not get cluttered. By @Halizeur
+- Daily Task API: Detects active daily quests from DarkBot's quest data, completes supported objectives, accepts eligible Uridium-reward dailies at the home station, disables the PET when finished, and stops the bot without changing another module's saved configuration. By @Berke
 
 ## Contributing
 
