@@ -15,6 +15,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DeltaGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.DseGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EpsilonGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.EternalBlacklightGate;
+import dev.shared.do_gamer.module.simple_galaxy_gate.gate.FiestaGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.GopGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.HadesGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.gate.InvasionGate;
@@ -103,6 +104,7 @@ public final class Maps {
         list.add(new MapInfo(450, "Gauntlet Of Plutus (Easy)", null, StarSystemAPI.HOME_MAPS, GopGate::new));
         list.add(new MapInfo(482, "Treacherous Domain", null, StarSystemAPI.BASE_MAPS, TreacherousDomainGate::new));
         list.add(new MapInfo(473, "DSE", null, StarSystemAPI.HOME_MAPS, DseGate::new));
+        list.add(new MapInfo(494, "Fiesta", null, StarSystemAPI.HOME_MAPS, FiestaGate::new));
         list.add(new MapInfo(499, "Trinity Trials", null, StarSystemAPI.BASE_MAPS, TrinityTrialsGate::new));
         list.add(new MapInfo(509, "Voyagers Ascent", null, StarSystemAPI.BASE_MAPS, VoyagersAscentGate::new));
 
