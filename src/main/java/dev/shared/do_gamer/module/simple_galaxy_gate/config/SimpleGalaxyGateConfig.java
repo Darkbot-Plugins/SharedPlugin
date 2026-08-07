@@ -385,7 +385,7 @@ public final class SimpleGalaxyGateConfig {
 
         public enum FiestaLevel {
             TRANQUIL(1, "Tranquil (Level 1)"),
-            STANDART(2, "Standart (Level 2)"),
+            STANDARD(2, "Standard (Level 2)"),
             FIERCE(3, "Fierce (Level 3)"),
             SAVAGE(4, "Savage (Level 4)"),
             MYTHIC(5, "Mythic (Level 5)");
