@@ -70,11 +70,11 @@ public final class SimpleGalaxyGateConfig {
     @Option("do_gamer.simple_galaxy_gate.any_gate")
     public AnyGateSettings anyGate = new AnyGateSettings();
 
-    @Option("do_gamer.simple_galaxy_gate.dse")
-    public DseSettings dse = new DseSettings();
-
     @Option("do_gamer.simple_galaxy_gate.eternal_blacklight")
     public EternalBlacklightSettings eternalBlacklight = new EternalBlacklightSettings();
+
+    @Option("do_gamer.simple_galaxy_gate.dse")
+    public DseSettings dse = new DseSettings();
 
     @Option("do_gamer.simple_galaxy_gate.fiesta")
     public FiestaSettings fiesta = new FiestaSettings();
@@ -157,33 +157,6 @@ public final class SimpleGalaxyGateConfig {
 
         @Option("do_gamer.simple_galaxy_gate.any_gate.move_to_center")
         public boolean moveToCenter = false;
-    }
-
-    /**
-     * Settings specific to the DSE gate.
-     */
-    public static class DseSettings {
-        public static class Instructions extends ConfigHtmlInstructions {
-            @Override
-            public String getEditorValue() {
-                return "DSE gate requires <b>manual</b> action to select ship and reset waves.";
-            }
-        }
-
-        @Option("")
-        @Readonly
-        @Editor(Instructions.class)
-        public String instructions = null;
-
-        @Option("do_gamer.simple_galaxy_gate.dse.missile_storm_distance")
-        @Number.Disabled(value = 0)
-        @Number(min = 0, max = 3_000, step = 100)
-        public int missileStormDistance = 2_000;
-
-        @Option("do_gamer.simple_galaxy_gate.dse.guardable_npc_hp")
-        @Number.Disabled(value = 0.0)
-        @Percentage
-        public double guardableNpcHpPercent = 0.9;
     }
 
     /**
@@ -373,6 +346,33 @@ public final class SimpleGalaxyGateConfig {
 
         }
 
+    }
+
+    /**
+     * Settings specific to the DSE gate.
+     */
+    public static class DseSettings {
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return "DSE gate requires <b>manual</b> action to select ship and reset waves.";
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
+        @Option("do_gamer.simple_galaxy_gate.dse.missile_storm_distance")
+        @Number.Disabled(value = 0)
+        @Number(min = 0, max = 3_000, step = 100)
+        public int missileStormDistance = 2_000;
+
+        @Option("do_gamer.simple_galaxy_gate.dse.guardable_npc_hp")
+        @Number.Disabled(value = 0.0)
+        @Percentage
+        public double guardableNpcHpPercent = 0.9;
     }
 
     /**
