@@ -21,6 +21,7 @@ import eu.darkbot.api.managers.StatsAPI;
 @Feature(name = "Auto refiner", description = "Automatically refine materials")
 public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
     private static final long FAILED_RETRY_DELAY_NANOS = 3_000_000_000L;
+    private static final long TRADE_WINDOW_ADDRESS_OFFSET = 0x78L;
 
     private final OreAPI ores;
     private final GuiManager guiManager;
@@ -32,7 +33,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
 
     // Track cargo to prevent unnecessary API calls when unable to refine
     private int lastCargoAmount = -1;
-    private boolean lastRefineAttemptFailed = false;
+    private boolean lastAttemptNeedsRetry = false;
     private long lastRefineAttemptAtNanos = 0L;
 
     public AutoRefin(OreAPI ores,
@@ -63,7 +64,7 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
             // Reset tracking variables when cargo is below trigger percent
             if (lastCargoAmount != -1) {
                 lastCargoAmount = -1;
-                lastRefineAttemptFailed = false;
+                lastAttemptNeedsRetry = false;
                 lastRefineAttemptAtNanos = 0L;
             }
             return;
@@ -72,9 +73,10 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
         int currentCargo = stats.getCargo();
         long nowNanos = System.nanoTime();
 
-        // If cargo hasn't changed since last failed refine attempt, skip to prevent
-        // unnecessary API calls
-        if (lastRefineAttemptFailed
+        // If cargo hasn't changed since last attempt that needs a retry (no ore was
+        // refined, either nothing was eligible or the attempt failed), skip to
+        // prevent unnecessary API calls until the retry delay elapses
+        if (lastAttemptNeedsRetry
                 && currentCargo == lastCargoAmount
                 && (nowNanos - lastRefineAttemptAtNanos) < FAILED_RETRY_DELAY_NANOS) {
             return;
@@ -87,21 +89,35 @@ public class AutoRefin implements Behavior, Configurable<AutoRefinConfig> {
                         ore -> ore,
                         this::maxRefine));
 
-        lastRefineAttemptFailed = true; // assume refine attempt will fail
+        lastAttemptNeedsRetry = true; // assume no ore will be refined this tick
         lastCargoAmount = currentCargo; // update last cargo amount
-        lastRefineAttemptAtNanos = nowNanos; // delay next retry if this attempt fails
+        lastRefineAttemptAtNanos = nowNanos; // delay next retry unless a refine succeeds
 
         // Find the ore with the highest refineable amount
         refineMap.entrySet().stream()
                 .filter(e -> e.getValue() > 0)
                 .max(Map.Entry.comparingByValue())
                 .ifPresent(entry -> {
-                    darkbotApi.refine(
-                            darkbotApi.readLong(guiManager.getAddress() + 0x78),
-                            entry.getKey(),
-                            entry.getValue());
-                    lastRefineAttemptFailed = false; // refine attempt succeeded
-                    lastRefineAttemptAtNanos = 0L;
+                    try {
+                        long guiAddress = guiManager.getAddress();
+                        if (guiAddress == 0)
+                            return;
+
+                        long tradeWindowAddress = darkbotApi.readLong(guiAddress + TRADE_WINDOW_ADDRESS_OFFSET);
+                        if (tradeWindowAddress == 0)
+                            return;
+
+                        darkbotApi.refine(tradeWindowAddress, entry.getKey(), entry.getValue());
+                        lastAttemptNeedsRetry = false; // ore was refined successfully
+                        lastRefineAttemptAtNanos = 0L;
+                    } catch (RuntimeException ignored) {
+                        // Keep bot alive on transient client/API states (for example while the user
+                        // is manually interacting with upgrade windows). lastRefineAttemptAtNanos was
+                        // already set above, so the next attempt is throttled by
+                        // FAILED_RETRY_DELAY_NANOS instead of retrying every tick, avoiding hammering
+                        // the API while the client is in this unstable state.
+                        System.out.println("Auto refiner: refine attempt failed, will retry after a short delay.");
+                    }
                 });
     }
 

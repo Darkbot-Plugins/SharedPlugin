@@ -70,11 +70,14 @@ public final class SimpleGalaxyGateConfig {
     @Option("do_gamer.simple_galaxy_gate.any_gate")
     public AnyGateSettings anyGate = new AnyGateSettings();
 
+    @Option("do_gamer.simple_galaxy_gate.eternal_blacklight")
+    public EternalBlacklightSettings eternalBlacklight = new EternalBlacklightSettings();
+
     @Option("do_gamer.simple_galaxy_gate.dse")
     public DseSettings dse = new DseSettings();
 
-    @Option("do_gamer.simple_galaxy_gate.eternal_blacklight")
-    public EternalBlacklightSettings eternalBlacklight = new EternalBlacklightSettings();
+    @Option("do_gamer.simple_galaxy_gate.fiesta")
+    public FiestaSettings fiesta = new FiestaSettings();
 
     @Option("do_gamer.simple_galaxy_gate.kamikaze")
     public KamikazeSettings kamikaze = new KamikazeSettings();
@@ -154,33 +157,6 @@ public final class SimpleGalaxyGateConfig {
 
         @Option("do_gamer.simple_galaxy_gate.any_gate.move_to_center")
         public boolean moveToCenter = false;
-    }
-
-    /**
-     * Settings specific to the DSE gate.
-     */
-    public static class DseSettings {
-        public static class Instructions extends ConfigHtmlInstructions {
-            @Override
-            public String getEditorValue() {
-                return "DSE gate requires <b>manual</b> action to select ship and reset waves.";
-            }
-        }
-
-        @Option("")
-        @Readonly
-        @Editor(Instructions.class)
-        public String instructions = null;
-
-        @Option("do_gamer.simple_galaxy_gate.dse.missile_storm_distance")
-        @Number.Disabled(value = 0)
-        @Number(min = 0, max = 3_000, step = 100)
-        public int missileStormDistance = 2_000;
-
-        @Option("do_gamer.simple_galaxy_gate.dse.guardable_npc_hp")
-        @Number.Disabled(value = 0.0)
-        @Percentage
-        public double guardableNpcHpPercent = 0.9;
     }
 
     /**
@@ -370,6 +346,70 @@ public final class SimpleGalaxyGateConfig {
 
         }
 
+    }
+
+    /**
+     * Settings specific to the DSE gate.
+     */
+    public static class DseSettings {
+        public static class Instructions extends ConfigHtmlInstructions {
+            @Override
+            public String getEditorValue() {
+                return "DSE gate requires <b>manual</b> action to select ship and reset waves.";
+            }
+        }
+
+        @Option("")
+        @Readonly
+        @Editor(Instructions.class)
+        public String instructions = null;
+
+        @Option("do_gamer.simple_galaxy_gate.dse.missile_storm_distance")
+        @Number.Disabled(value = 0)
+        @Number(min = 0, max = 3_000, step = 100)
+        public int missileStormDistance = 2_000;
+
+        @Option("do_gamer.simple_galaxy_gate.dse.guardable_npc_hp")
+        @Number.Disabled(value = 0.0)
+        @Percentage
+        public double guardableNpcHpPercent = 0.9;
+    }
+
+    /**
+     * Settings for the Fiesta gate level selection.
+     */
+    public static class FiestaSettings {
+        @Option("do_gamer.simple_galaxy_gate.fiesta.level")
+        @Dropdown(options = FiestaLevelDropdown.class)
+        public FiestaLevel level = FiestaLevel.TRANQUIL;
+
+        public enum FiestaLevel {
+            TRANQUIL(1, "Tranquil (Level 1)"),
+            STANDARD(2, "Standard (Level 2)"),
+            FIERCE(3, "Fierce (Level 3)"),
+            SAVAGE(4, "Savage (Level 4)"),
+            MYTHIC(5, "Mythic (Level 5)");
+
+            public final int value;
+            public final String label;
+
+            FiestaLevel(int value, String label) {
+                this.value = value;
+                this.label = label;
+            }
+        }
+
+        public static class FiestaLevelDropdown implements Dropdown.Options<FiestaLevel> {
+            @Override
+            public List<FiestaLevel> options() {
+                return List.of(FiestaLevel.values());
+            }
+
+            @Override
+            public String getText(FiestaLevel option) {
+                return option == null ? "" : option.label;
+            }
+        }
     }
 
     /**
