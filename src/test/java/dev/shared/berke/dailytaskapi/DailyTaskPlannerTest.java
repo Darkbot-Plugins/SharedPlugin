@@ -31,6 +31,30 @@ public final class DailyTaskPlannerTest {
         require(DailyTaskPlanner.actionable(nestedNpcQuest).contains(mapChild),
                 "NPC hedefinin altındaki harita şartı da korunmalı");
 
+        DailyQuestConditionEngine.Plan nestedPlan = DailyQuestConditionEngine.build(nestedNpcQuest, "1");
+        require("1-4".equals(nestedPlan.targetMapName()),
+                "Quest Engine must include a nested MAP condition");
+        require(nestedPlan.targetNpcDescription().contains("Mordon"),
+                "Quest Engine must include a nested NPC condition");
+
+        QuestAPI.Requirement coordinates = requirement("X: 12400 Y: 7600", "COORDINATES",
+                QuestAPI.Requirement.RequirementType.COORDINATES, 0, 1, false);
+        QuestAPI.Quest coordinateQuest = quest(5, true, false, "Coordinates", List.of(coordinates, dailyTimer));
+        DailyQuestConditionEngine.Plan coordinatePlan = DailyQuestConditionEngine.build(coordinateQuest, "1");
+        require(coordinatePlan.targetCoordinates() != null &&
+                        coordinatePlan.targetCoordinates().x() == 12400 &&
+                        coordinatePlan.targetCoordinates().y() == 7600,
+                "Quest Engine must parse coordinates from the source condition");
+        require(coordinatePlan.coordinatesOnly(), "coordinate-only plans must be recognized");
+
+        QuestAPI.Requirement visitMap = requirement("Visit map 1-8", "VISIT_MAP",
+                QuestAPI.Requirement.RequirementType.VISIT_MAP, 0, 1, false);
+        QuestAPI.Quest visitQuest = quest(6, true, false, "Map visit", List.of(visitMap, dailyTimer));
+        require("1-8".equals(DailyQuestConditionEngine.build(visitQuest, "1").targetMapName()),
+                "Quest Engine must support typed VISIT_MAP conditions");
+        require(DailyQuestConditionEngine.supports(visitQuest),
+                "a map visit must be considered executable");
+
         require(DailyTaskPlanner.isDailyType("questType_daily1"),
                 "quest catalog daily type should be recognized");
         require(!DailyTaskPlanner.isDailyType("questType_kill"),
