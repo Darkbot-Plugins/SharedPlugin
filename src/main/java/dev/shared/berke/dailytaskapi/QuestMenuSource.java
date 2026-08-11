@@ -147,7 +147,7 @@ final class QuestMenuSource {
                 selectors.add(new Selector(best.x() + childX + 1, best.y() + 1));
             }
             return List.copyOf(selectors);
-        } catch (Throwable error) {
+        } catch (RuntimeException error) {
             return fail("Görev kaynak ağacı hatası: " + error.getClass().getSimpleName());
         }
     }
@@ -170,7 +170,7 @@ final class QuestMenuSource {
         List<Long> childAddresses = new ArrayList<>();
         try {
             nativeQuestGui.forEachSpriteChild(address, childAddresses::add);
-        } catch (Throwable error) {
+        } catch (RuntimeException error) {
             lastError = "Görev kaynak çocuğu okunamadı: " + describe(error);
         }
 
@@ -187,7 +187,7 @@ final class QuestMenuSource {
             long matrix = memory.readLong(address + 72L);
             int raw = memory.readInt(matrix + offset);
             return Math.round(raw * 0.05f);
-        } catch (Throwable ignored) {
+        } catch (RuntimeException ignored) {
             return 0;
         }
     }

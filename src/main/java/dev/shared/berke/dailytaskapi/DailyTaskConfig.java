@@ -22,5 +22,8 @@ public final class DailyTaskConfig {
     @Number(min = 0.10, max = 0.90, step = 0.05)
     public double minimumHpPercent = 0.30;
 
+    @Number(min = 60, max = 900, step = 30)
+    public int stagnationTimeoutSeconds = 300;
+
     public boolean stopWhenAllDailyTasksAreDone = true;
 }

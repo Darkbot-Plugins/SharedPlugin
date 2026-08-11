@@ -10,6 +10,7 @@ import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
+import eu.darkbot.api.game.other.Locatable;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
@@ -108,6 +109,9 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private OreAPI.Ore oreToSell;
     private boolean collectBonus;
     private boolean collectCargo;
+    private Locatable targetCoordinates;
+    private double lastTrackedProgress = -1d;
+    private long lastProgressAt;
     private final Set<Integer> completedQuestIds = new HashSet<>();
     private final Set<Integer> knownDailyQuestIds = new HashSet<>();
     private final Set<Integer> scannedQuestIds = new LinkedHashSet<>();
@@ -163,25 +167,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             // After midnight a deliberate new start begins a fresh daily run.
             if (nextActionAt > now) {
                 npcCombat.stopCombat();
-                boolean petStillActive = true;
-                try {
-                    java.lang.reflect.Field petField = null;
-                    for (Class<?> type = npcCombat.getClass(); type != null; type = type.getSuperclass()) {
-                        try {
-                            petField = type.getDeclaredField("pet");
-                            break;
-                        } catch (NoSuchFieldException ignored) {
-                            // Continue through the exact runtime class hierarchy.
-                        }
-                    }
-                    if (petField != null) {
-                        petField.setAccessible(true);
-                        petStillActive = ((eu.darkbot.api.managers.PetAPI) petField.get(npcCombat)).isActive();
-                    }
-                } catch (Throwable ignored) {
-                    // Do not stop before PET shutdown can be confirmed.
-                }
-                if (petStillActive || now < nextRoamAt) {
+                if (npcCombat.isPetActive() || now < nextRoamAt) {
                     status = "TÜM GÜNLÜK GÖREVLER TAMAMLANDI | Bugün yeniden taranmayacak" +
                             " | PET kapatılıyor | Bot PET kapanınca duracak";
                     return;
@@ -275,6 +261,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         }
 
         buildPlanFromSource(quest);
+        if (recoverStagnantPlan(quest, progress, now)) return;
         boolean standardNpcCombatOwnsSafety = targetNpcDescription != null &&
                 (targetMapName == null || isOnMap(targetMapName));
         if (!standardNpcCombatOwnsSafety && runLocalSafety()) return;
@@ -308,6 +295,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         seenGiverOfferIds.clear();
         acceptedOfferIds.clear();
         skippedTetrathrinOfferIds.clear();
+        resetProgressTracking();
         clearPlan();
         status = "Görev menüsü kaynaktan taranıyor";
     }
@@ -714,7 +702,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
                     .filter(item -> item != null && item.getId() == id)
                     .findFirst()
                     .map(item -> (QuestAPI.QuestListItem) item);
-        } catch (Throwable ignored) {
+        } catch (RuntimeException ignored) {
             return Optional.empty();
         }
     }
@@ -768,6 +756,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         currentQuestId = quest.getId();
         currentQuestTitle = safeTitle(quest);
         selectionRetries = 0;
+        resetProgressTracking();
         state = State.RUNNING;
         buildPlanFromSource(quest);
         status = "Günlük görev doğrulandı: " + currentQuestTitle;
@@ -813,7 +802,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
                     knownDailyQuestIds.add(item.getId());
                 }
             }
-        } catch (Throwable ignored) {
+        } catch (RuntimeException ignored) {
             // The quest-giver catalog can be unavailable when its window has
             // never been opened. The 24-hour requirement remains authoritative.
         }
@@ -827,23 +816,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             completedQuestIds.add(quest.getId());
             return;
         }
-        boolean supported = false;
-        for (QuestAPI.Requirement requirement : DailyTaskPlanner.actionable(quest)) {
-            QuestAPI.Requirement.RequirementType type = requirement.getRequirementType();
-            if (isNpcRequirement(requirement) ||
-                    DailyTaskPlanner.findMap(requirement.getDescription()).isPresent() ||
-                    type == QuestAPI.Requirement.RequirementType.SELL_ORE ||
-                    type == QuestAPI.Requirement.RequirementType.COLLECT_BONUS_BOX ||
-                    type == QuestAPI.Requirement.RequirementType.COLLECT_BONUS_BOX_TYPE ||
-                    type == QuestAPI.Requirement.RequirementType.SALVAGE ||
-                    type == QuestAPI.Requirement.RequirementType.COLLECT_LOOT ||
-                    type == QuestAPI.Requirement.RequirementType.CARGO ||
-                    type == QuestAPI.Requirement.RequirementType.COLLECT) {
-                supported = true;
-                break;
-            }
-        }
-        if (!supported) return;
+        if (!DailyQuestConditionEngine.supports(quest)) return;
         QuestChoice choice = new QuestChoice(quest.getId(), safeTitle(quest), selector);
         QuestChoice existing = dailyChoices.get(quest.getId());
         if (existing == null || (existing.selector() == null && selector != null)) {
@@ -867,40 +840,13 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private void buildPlanFromSource(QuestAPI.Quest quest) {
         clearPlan();
-        List<QuestAPI.Requirement> requirements = DailyTaskPlanner.actionable(quest);
-        targetMapName = requirements.stream()
-                .map(QuestAPI.Requirement::getDescription)
-                .map(DailyTaskPlanner::findMap)
-                .flatMap(Optional::stream)
-                .findFirst()
-                .orElse(null);
-
-        targetNpcDescription = requirements.stream()
-                .filter(this::isNpcRequirement)
-                .map(QuestAPI.Requirement::getDescription)
-                .findFirst()
-                .orElse(null);
-
-        if (targetMapName == null && targetNpcDescription != null) {
-            targetMapName = DailyTaskPlanner.preferredMapForNpc(targetNpcDescription, "1").orElse(null);
-        }
-
-        oreToSell = requirements.stream()
-                .filter(r -> r.getRequirementType() == QuestAPI.Requirement.RequirementType.SELL_ORE)
-                .map(QuestAPI.Requirement::getDescription)
-                .map(DailyTaskPlanner::findOre)
-                .flatMap(Optional::stream)
-                .findFirst()
-                .orElse(null);
-
-        collectBonus = requirements.stream().anyMatch(r ->
-                r.getRequirementType() == QuestAPI.Requirement.RequirementType.COLLECT_BONUS_BOX ||
-                        r.getRequirementType() == QuestAPI.Requirement.RequirementType.COLLECT_BONUS_BOX_TYPE);
-        collectCargo = requirements.stream().anyMatch(r ->
-                r.getRequirementType() == QuestAPI.Requirement.RequirementType.SALVAGE ||
-                        r.getRequirementType() == QuestAPI.Requirement.RequirementType.COLLECT_LOOT ||
-                        r.getRequirementType() == QuestAPI.Requirement.RequirementType.CARGO ||
-                        r.getRequirementType() == QuestAPI.Requirement.RequirementType.COLLECT);
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(quest, companyPrefix());
+        targetMapName = plan.targetMapName();
+        targetNpcDescription = plan.targetNpcDescription();
+        oreToSell = plan.oreToSell();
+        collectBonus = plan.collectBonus();
+        collectCargo = plan.collectCargo();
+        targetCoordinates = plan.targetCoordinates();
 
         if (oreToSell != null && !ores.canSellOres() && targetMapName == null) {
             targetMapName = homeBaseMapName();
@@ -911,6 +857,23 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         if (targetMapName != null && !isOnMap(targetMapName)) {
             navigateTo(targetMapName);
             updateProgressStatus(quest, progress, "Haritaya gidiliyor: " + targetMapName);
+            return;
+        }
+
+        if (targetCoordinates != null && movement.getClosestDistance(targetCoordinates) > 120d) {
+            npcCombat.stopCombat();
+            attack.stopAttack();
+            hero.setRunMode();
+            movement.moveTo(targetCoordinates);
+            updateProgressStatus(quest, progress, "Quest Engine koordinata gidiyor: " +
+                    targetCoordinates.x() + "/" + targetCoordinates.y());
+            return;
+        }
+        if (targetCoordinates != null && targetNpcDescription == null && oreToSell == null &&
+                !collectBonus && !collectCargo) {
+            movement.stop(false);
+            hero.setRoamMode();
+            updateProgressStatus(quest, progress, "Quest Engine hedef koordinatta");
             return;
         }
 
@@ -1103,11 +1066,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     }
 
     private boolean isNpcRequirement(QuestAPI.Requirement requirement) {
-        QuestAPI.Requirement.RequirementType type = requirement.getRequirementType();
-        return type == QuestAPI.Requirement.RequirementType.KILL_NPC ||
-                type == QuestAPI.Requirement.RequirementType.KILL_NPCS ||
-                type == QuestAPI.Requirement.RequirementType.DAMAGE_NPCS ||
-                type == QuestAPI.Requirement.RequirementType.DAMAGE;
+        return DailyQuestConditionEngine.isNpcCondition(requirement);
     }
 
     private boolean isOnMap(String mapName) {
@@ -1120,6 +1079,39 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         String prefix = current == null ? "1" : current.getName().split("-")[0];
         if (!prefix.matches("[1-3]")) prefix = "1";
         return prefix + "-1";
+    }
+
+    private String companyPrefix() {
+        GameMap current = starSystem.getCurrentMap();
+        String prefix = current == null ? "1" : current.getName().split("-")[0];
+        return prefix.matches("[1-3]") ? prefix : "1";
+    }
+
+    private boolean recoverStagnantPlan(QuestAPI.Quest quest, double progress, long now) {
+        if (lastProgressAt == 0L || lastTrackedProgress < 0d || progress > lastTrackedProgress + 0.000001d) {
+            lastTrackedProgress = progress;
+            lastProgressAt = now;
+            return false;
+        }
+        if (now - lastProgressAt < settings.stagnationTimeoutSeconds * 1_000L) return false;
+
+        lastProgressAt = now;
+        npcCombat.stopCombat();
+        attack.stopAttack();
+        attack.setTarget(null);
+        if (targetMapName != null && !isOnMap(targetMapName)) {
+            navigateTo(targetMapName);
+        } else if (!movement.isMoving()) {
+            movement.moveRandom();
+        }
+        updateProgressStatus(quest, progress,
+                "Quest Engine ilerleme yenilemesi: hedef ve rota yeniden değerlendirildi");
+        return true;
+    }
+
+    private void resetProgressTracking() {
+        lastTrackedProgress = -1d;
+        lastProgressAt = 0L;
     }
 
     private void updateProgressStatus(QuestAPI.Quest quest, double progress, String action) {
@@ -1162,6 +1154,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         oreToSell = null;
         collectBonus = false;
         collectCargo = false;
+        targetCoordinates = null;
     }
 
     String getNpcLocatorTargetDescription() {

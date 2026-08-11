@@ -38,6 +38,10 @@ final class DailyNpcCombat extends LootModule {
         if (pet.isEnabled()) pet.setEnabled(false);
     }
 
+    boolean isPetActive() {
+        return pet.isActive();
+    }
+
     @Override
     protected boolean checkMap() {
         // DailyTaskAPI resolves and navigates to the quest's required map.

@@ -216,13 +216,5 @@ final class DailyTaskPlanner {
             this.original = original;
             this.clean = clean;
         }
-
-        private String original() {
-            return original;
-        }
-
-        private String clean() {
-            return clean;
-        }
     }
 }
