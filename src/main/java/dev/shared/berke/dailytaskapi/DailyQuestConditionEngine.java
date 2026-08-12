@@ -19,9 +19,12 @@ import java.util.regex.Pattern;
  * module's saved configuration.</p>
  */
 final class DailyQuestConditionEngine {
-    private static final Pattern LABELED_COORDINATES = Pattern.compile(
-            "(?i)(?:x|x-koordinat(?:i|ı)?)\\s*[:=]?\\s*(-?\\d{1,5})\\D{1,24}" +
-                    "(?:y|y-koordinat(?:i|ı)?)\\s*[:=]?\\s*(-?\\d{1,5})");
+    private static final Pattern X_COORDINATE = Pattern.compile(
+            "\\bx(?:-koordinat[iı]?)?\\s*[:=]?\\s*(-?\\d{1,5})",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+    private static final Pattern Y_COORDINATE = Pattern.compile(
+            "\\by(?:-koordinat[iı]?)?\\s*[:=]?\\s*(-?\\d{1,5})",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern PAIRED_COORDINATES = Pattern.compile(
             "(?<![\\d-])(-?\\d{2,5})\\s*[/,;|:]\\s*(-?\\d{2,5})(?![\\d-])");
 
@@ -210,8 +213,11 @@ final class DailyQuestConditionEngine {
     static Optional<Locatable> findCoordinates(String description) {
         if (description == null || description.isBlank()) return Optional.empty();
         String normalized = description.toLowerCase(Locale.ROOT);
-        Matcher labeled = LABELED_COORDINATES.matcher(normalized);
-        if (labeled.find()) return coordinates(labeled.group(1), labeled.group(2));
+        Matcher labeledX = X_COORDINATE.matcher(normalized);
+        Matcher labeledY = Y_COORDINATE.matcher(normalized);
+        if (labeledX.find() && labeledY.find()) {
+            return coordinates(labeledX.group(1), labeledY.group(1));
+        }
         Matcher paired = PAIRED_COORDINATES.matcher(normalized);
         if (paired.find()) return coordinates(paired.group(1), paired.group(2));
         return Optional.empty();

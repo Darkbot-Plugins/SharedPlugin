@@ -41,16 +41,18 @@ final class DailyTaskPlanner {
         if (rewards == null || rewards.isEmpty()) return false;
         boolean hasTetrathrin = false;
         for (QuestAPI.Reward reward : rewards) {
-            if (reward != null && reward.getAmount() > 0) {
-                String type = normalize(reward.getType());
-                if (type.contains("uridium")) return false;
-                if (!type.startsWith("currency ")) {
-                    if (!type.contains("tetrathrin")) return false;
-                    hasTetrathrin = true;
-                }
-            }
+            if (!isPositiveReward(reward)) continue;
+            String type = normalize(reward.getType());
+            if (type.contains("uridium")) return false;
+            if (type.startsWith("currency ")) continue;
+            if (!type.contains("tetrathrin")) return false;
+            hasTetrathrin = true;
         }
         return hasTetrathrin;
+    }
+
+    private static boolean isPositiveReward(QuestAPI.Reward reward) {
+        return reward != null && reward.getAmount() > 0;
     }
 
     static boolean hasUridiumReward(Collection<? extends QuestAPI.Reward> rewards) {

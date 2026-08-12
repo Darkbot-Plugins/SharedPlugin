@@ -85,15 +85,12 @@ public final class DailyRamCleaner implements Behavior, Configurable<DailyRamCle
                 darkbotApi.clearCache(".*");
             }
 
-            System.gc();
             if (darkbotApi.hasCapability(Capability.HANDLER_CLEAR_RAM)) {
                 darkbotApi.emptyWorkingSet();
             }
-            System.out.println("[BerkePlugin RAM Cleaner] Cleanup completed: "
-                    + memoryUsageMb + " MB");
         } catch (RuntimeException cleanupFailure) {
-            System.err.println("[BerkePlugin RAM Cleaner] Cleanup failed: "
-                    + cleanupFailure.getMessage());
+            // Best-effort: DarkBot may temporarily reject cleanup while the
+            // game client is reconnecting.
         }
     }
 }
