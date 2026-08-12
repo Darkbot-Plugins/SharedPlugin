@@ -30,6 +30,12 @@ description = "SharedPlugin"
 dependencies {
     api("eu.darkbot.DarkBotAPI", "darkbot-impl", "0.9.8")
     api("eu.darkbot", "DarkBot", "dc48506543")
+    testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 

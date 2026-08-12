@@ -1,4 +1,4 @@
-package dev.shared.berke.dailytaskapi;
+package dev.shared.berke.ramcleaner;
 
 import com.github.manolo8.darkbot.Main;
 import com.github.manolo8.darkbot.core.IDarkBotAPI;
@@ -19,7 +19,7 @@ import eu.darkbot.api.managers.HeroAPI;
  * delete files.</p>
  */
 @Feature(name = "BerkePlugin RAM Cleaner",
-        description = "Bellek eşiği aşıldığında DarkBot oyun istemcisinin RAM kullanımını azaltır",
+        description = "Reduces the game client's working set above a configurable memory threshold",
         enabledByDefault = true)
 public final class DailyRamCleaner implements Behavior, Configurable<DailyRamCleanerConfig> {
     private static final long MIN_RETRY_AFTER_COMBAT_MS = 5_000L;
@@ -89,10 +89,10 @@ public final class DailyRamCleaner implements Behavior, Configurable<DailyRamCle
             if (darkbotApi.hasCapability(Capability.HANDLER_CLEAR_RAM)) {
                 darkbotApi.emptyWorkingSet();
             }
-            System.out.println("[BerkePlugin RAM Cleaner] Temizleme tamamlandı: "
+            System.out.println("[BerkePlugin RAM Cleaner] Cleanup completed: "
                     + memoryUsageMb + " MB");
         } catch (RuntimeException cleanupFailure) {
-            System.err.println("[BerkePlugin RAM Cleaner] Temizleme başarısız: "
+            System.err.println("[BerkePlugin RAM Cleaner] Cleanup failed: "
                     + cleanupFailure.getMessage());
         }
     }

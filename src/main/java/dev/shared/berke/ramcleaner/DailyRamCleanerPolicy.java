@@ -1,4 +1,4 @@
-package dev.shared.berke.dailytaskapi;
+package dev.shared.berke.ramcleaner;
 
 /** Pure decision logic kept separate so RAM cleanup rules can be unit tested. */
 final class DailyRamCleanerPolicy {

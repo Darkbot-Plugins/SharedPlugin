@@ -13,9 +13,6 @@ public final class DailyTaskConfig {
     @Number(min = 1, max = 10, step = 1)
     public int maxSelectionRetries = 1;
 
-    @Number(min = 1, max = 5, step = 1)
-    public int maxMenuScanPasses = 1;
-
     @Number(min = 300, max = 750, step = 25)
     public int attackRadius = 500;
 
@@ -25,5 +22,4 @@ public final class DailyTaskConfig {
     @Number(min = 60, max = 900, step = 30)
     public int stagnationTimeoutSeconds = 300;
 
-    public boolean stopWhenAllDailyTasksAreDone = true;
 }

@@ -1,4 +1,6 @@
-package dev.shared.berke.dailytaskapi;
+package dev.shared.berke.petlocator;
+
+import dev.shared.berke.dailytaskapi.DailyTaskAPI;
 
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.extensions.Feature;
@@ -57,9 +59,8 @@ public final class DailyNpcPetLocator implements GearSelector, PetGearSupplier {
             Collection<? extends PetAPI.LocatorPick> available) {
         DailyTaskAPI daily = activeDaily();
         if (daily == null) return PetGearSupplier.super.getNpcLocatorPick(available);
-        String description = daily.getNpcLocatorTargetDescription();
         return available.stream()
-                .filter(pick -> matches(description, pick))
+                .filter(pick -> matches(daily, pick))
                 .findFirst()
                 .orElse(null);
     }
@@ -68,7 +69,7 @@ public final class DailyNpcPetLocator implements GearSelector, PetGearSupplier {
     public Integer getNpcPickPriority(PetAPI.LocatorPick pick) {
         DailyTaskAPI daily = activeDaily();
         if (daily == null) return PetGearSupplier.super.getNpcPickPriority(pick);
-        return matches(daily.getNpcLocatorTargetDescription(), pick) ? 0 : null;
+        return matches(daily, pick) ? 0 : null;
     }
 
     private DailyTaskAPI activeDaily() {
@@ -77,19 +78,12 @@ public final class DailyNpcPetLocator implements GearSelector, PetGearSupplier {
         if (!(module instanceof DailyTaskAPI)) module = bot.getModule();
         if (module instanceof DailyTaskAPI) {
             DailyTaskAPI daily = (DailyTaskAPI) module;
-            if (daily.getNpcLocatorTargetDescription() != null) return daily;
+            if (daily.hasNpcLocatorTarget()) return daily;
         }
         return null;
     }
 
-    private boolean matches(String description, PetAPI.LocatorPick pick) {
-        if (description == null || pick == null || pick.getName() == null) return false;
-        String target = DailyTaskPlanner.normalizeNpcName(description);
-        String candidate = DailyTaskPlanner.normalizeNpcName(pick.getName());
-        boolean wantsBoss = target.contains("boss");
-        boolean wantsUber = target.contains("uber");
-        return !candidate.isBlank() && target.contains(candidate) &&
-                wantsBoss == candidate.startsWith("boss ") &&
-                wantsUber == candidate.startsWith("uber");
+    private boolean matches(DailyTaskAPI daily, PetAPI.LocatorPick pick) {
+        return pick != null && daily.matchesNpcLocatorTarget(pick.getName());
     }
 }

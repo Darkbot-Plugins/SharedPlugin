@@ -41,20 +41,14 @@ final class QuestMenuSource {
     }
 
     private static final class Sprite {
-        private final long address;
         private final int x;
         private final int y;
         private final List<Sprite> children;
 
-        private Sprite(long address, int x, int y, List<Sprite> children) {
-            this.address = address;
+        private Sprite(int x, int y, List<Sprite> children) {
             this.x = x;
             this.y = y;
             this.children = children;
-        }
-
-        private long address() {
-            return address;
         }
 
         private int x() {
@@ -73,14 +67,12 @@ final class QuestMenuSource {
     private static final class Row {
         private final int x;
         private final int y;
-        private final int step;
         private final List<Integer> childXs;
         private final int score;
 
-        private Row(int x, int y, int step, List<Integer> childXs, int score) {
+        private Row(int x, int y, List<Integer> childXs, int score) {
             this.x = x;
             this.y = y;
-            this.step = step;
             this.childXs = childXs;
             this.score = score;
         }
@@ -91,10 +83,6 @@ final class QuestMenuSource {
 
         private int y() {
             return y;
-        }
-
-        private int step() {
-            return step;
         }
 
         private List<Integer> childXs() {
@@ -120,16 +108,16 @@ final class QuestMenuSource {
 
     List<Selector> discoverSelectors() {
         lastError = "";
-        if (questGui == null) return fail("Görev penceresi bulunamadı");
+        if (questGui == null) return fail("Quest window not found");
         if (memory == null || nativeQuestGui == null) {
-            return fail("DarkBot görev kaynak ağacı kullanılamıyor");
+            return fail("DarkBot quest source tree is unavailable");
         }
 
         try {
             long rootAddress = nativeQuestGui.getAddress();
-            if (rootAddress == 0L) return fail("Görev kaynak adresi henüz hazır değil");
+            if (rootAddress == 0L) return fail("Quest source address is not ready");
             Sprite root = readSprite(rootAddress, 0, new HashSet<>());
-            if (root == null) return fail("Görev kaynak ağacı okunamadı");
+            if (root == null) return fail("Quest source tree could not be read");
 
             List<Row> rows = new ArrayList<>();
             // The root coordinate is the quest window's screen position.
@@ -137,7 +125,7 @@ final class QuestMenuSource {
             // window position, animation and resolution cannot affect discovery.
             findRows(root, -root.x(), -root.y(), 0, rows);
             Row best = rows.stream().max(Comparator.comparingInt(Row::score)).orElse(null);
-            if (best == null) return fail("Görev seçici satırı kaynak ağacında bulunamadı");
+            if (best == null) return fail("Quest selector row not found in source tree");
 
             List<Selector> selectors = new ArrayList<>();
             for (int childX : best.childXs()) {
@@ -148,7 +136,7 @@ final class QuestMenuSource {
             }
             return List.copyOf(selectors);
         } catch (RuntimeException error) {
-            return fail("Görev kaynak ağacı hatası: " + error.getClass().getSimpleName());
+            return fail("Quest source tree error: " + error.getClass().getSimpleName());
         }
     }
 
@@ -171,7 +159,7 @@ final class QuestMenuSource {
         try {
             nativeQuestGui.forEachSpriteChild(address, childAddresses::add);
         } catch (RuntimeException error) {
-            lastError = "Görev kaynak çocuğu okunamadı: " + describe(error);
+            lastError = "Quest source child could not be read: " + describe(error);
         }
 
         List<Sprite> children = new ArrayList<>();
@@ -179,7 +167,7 @@ final class QuestMenuSource {
             Sprite child = readSprite(childAddress, depth + 1, visited);
             if (child != null) children.add(child);
         }
-        return new Sprite(address, coordinate(address, 88L), coordinate(address, 92L), List.copyOf(children));
+        return new Sprite(coordinate(address, 88L), coordinate(address, 92L), List.copyOf(children));
     }
 
     private int coordinate(long address, long offset) {
@@ -217,7 +205,7 @@ final class QuestMenuSource {
         if (differences.stream().anyMatch(value -> Math.abs(value - step) > 2)) return null;
 
         int score = children.size() * 100 + Math.min(absoluteX, 500) - absoluteY * 2;
-        return new Row(absoluteX, absoluteY, step, xs, score);
+        return new Row(absoluteX, absoluteY, xs, score);
     }
 
     private int median(List<Integer> values) {
@@ -231,9 +219,11 @@ final class QuestMenuSource {
         return List.of();
     }
 
-    private String describe(Throwable error) {
-        String message = error == null ? null : error.getMessage();
-        return error == null ? "bilinmeyen hata" : error.getClass().getSimpleName() +
-                (message == null || message.isBlank() ? "" : ": " + message);
+    private String describe(RuntimeException error) {
+        if (error == null) return "unknown error";
+        String description = error.getClass().getSimpleName();
+        String message = error.getMessage();
+        if (message == null || message.isBlank()) return description;
+        return description + ": " + message;
     }
 }

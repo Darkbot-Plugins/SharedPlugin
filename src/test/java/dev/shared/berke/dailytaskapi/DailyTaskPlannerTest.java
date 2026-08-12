@@ -2,108 +2,129 @@ package dev.shared.berke.dailytaskapi;
 
 import eu.darkbot.api.managers.OreAPI;
 import eu.darkbot.api.managers.QuestAPI;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-public final class DailyTaskPlannerTest {
-    public static void main(String[] args) {
-        QuestAPI.Requirement dailyTimer = requirement("Bu görevi 1 gün içinde bitir", "REAL_TIME_HASTE",
-                QuestAPI.Requirement.RequirementType.REAL_TIME_HASTE, 10, 86_400_000, false);
-        QuestAPI.Requirement kill = requirement("Lordakium imha et.", "KILL_NPC",
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
+final class DailyTaskPlannerTest {
+    private static final double DAY_MS = 86_400_000d;
+
+    @Test
+    void identifiesDailyQuestsFromTheSourceTimer() {
+        QuestAPI.Requirement timer = requirement("Complete within one day", "REAL_TIME_HASTE",
+                QuestAPI.Requirement.RequirementType.REAL_TIME_HASTE, 10, DAY_MS, false);
+        QuestAPI.Requirement kill = requirement("Destroy Lordakium", "KILL_NPC",
                 QuestAPI.Requirement.RequirementType.KILL_NPC, 2, 5, false);
-        QuestAPI.Quest daily = quest(1, true, false, "Galaksi Politikaları", List.of(kill, dailyTimer));
-        require(DailyTaskPlanner.isDaily(daily), "24 saatlik görev günlük tanınmalı");
 
-        QuestAPI.Quest normal = quest(2, true, false, "Normal", List.of(kill));
-        require(!DailyTaskPlanner.isDaily(normal), "süresiz görev günlük sayılmamalı");
-        QuestAPI.Quest dailyOffer = quest(3, false, false, "Teklif", List.of(kill, dailyTimer));
-        require(DailyTaskPlanner.isDaily(dailyOffer),
-                "henüz aktif olmayan istasyon teklifi 24 saat şartından günlük tanınmalı");
+        assertTrue(DailyTaskPlanner.isDaily(quest(1, true, false, List.of(kill, timer))));
+        assertTrue(DailyTaskPlanner.isDaily(quest(2, false, false, List.of(kill, timer))));
+        assertFalse(DailyTaskPlanner.isDaily(quest(3, true, false, List.of(kill))));
+        assertTrue(DailyTaskPlanner.isDailyType("questType_daily1"));
+        assertFalse(DailyTaskPlanner.isDailyType("questType_kill"));
+    }
 
-        QuestAPI.Requirement mapChild = requirement("1-4 haritasında", "MAP",
+    @Test
+    void retainsNestedNpcAndMapRequirements() {
+        QuestAPI.Requirement map = requirement("On map 1-4", "MAP",
                 QuestAPI.Requirement.RequirementType.MAP, 0, 0, false);
-        QuestAPI.Requirement nestedMordon = requirement("Mordon imha et.", "KILL_NPC",
-                QuestAPI.Requirement.RequirementType.KILL_NPC, 0, 8, false, List.of(mapChild));
-        QuestAPI.Quest nestedNpcQuest = quest(4, true, false, "Hedef: Biliniyor",
-                List.of(nestedMordon, dailyTimer));
-        require(DailyTaskPlanner.actionable(nestedNpcQuest).contains(nestedMordon),
-                "altında harita şartı bulunan NPC öldürme hedefi kaybolmamalı");
-        require(DailyTaskPlanner.actionable(nestedNpcQuest).contains(mapChild),
-                "NPC hedefinin altındaki harita şartı da korunmalı");
+        QuestAPI.Requirement npc = requirement("Destroy Mordon", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 0, 8, false, List.of(map));
+        QuestAPI.Quest daily = quest(4, true, false, List.of(npc, dailyTimer()));
 
-        DailyQuestConditionEngine.Plan nestedPlan = DailyQuestConditionEngine.build(nestedNpcQuest, "1");
-        require("1-4".equals(nestedPlan.targetMapName()),
-                "Quest Engine must include a nested MAP condition");
-        require(nestedPlan.targetNpcDescription().contains("Mordon"),
-                "Quest Engine must include a nested NPC condition");
+        assertTrue(DailyTaskPlanner.actionable(daily).contains(npc));
+        assertTrue(DailyTaskPlanner.actionable(daily).contains(map));
 
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(daily, "1");
+        assertEquals("1-4", plan.targetMapName());
+        assertTrue(plan.targetNpcDescription().contains("Mordon"));
+    }
+
+    @Test
+    void parsesCoordinatesAndTypedMapVisits() {
         QuestAPI.Requirement coordinates = requirement("X: 12400 Y: 7600", "COORDINATES",
                 QuestAPI.Requirement.RequirementType.COORDINATES, 0, 1, false);
-        QuestAPI.Quest coordinateQuest = quest(5, true, false, "Coordinates", List.of(coordinates, dailyTimer));
-        DailyQuestConditionEngine.Plan coordinatePlan = DailyQuestConditionEngine.build(coordinateQuest, "1");
-        require(coordinatePlan.targetCoordinates() != null &&
-                        coordinatePlan.targetCoordinates().x() == 12400 &&
-                        coordinatePlan.targetCoordinates().y() == 7600,
-                "Quest Engine must parse coordinates from the source condition");
-        require(coordinatePlan.coordinatesOnly(), "coordinate-only plans must be recognized");
+        DailyQuestConditionEngine.Plan coordinatePlan = DailyQuestConditionEngine.build(
+                quest(5, true, false, List.of(coordinates, dailyTimer())), "1");
+        assertEquals(12400, coordinatePlan.targetCoordinates().x());
+        assertEquals(7600, coordinatePlan.targetCoordinates().y());
+        assertTrue(coordinatePlan.coordinatesOnly());
 
-        QuestAPI.Requirement visitMap = requirement("Visit map 1-8", "VISIT_MAP",
+        QuestAPI.Requirement visit = requirement("Visit map 1-8", "VISIT_MAP",
                 QuestAPI.Requirement.RequirementType.VISIT_MAP, 0, 1, false);
-        QuestAPI.Quest visitQuest = quest(6, true, false, "Map visit", List.of(visitMap, dailyTimer));
-        require("1-8".equals(DailyQuestConditionEngine.build(visitQuest, "1").targetMapName()),
-                "Quest Engine must support typed VISIT_MAP conditions");
-        require(DailyQuestConditionEngine.supports(visitQuest),
-                "a map visit must be considered executable");
+        QuestAPI.Quest visitQuest = quest(6, true, false, List.of(visit, dailyTimer()));
+        assertEquals("1-8", DailyQuestConditionEngine.build(visitQuest, "1").targetMapName());
+        assertTrue(DailyQuestConditionEngine.supports(visitQuest));
+    }
 
-        require(DailyTaskPlanner.isDailyType("questType_daily1"),
-                "quest catalog daily type should be recognized");
-        require(!DailyTaskPlanner.isDailyType("questType_kill"),
-                "normal quest catalog type must not be daily");
-
+    @Test
+    void matchesNpcVariantsAndPreferredMaps() {
         List<String> names = List.of("-=[ Lordakium ]=-", "..::{ Boss Lordakium }::..", "( UberLordakium )");
-        require(DailyTaskPlanner.findNpc("Mordon imha et.", List.of("-=[ Mordon ]=-")).isPresent(),
-                "decorated Mordon name should match the quest target");
-        require(DailyTaskPlanner.findNpc("Lordakium imha et.", names).orElseThrow().equals("-=[ Lordakium ]=-"),
-                "normal Lordakium seçilmeli");
-        require(DailyTaskPlanner.findNpc("Boss Lordakium imha et.", names).orElseThrow().contains("Boss Lordakium"),
-                "Boss Lordakium seçilmeli");
-        require(DailyTaskPlanner.findNpc("Boss Sibelonit imha et.", List.of("-=[ Sibelonit ]=-")).isEmpty(),
-                "Boss isteniyorsa normal NPC kesinlikle seçilmemeli");
-        require(DailyTaskPlanner.findNpc("UberLordakium imha et.",
-                        List.of("-=[ Lordakium ]=-", "..::{ Boss Lordakium }::..")).isEmpty(),
-                "Uber isteniyorsa normal veya Boss NPC seçilmemeli");
-        require(DailyTaskPlanner.findMap("1-6 haritasına git").orElseThrow().equals("1-6"),
-                "harita ayrıştırılmalı");
-        require(DailyTaskPlanner.preferredMapForNpc("Saimon imha et.", "1").orElseThrow().equals("1-3"),
-                "Saimon MMO X-3 haritasına yönlendirilmeli");
-        require(DailyTaskPlanner.preferredMapForNpc("Lordakium imha et.", "1").orElseThrow().equals("1-6"),
-                "hesap sahibinin Lordakium X-6 tercihi korunmalı");
-        require(DailyTaskPlanner.preferredMapForNpc("Boss Lordakium imha et.", "1").orElseThrow().equals("1-5"),
-                "Boss Lordakium MMO X-5 haritasına yönlendirilmeli");
-        require(DailyTaskPlanner.preferredMapForNpc("UberKristallin imha et.", "1").orElseThrow().equals("4-5"),
-                "Uber NPC 4-5 haritasına yönlendirilmeli");
-        require(DailyTaskPlanner.preferredMapForNpc("StreuneR imha et.", "1").orElseThrow().equals("1-8"),
-                "StreuneR X-8 haritasına yönlendirilmeli");
-        require(DailyTaskPlanner.findOre("Prometium sat.").orElseThrow() == OreAPI.Ore.PROMETIUM,
-                "Prometium ayrıştırılmalı");
-        require(DailyTaskPlanner.isOnlyTetrathrinReward(List.of(
-                        reward("currency_experience", 1000), reward("currency_credits", 1000),
-                        reward("resource_tetrathrin", 10))),
-                "currency rewards plus only Tetrathrin must be skipped");
-        require(!DailyTaskPlanner.isOnlyTetrathrinReward(List.of(
-                        reward("resource_tetrathrin", 10), reward("ammunition_laser_ucb-100", 5000))),
-                "a quest with Tetrathrin and another special reward must be accepted");
-        require(!DailyTaskPlanner.isOnlyTetrathrinReward(List.of(
-                        reward("resource_tetrathrin", 10), reward("currency_uridium", 1500))),
-                "a quest containing Uridium must be accepted even with Tetrathrin");
-        require(!DailyTaskPlanner.isOnlyTetrathrinReward(List.of(reward("currency_experience", 1000))),
-                "currency-only rewards are not a Tetrathrin variant");
-        require(DailyTaskPlanner.hasUridiumReward(List.of(
-                        reward("currency_experience", 1000), reward("currency_uridium", 1500))),
-                "Uridium reward must be detected from the source reward type");
-        require(!DailyTaskPlanner.hasUridiumReward(List.of(reward("resource_tetrathrin", 10))),
-                "a reward list without Uridium must be rejected");
-        System.out.println("DailyTaskPlannerTest: OK");
+        assertEquals("-=[ Lordakium ]=-", DailyTaskPlanner.findNpc("Destroy Lordakium", names).orElseThrow());
+        assertTrue(DailyTaskPlanner.findNpc("Destroy Boss Lordakium", names).orElseThrow()
+                .contains("Boss Lordakium"));
+        assertTrue(DailyTaskPlanner.findNpc("Destroy Boss Sibelonit", List.of("-=[ Sibelonit ]=-")).isEmpty());
+        assertTrue(DailyTaskPlanner.findNpc("Destroy UberLordakium",
+                List.of("-=[ Lordakium ]=-", "..::{ Boss Lordakium }::..")).isEmpty());
+        assertEquals("1-3", DailyTaskPlanner.preferredMapForNpc("Destroy Saimon", "1").orElseThrow());
+        assertEquals("1-6", DailyTaskPlanner.preferredMapForNpc("Destroy Lordakium", "1").orElseThrow());
+        assertEquals("1-5", DailyTaskPlanner.preferredMapForNpc("Destroy Boss Lordakium", "1").orElseThrow());
+        assertEquals("4-5", DailyTaskPlanner.preferredMapForNpc("Destroy UberKristallin", "1").orElseThrow());
+        assertEquals("1-8", DailyTaskPlanner.preferredMapForNpc("Destroy StreuneR", "1").orElseThrow());
+        assertEquals(OreAPI.Ore.PROMETIUM, DailyTaskPlanner.findOre("Sell Prometium").orElseThrow());
+    }
+
+    @Test
+    void acceptsOnlyValidMapNames() {
+        assertEquals("1-6", DailyTaskPlanner.findMap("Travel to 1-6").orElseThrow());
+        assertEquals("4-5", DailyTaskPlanner.findMap("Travel to 4-5").orElseThrow());
+        assertEquals("5-3", DailyTaskPlanner.findMap("Travel to 5-3").orElseThrow());
+        assertTrue(DailyTaskPlanner.findMap("Travel to 4-8").isEmpty());
+        assertTrue(DailyTaskPlanner.findMap("Travel to 5-8").isEmpty());
+    }
+
+    @Test
+    void filtersOffersBySourceRewardTypes() {
+        assertTrue(DailyTaskPlanner.isOnlyTetrathrinReward(List.of(
+                reward("currency_experience", 1000), reward("currency_credits", 1000),
+                reward("resource_tetrathrin", 10))));
+        assertFalse(DailyTaskPlanner.isOnlyTetrathrinReward(List.of(
+                reward("resource_tetrathrin", 10), reward("ammunition_laser_ucb-100", 5000))));
+        assertFalse(DailyTaskPlanner.isOnlyTetrathrinReward(List.of(
+                reward("resource_tetrathrin", 10), reward("currency_uridium", 1500))));
+        assertFalse(DailyTaskPlanner.isOnlyTetrathrinReward(List.of(reward("currency_experience", 1000))));
+        assertTrue(DailyTaskPlanner.hasUridiumReward(List.of(reward("currency_uridium", 1500))));
+        assertFalse(DailyTaskPlanner.hasUridiumReward(List.of(reward("resource_tetrathrin", 10))));
+    }
+
+    @Test
+    void calculatesProgressWithoutTimerRequirements() {
+        QuestAPI.Requirement partial = requirement("Destroy NPC", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 2, 5, false);
+        QuestAPI.Requirement timer = dailyTimer();
+        assertEquals(0.4d, DailyTaskPlanner.progress(
+                quest(7, true, false, List.of(partial, timer))), 0.000001d);
+    }
+
+    @Test
+    void handlesZeroGoalsCompletedRequirementsAndClamping() {
+        QuestAPI.Requirement incompleteZero = requirement("Visit target", "MAP",
+                QuestAPI.Requirement.RequirementType.MAP, 0, 0, false);
+        QuestAPI.Requirement completedZero = requirement("Visit target", "MAP",
+                QuestAPI.Requirement.RequirementType.MAP, 0, 0, true);
+        QuestAPI.Requirement overGoal = requirement("Destroy NPC", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 8, 5, false);
+        assertEquals(0d, DailyTaskPlanner.progress(quest(8, true, false, List.of(incompleteZero))), 0d);
+        assertEquals(1d, DailyTaskPlanner.progress(quest(9, true, true, List.of(completedZero))), 0d);
+        assertEquals(1d, DailyTaskPlanner.progress(quest(10, true, false, List.of(overGoal))), 0d);
+    }
+
+    private static QuestAPI.Requirement dailyTimer() {
+        return requirement("Complete within one day", "REAL_TIME_HASTE",
+                QuestAPI.Requirement.RequirementType.REAL_TIME_HASTE, 0, DAY_MS, false);
     }
 
     private static QuestAPI.Reward reward(String type, int amount) {
@@ -135,20 +156,16 @@ public final class DailyTaskPlannerTest {
         };
     }
 
-    private static QuestAPI.Quest quest(int id, boolean active, boolean completed, String title,
+    private static QuestAPI.Quest quest(int id, boolean active, boolean completed,
                                         List<? extends QuestAPI.Requirement> requirements) {
         return new QuestAPI.Quest() {
             public int getId() { return id; }
             public boolean isActive() { return active; }
-            public String getTitle() { return title; }
+            public String getTitle() { return "Quest " + id; }
             public String getDescription() { return ""; }
             public boolean isCompleted() { return completed; }
             public List<? extends QuestAPI.Requirement> getRequirements() { return requirements; }
             public List<? extends QuestAPI.Reward> getRewards() { return List.of(); }
         };
-    }
-
-    private static void require(boolean condition, String message) {
-        if (!condition) throw new AssertionError(message);
     }
 }

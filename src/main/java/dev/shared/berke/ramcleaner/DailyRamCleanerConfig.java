@@ -1,9 +1,9 @@
-package dev.shared.berke.dailytaskapi;
+package dev.shared.berke.ramcleaner;
 
 import eu.darkbot.api.config.annotations.Configuration;
 import eu.darkbot.api.config.annotations.Number;
 
-@Configuration("dailytaskapi.ram_cleaner")
+@Configuration("berke.ram_cleaner")
 public final class DailyRamCleanerConfig {
     public boolean enabled = true;
 

@@ -14,7 +14,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 final class DailyTaskPlanner {
-    private static final Pattern MAP_PATTERN = Pattern.compile("(?i)([1-3]-BL|[1-5]-[1-8]|4-[1-5]|5-[1-3])");
+    private static final Pattern MAP_PATTERN = Pattern.compile("(?i)([1-3]-BL|[1-3]-[1-8]|4-[1-5]|5-[1-3])");
     private static final double DAILY_DURATION_MS = 86_400_000d;
 
     private DailyTaskPlanner() {
@@ -39,18 +39,18 @@ final class DailyTaskPlanner {
 
     static boolean isOnlyTetrathrinReward(Collection<? extends QuestAPI.Reward> rewards) {
         if (rewards == null || rewards.isEmpty()) return false;
-        boolean hasMaterialReward = false;
+        boolean hasTetrathrin = false;
         for (QuestAPI.Reward reward : rewards) {
-            if (reward == null || reward.getAmount() <= 0) continue;
-            String type = normalize(reward.getType());
-            // Uridium is always valuable for this account. Accept the quest even
-            // when its only material reward is Tetrathrin.
-            if (type.contains("uridium")) return false;
-            if (type.startsWith("currency ")) continue;
-            hasMaterialReward = true;
-            if (!type.contains("tetrathrin")) return false;
+            if (reward != null && reward.getAmount() > 0) {
+                String type = normalize(reward.getType());
+                if (type.contains("uridium")) return false;
+                if (!type.startsWith("currency ")) {
+                    if (!type.contains("tetrathrin")) return false;
+                    hasTetrathrin = true;
+                }
+            }
         }
-        return hasMaterialReward;
+        return hasTetrathrin;
     }
 
     static boolean hasUridiumReward(Collection<? extends QuestAPI.Reward> rewards) {
@@ -67,13 +67,7 @@ final class DailyTaskPlanner {
         List<QuestAPI.Requirement> result = new ArrayList<>();
         if (quest == null) return result;
         for (QuestAPI.Requirement requirement : flatten(quest.getRequirements())) {
-            if (!requirement.isEnabled() || requirement.isCompleted()) continue;
-            QuestAPI.Requirement.RequirementType type = requirement.getRequirementType();
-            if (type == QuestAPI.Requirement.RequirementType.REAL_TIME_HASTE ||
-                    type == QuestAPI.Requirement.RequirementType.HASTE ||
-                    type == QuestAPI.Requirement.RequirementType.TIMER ||
-                    type == QuestAPI.Requirement.RequirementType.COUNTDOWN) continue;
-            result.add(requirement);
+            if (isActionable(requirement, false)) result.add(requirement);
         }
         return result;
     }
@@ -112,6 +106,17 @@ final class DailyTaskPlanner {
                 .map(candidate -> candidate.original);
     }
 
+    static boolean matchesNpcName(String description, String npcName) {
+        if (description == null || npcName == null) return false;
+        String target = normalizeNpcName(description);
+        String candidate = normalizeNpcName(npcName);
+        boolean wantsBoss = target.contains("boss");
+        boolean wantsUber = target.contains("uber");
+        return !candidate.isBlank() && target.contains(candidate) &&
+                wantsBoss == candidate.startsWith("boss ") &&
+                wantsUber == candidate.startsWith("uber");
+    }
+
     static Optional<String> findMap(String description) {
         if (description == null) return Optional.empty();
         Matcher matcher = MAP_PATTERN.matcher(description);
@@ -125,24 +130,36 @@ final class DailyTaskPlanner {
 
         if (npc.contains("uber")) return Optional.of("4-5");
         if (description.contains("StreuneR")) return Optional.of(prefix + "-8");
-        if (npc.contains("protecgit") || npc.contains("protegit") || npc.contains("cubikon")) {
-            return Optional.of(prefix + "-6");
-        }
-        if (npc.contains("boss kristallon")) return Optional.of(prefix + "-7");
-        if (npc.contains("boss lordakium")) return Optional.of(prefix + "-5");
-        if (npc.contains("kristallin") || npc.contains("kristallon")) return Optional.of(prefix + "-6");
-        // The account owner's requested Lordakium farming route is X-6.
-        if (npc.contains("lordakium")) return Optional.of(prefix + "-6");
-        if (npc.contains("sibelonit")) return Optional.of(prefix + "-5");
-        if (npc.contains("sibelon")) return Optional.of(prefix + "-4");
-        if (npc.contains("saimon") || npc.contains("mordon") || npc.contains("devolarium")) {
-            return Optional.of(prefix + "-3");
-        }
-        if (npc.contains("lordakia") || npc.contains("streuner")) return Optional.of(prefix + "-2");
+        String homeMap = homeMapForNpc(npc, prefix);
+        if (homeMap != null) return Optional.of(homeMap);
+        return pirateMapForNpc(npc);
+    }
+
+    private static String homeMapForNpc(String npc, String prefix) {
+        if (containsAny(npc, "protecgit", "protegit", "cubikon")) return prefix + "-6";
+        if (npc.contains("boss kristallon")) return prefix + "-7";
+        if (npc.contains("boss lordakium")) return prefix + "-5";
+        if (containsAny(npc, "kristallin", "kristallon", "lordakium")) return prefix + "-6";
+        if (npc.contains("sibelonit")) return prefix + "-5";
+        if (npc.contains("sibelon")) return prefix + "-4";
+        if (containsAny(npc, "saimon", "mordon", "devolarium")) return prefix + "-3";
+        if (containsAny(npc, "lordakia", "streuner")) return prefix + "-2";
+        return null;
+    }
+
+    private static Optional<String> pirateMapForNpc(String npc) {
         if (npc.contains("battleray")) return Optional.of("5-3");
-        if (npc.contains("interceptor") || npc.contains("barracuda") ||
-                npc.contains("saboteur") || npc.contains("annihilator")) return Optional.of("5-2");
+        if (containsAny(npc, "interceptor", "barracuda", "saboteur", "annihilator")) {
+            return Optional.of("5-2");
+        }
         return Optional.empty();
+    }
+
+    private static boolean containsAny(String value, String... candidates) {
+        for (String candidate : candidates) {
+            if (value.contains(candidate)) return true;
+        }
+        return false;
     }
 
     static Optional<OreAPI.Ore> findOre(String description) {
@@ -161,25 +178,23 @@ final class DailyTaskPlanner {
     }
 
     static String normalizeNpcName(String value) {
-        String normalized = normalize(value)
+        return normalize(value)
                 .replace('-', ' ')
                 .replaceAll("\\b(delta|alpha|beta|gamma)\\s*\\d+\\b", " ")
                 .replaceAll("\\b[a-z]\\d+\\b", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
-        return normalized;
     }
 
     static String normalize(String value) {
         if (value == null) return "";
-        String ascii = Normalizer.normalize(value, Normalizer.Form.NFD)
+        return Normalizer.normalize(value, Normalizer.Form.NFD)
                 .replaceAll("\\p{M}+", "")
                 .toLowerCase(Locale.ROOT)
                 .replace('ı', 'i')
                 .replaceAll("[^a-z0-9-]+", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
-        return ascii;
     }
 
     static double progress(QuestAPI.Quest quest) {
@@ -187,25 +202,34 @@ final class DailyTaskPlanner {
         if (requirements.isEmpty()) return 0d;
         double sum = 0d;
         for (QuestAPI.Requirement requirement : requirements) {
-            double goal = requirement.getGoal();
-            sum += goal <= 0d ? (requirement.isCompleted() ? 1d : 0d)
-                    : Math.max(0d, Math.min(1d, requirement.getProgress() / goal));
+            sum += requirementProgress(requirement);
         }
         return sum / requirements.size();
+    }
+
+    private static double requirementProgress(QuestAPI.Requirement requirement) {
+        double goal = requirement.getGoal();
+        if (goal <= 0d) return requirement.isCompleted() ? 1d : 0d;
+        return Math.max(0d, Math.min(1d, requirement.getProgress() / goal));
     }
 
     private static List<QuestAPI.Requirement> actionableIncludingCompleted(QuestAPI.Quest quest) {
         List<QuestAPI.Requirement> result = new ArrayList<>();
         if (quest == null) return result;
         for (QuestAPI.Requirement requirement : flatten(quest.getRequirements())) {
-            QuestAPI.Requirement.RequirementType type = requirement.getRequirementType();
-            if (type == QuestAPI.Requirement.RequirementType.REAL_TIME_HASTE ||
-                    type == QuestAPI.Requirement.RequirementType.HASTE ||
-                    type == QuestAPI.Requirement.RequirementType.TIMER ||
-                    type == QuestAPI.Requirement.RequirementType.COUNTDOWN) continue;
-            result.add(requirement);
+            if (isActionable(requirement, true)) result.add(requirement);
         }
         return result;
+    }
+
+    private static boolean isActionable(QuestAPI.Requirement requirement, boolean includeCompleted) {
+        if (requirement == null || !requirement.isEnabled()) return false;
+        if (!includeCompleted && requirement.isCompleted()) return false;
+        QuestAPI.Requirement.RequirementType type = requirement.getRequirementType();
+        return type != QuestAPI.Requirement.RequirementType.REAL_TIME_HASTE &&
+                type != QuestAPI.Requirement.RequirementType.HASTE &&
+                type != QuestAPI.Requirement.RequirementType.TIMER &&
+                type != QuestAPI.Requirement.RequirementType.COUNTDOWN;
     }
 
     private static final class NpcCandidate {
