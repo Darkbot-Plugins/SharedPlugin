@@ -21,10 +21,10 @@ import java.util.regex.Pattern;
  */
 final class DailyQuestConditionEngine {
     private static final Pattern X_COORDINATE = Pattern.compile(
-            "\\bx(?:-koordinat[iı]?)?\\s*[:=]?\\s*(-?\\d{1,5})",
+            "\\bx(?:-koordinat[i\\x{0131}]?)?\\s*+(?:[:=]\\s*+)?(-?\\d{1,5}+)",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern Y_COORDINATE = Pattern.compile(
-            "\\by(?:-koordinat[iı]?)?\\s*[:=]?\\s*(-?\\d{1,5})",
+            "\\by(?:-koordinat[i\\x{0131}]?)?\\s*+(?:[:=]\\s*+)?(-?\\d{1,5}+)",
             Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
     private static final Pattern PAIRED_COORDINATES = Pattern.compile(
             "(?<![\\d-])(-?\\d{2,5})\\s*[/,;|:]\\s*(-?\\d{2,5})(?![\\d-])");
@@ -62,17 +62,15 @@ final class DailyQuestConditionEngine {
         private final String primaryDescription;
         private final List<Step> steps;
 
-        Plan(String targetMapName, String targetNpcDescription, String targetPlayerDescription,
-             OreAPI.Ore oreToSell,
-             boolean collectBonus, boolean collectCargo, Locatable targetCoordinates,
+        Plan(String targetMapName, ActiveObjective objective,
              String primaryDescription, List<Step> steps) {
             this.targetMapName = targetMapName;
-            this.targetNpcDescription = targetNpcDescription;
-            this.targetPlayerDescription = targetPlayerDescription;
-            this.oreToSell = oreToSell;
-            this.collectBonus = collectBonus;
-            this.collectCargo = collectCargo;
-            this.targetCoordinates = targetCoordinates;
+            this.targetNpcDescription = objective.targetNpcDescription;
+            this.targetPlayerDescription = objective.targetPlayerDescription;
+            this.oreToSell = objective.oreToSell;
+            this.collectBonus = objective.collectBonus;
+            this.collectCargo = objective.collectCargo;
+            this.targetCoordinates = objective.targetCoordinates;
             this.primaryDescription = primaryDescription;
             this.steps = List.copyOf(steps);
         }
@@ -131,6 +129,26 @@ final class DailyQuestConditionEngine {
             return targetCoordinates != null && targetNpcDescription == null && targetPlayerDescription == null &&
                     oreToSell == null &&
                     !collectBonus && !collectCargo;
+        }
+    }
+
+    private static final class ActiveObjective {
+        private final String targetNpcDescription;
+        private final String targetPlayerDescription;
+        private final OreAPI.Ore oreToSell;
+        private final boolean collectBonus;
+        private final boolean collectCargo;
+        private final Locatable targetCoordinates;
+
+        private ActiveObjective(String targetNpcDescription, String targetPlayerDescription,
+                                OreAPI.Ore oreToSell, boolean collectBonus, boolean collectCargo,
+                                Locatable targetCoordinates) {
+            this.targetNpcDescription = targetNpcDescription;
+            this.targetPlayerDescription = targetPlayerDescription;
+            this.oreToSell = oreToSell;
+            this.collectBonus = collectBonus;
+            this.collectCargo = collectCargo;
+            this.targetCoordinates = targetCoordinates;
         }
     }
 
@@ -213,8 +231,9 @@ final class DailyQuestConditionEngine {
                         .findFirst()
                         .orElse("etkin hedef yok"));
 
-        return new Plan(targetMap, targetNpc, targetPlayer, ore, collectBonus, collectCargo,
-                coordinates, primary, steps);
+        ActiveObjective objective = new ActiveObjective(targetNpc, targetPlayer, ore,
+                collectBonus, collectCargo, coordinates);
+        return new Plan(targetMap, objective, primary, steps);
     }
 
     static boolean supports(QuestAPI.Quest quest) {

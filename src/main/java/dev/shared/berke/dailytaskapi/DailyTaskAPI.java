@@ -1159,10 +1159,6 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         nextRoamAt = now + 2500L;
     }
 
-    private boolean isNpcRequirement(QuestAPI.Requirement requirement) {
-        return DailyQuestConditionEngine.isNpcCondition(requirement);
-    }
-
     private boolean isOnMap(String mapName) {
         GameMap current = starSystem.getCurrentMap();
         return current != null && current.getName().equalsIgnoreCase(mapName);
