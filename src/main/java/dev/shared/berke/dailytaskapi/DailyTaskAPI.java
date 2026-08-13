@@ -24,6 +24,7 @@ import eu.darkbot.api.managers.StarSystemAPI;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Comparator;
+import java.util.EnumMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -62,11 +63,13 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         private final int id;
         private final String title;
         private final QuestMenuSource.Selector selector;
+        private final int priority;
 
-        private QuestChoice(int id, String title, QuestMenuSource.Selector selector) {
+        private QuestChoice(int id, String title, QuestMenuSource.Selector selector, int priority) {
             this.id = id;
             this.title = title;
             this.selector = selector;
+            this.priority = priority;
         }
 
         private int id() {
@@ -79,6 +82,10 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
         private QuestMenuSource.Selector selector() {
             return selector;
+        }
+
+        private int priority() {
+            return priority;
         }
     }
 
@@ -95,6 +102,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private final QuestMenuSource questMenuSource;
     private final QuestGiverSource questGiverSource;
     private final DailyNpcCombat npcCombat;
+    private final DailyPlayerCombat playerCombat;
 
     private DailyTaskConfig settings = new DailyTaskConfig();
     private State state = State.STARTING;
@@ -108,6 +116,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private long nextRoamAt;
     private String status = "Starting";
     private String targetNpcDescription;
+    private String targetPlayerDescription;
     private String targetMapName;
     private OreAPI.Ore oreToSell;
     private boolean collectBonus;
@@ -134,7 +143,8 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private final Set<Integer> reviewedOfferIds = new LinkedHashSet<>();
     private final Set<Integer> seenGiverOfferIds = new LinkedHashSet<>();
     private final Set<Integer> acceptedOfferIds = new LinkedHashSet<>();
-    private final Set<Integer> skippedTetrathrinOfferIds = new LinkedHashSet<>();
+    private final Map<DailyQuestPolicy.Decision, Integer> skippedOfferCounts =
+            new EnumMap<>(DailyQuestPolicy.Decision.class);
 
     public DailyTaskAPI(PluginAPI api) {
         this.quests = api.requireAPI(QuestAPI.class);
@@ -150,6 +160,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         this.questMenuSource = new QuestMenuSource(questGui);
         this.questGiverSource = new QuestGiverSource(gameScreen);
         this.npcCombat = new DailyNpcCombat(api);
+        this.playerCombat = new DailyPlayerCombat(api);
     }
 
     @Override
@@ -223,13 +234,15 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             waitForQuestSnapshot();
             return;
         }
-        if (handleQuestChange(quest, now) || rejectNonDailyQuest(quest, now)) return;
+        if (handleQuestChange(quest, now) || rejectNonDailyQuest(quest, now) ||
+                rejectDisallowedQuest(quest, now)) return;
         double progress = DailyTaskPlanner.progress(quest);
         if (quest.isCompleted() || progress >= 0.9999d) {
             completeQuest(quest, now);
             return;
         }
         buildPlanFromSource(quest);
+        if (targetPlayerDescription != null) playerCombat.observeHeroState();
         if (recoverStagnantPlan(quest, progress, now)) return;
         boolean standardNpcCombatOwnsSafety = targetNpcDescription != null &&
                 (targetMapName == null || isOnMap(targetMapName));
@@ -246,9 +259,8 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private boolean handleQuestChange(QuestAPI.Quest quest, long now) {
         if (currentQuestId < 0 || quest.getId() == currentQuestId) return false;
-        completedQuestIds.add(currentQuestId);
-        scheduleQuestMenuScan(now, true);
-        status = "Displayed quest changed; rescanning the native quest menu";
+        scheduleQuestMenuScan(now, false);
+        status = "Displayed quest changed before completion; safely rescanning the native quest menu";
         return true;
     }
 
@@ -299,7 +311,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         reviewedOfferIds.clear();
         seenGiverOfferIds.clear();
         acceptedOfferIds.clear();
-        skippedTetrathrinOfferIds.clear();
+        skippedOfferCounts.clear();
         resetProgressTracking();
         clearPlan();
         status = "Scanning the native quest menu";
@@ -444,7 +456,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         pendingChoice = dailyChoices.values().stream()
                 .filter(choice -> !completedQuestIds.contains(choice.id()))
                 .filter(choice -> choice.selector() != null)
-                .findFirst()
+                .min(Comparator.comparingInt(QuestChoice::priority))
                 .orElse(null);
         if (pendingChoice != null) {
             selectionRetries = 0;
@@ -624,29 +636,21 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             return;
         }
 
-        if (isProtegitQuest(selected)) {
-            reviewedOfferIds.add(info.getId());
-            status = "Skipped Protegit kill quest: " + safeTitle(selected);
-            advanceGiverRow();
-            return;
-        }
-
         int id = info.getId();
         if (reviewedOfferIds.contains(id) || info.isCompleted() || !info.isActivable()) {
             reviewedOfferIds.add(id);
             advanceGiverRow();
             return;
         }
-        if (selected.getRewards() == null || selected.getRewards().isEmpty()) {
+        DailyQuestPolicy.Decision decision = DailyQuestPolicy.evaluateOffer(selected, settings);
+        if (decision == DailyQuestPolicy.Decision.WAIT_FOR_REWARDS) {
             retryOrAdvanceGiverRow("Waiting for offer rewards from the source");
             return;
         }
-        if (!DailyTaskPlanner.hasUridiumReward(selected.getRewards())) {
+        if (!decision.accepted()) {
             reviewedOfferIds.add(id);
-            if (DailyTaskPlanner.isOnlyTetrathrinReward(selected.getRewards())) {
-                skippedTetrathrinOfferIds.add(id);
-            }
-            status = "Skipped daily quest without Uridium: " + safeTitle(selected);
+            skippedOfferCounts.merge(decision, 1, Integer::sum);
+            status = "Skipped daily quest: " + decision.message() + " | " + safeTitle(selected);
             advanceGiverRow();
             return;
         }
@@ -694,9 +698,8 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         if (info == null || selected == null) return false;
         if (info.getId() != selectedOfferId || selected.getId() != selectedOfferId) return false;
         if (!DailyTaskPlanner.isDailyType(info.getType()) && !DailyTaskPlanner.isDaily(selected)) return false;
-        if (isProtegitQuest(selected) || !info.isActivable() || info.isCompleted()) return false;
-        return selected.getRewards() != null && !selected.getRewards().isEmpty() &&
-                DailyTaskPlanner.hasUridiumReward(selected.getRewards());
+        if (!info.isActivable() || info.isCompleted()) return false;
+        return DailyQuestPolicy.evaluateOffer(selected, settings).accepted();
     }
 
     private void skipSelectedOffer(QuestAPI.QuestListItem info) {
@@ -711,14 +714,6 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             status = "Offer source changed during verification; skipped safely: " + skippedTitle;
         }
         advanceGiverRow();
-    }
-
-    private boolean isProtegitQuest(QuestAPI.Quest quest) {
-        return DailyTaskPlanner.actionable(quest).stream()
-                .filter(this::isNpcRequirement)
-                .map(QuestAPI.Requirement::getDescription)
-                .map(DailyTaskPlanner::normalizeNpcName)
-                .anyMatch(description -> description.contains("protegit"));
     }
 
     private void verifyAcceptedOffer() {
@@ -762,7 +757,8 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         offerScanNeeded = false;
         state = State.CLOSING_GIVER;
         status = "Station scan completed | Accepted: " + acceptedOfferIds.size() +
-                " | Tetrathrin-only skipped: " + skippedTetrathrinOfferIds.size();
+                " | Skipped by policy: " + skippedOfferCounts.values().stream()
+                .mapToInt(Integer::intValue).sum();
         nextActionAt = System.currentTimeMillis() + 300L;
     }
 
@@ -808,6 +804,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         currentQuestTitle = safeTitle(quest);
         selectionRetries = 0;
         resetProgressTracking();
+        playerCombat.startQuest();
         state = State.RUNNING;
         buildPlanFromSource(quest);
         status = "Daily quest verified: " + currentQuestTitle;
@@ -867,8 +864,9 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             completedQuestIds.add(quest.getId());
             return;
         }
-        if (!DailyQuestConditionEngine.supports(quest)) return;
-        QuestChoice choice = new QuestChoice(quest.getId(), safeTitle(quest), selector);
+        if (!DailyQuestPolicy.evaluateActive(quest, settings).accepted()) return;
+        QuestChoice choice = new QuestChoice(quest.getId(), safeTitle(quest), selector,
+                DailyQuestPolicy.priority(quest, settings));
         QuestChoice existing = dailyChoices.get(quest.getId());
         if (existing == null || (existing.selector() == null && selector != null)) {
             dailyChoices.put(quest.getId(), choice);
@@ -894,10 +892,16 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(quest, companyPrefix());
         targetMapName = plan.targetMapName();
         targetNpcDescription = plan.targetNpcDescription();
+        targetPlayerDescription = plan.targetPlayerDescription();
         oreToSell = plan.oreToSell();
         collectBonus = plan.collectBonus();
         collectCargo = plan.collectCargo();
         targetCoordinates = plan.targetCoordinates();
+
+        if (targetPlayerDescription != null && targetMapName == null &&
+                settings.playerCombatMap != null && !settings.playerCombatMap.isBlank()) {
+            targetMapName = DailyTaskPlanner.findMap(settings.playerCombatMap).orElse(null);
+        }
 
         if (oreToSell != null && !ores.canSellOres() && targetMapName == null) {
             targetMapName = homeBaseMapName();
@@ -910,6 +914,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         if (handleOreSale(quest, progress)) return;
         if (collectRequiredBox(quest, progress)) return;
         if (huntRequiredNpc(quest, progress)) return;
+        if (fightRequiredPlayer(quest, progress)) return;
         if (searchForRequiredBox(quest, progress)) return;
         if (reportMapArrival(quest, progress)) return;
         pauseSafely("Unsupported daily objective: " + firstRequirement(quest));
@@ -926,6 +931,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         if (targetCoordinates == null) return false;
         if (movement.getClosestDistance(targetCoordinates) > 120d) {
             npcCombat.stopCombat();
+            playerCombat.stopCombat();
             attack.stopAttack();
             hero.setRunMode();
             movement.moveTo(targetCoordinates);
@@ -941,7 +947,8 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     }
 
     private boolean isCoordinateOnlyPlan() {
-        return targetNpcDescription == null && oreToSell == null && !collectBonus && !collectCargo;
+        return targetNpcDescription == null && targetPlayerDescription == null && oreToSell == null &&
+                !collectBonus && !collectCargo;
     }
 
     private boolean handleOreSale(QuestAPI.Quest quest, double progress) {
@@ -973,10 +980,29 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private boolean huntRequiredNpc(QuestAPI.Quest quest, double progress) {
         if (targetNpcDescription == null) return false;
-        npcCombat.tick(targetNpcDescription);
+        npcCombat.tick(targetNpcDescription, settings.attackRadius);
         if (attack.getTarget() == null && !movement.isMoving()) movement.moveRandom();
         updateProgressStatus(quest, progress, "NPC Kill and Collect: " + npcCombat.getStatus() +
                 " | Target: " + cleanedRequirement(targetNpcDescription));
+        return true;
+    }
+
+    private boolean rejectDisallowedQuest(QuestAPI.Quest quest, long now) {
+        DailyQuestPolicy.Decision decision = DailyQuestPolicy.evaluateActive(quest, settings);
+        if (decision.accepted()) return false;
+        scheduleQuestMenuScan(now, false);
+        status = "Daily quest skipped by policy: " + decision.message();
+        return true;
+    }
+
+    private boolean fightRequiredPlayer(QuestAPI.Quest quest, double progress) {
+        if (targetPlayerDescription == null) return false;
+        if (playerCombat.exceededSafetyLimits(settings)) {
+            pauseSafely("Player combat stopped: " + playerCombat.failureReason(settings));
+            return true;
+        }
+        playerCombat.tick(targetPlayerDescription, settings);
+        updateProgressStatus(quest, progress, "Player combat: " + playerCombat.getStatus());
         return true;
     }
 
@@ -995,14 +1021,17 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private boolean runLocalSafety() {
         double hp = hero.getHealth().hpPercent();
-        if (hp >= settings.minimumHpPercent) return false;
+        boolean lowShieldInPlayerCombat = targetPlayerDescription != null &&
+                hero.getHealth().shieldPercent() < settings.playerMinimumShieldPercent;
+        if (hp >= settings.minimumHpPercent && !lowShieldInPlayerCombat) return false;
         attack.stopAttack();
         hero.setRunMode();
         entities.getPortals().stream()
                 .filter(Portal::isValid)
                 .min(Comparator.comparingDouble(hero::distanceTo))
                 .ifPresent(portal -> movement.moveTo(portal));
-        status = "Local safety: HP " + (int) Math.round(hp * 100d) + "% ; waiting near portal";
+        status = "Local safety: HP " + (int) Math.round(hp * 100d) + "% / shield " +
+                (int) Math.round(hero.getHealth().shieldPercent() * 100d) + "% ; waiting near portal";
         return true;
     }
 
@@ -1162,6 +1191,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
         lastProgressAt = now;
         npcCombat.stopCombat();
+        playerCombat.stopCombat();
         attack.stopAttack();
         attack.setTarget(null);
         if (targetMapName != null && !isOnMap(targetMapName)) {
@@ -1208,6 +1238,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private void stopCurrentAction() {
         npcCombat.stopCombat();
+        playerCombat.stopCombat();
         attack.stopAttack();
         movement.stop(false);
         hero.setRoamMode();
@@ -1216,6 +1247,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private void clearPlan() {
         targetNpcDescription = null;
+        targetPlayerDescription = null;
         targetMapName = null;
         oreToSell = null;
         collectBonus = false;
@@ -1263,6 +1295,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         // gaps. Stop active movement/attack, but retain the selected quest and its
         // plan so a slow server does not force another trip to the quest station.
         npcCombat.stopCombat();
+        playerCombat.stopCombat();
         attack.stopAttack();
         movement.stop(false);
         hero.setRoamMode();

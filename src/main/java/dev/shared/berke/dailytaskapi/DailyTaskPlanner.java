@@ -209,6 +209,15 @@ final class DailyTaskPlanner {
         return sum / requirements.size();
     }
 
+    static double remainingWork(QuestAPI.Quest quest) {
+        double remaining = 0d;
+        for (QuestAPI.Requirement requirement : actionable(quest)) {
+            double goal = Math.max(0d, requirement.getGoal());
+            remaining += goal <= 0d ? 1d : Math.max(0d, goal - requirement.getProgress());
+        }
+        return remaining;
+    }
+
     private static double requirementProgress(QuestAPI.Requirement requirement) {
         double goal = requirement.getGoal();
         if (goal <= 0d) return requirement.isCompleted() ? 1d : 0d;

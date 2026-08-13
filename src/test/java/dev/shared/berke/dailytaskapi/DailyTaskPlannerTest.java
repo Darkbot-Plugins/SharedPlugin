@@ -8,6 +8,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 final class DailyTaskPlannerTest {
@@ -122,6 +123,99 @@ final class DailyTaskPlannerTest {
         assertEquals(1d, DailyTaskPlanner.progress(quest(10, true, false, List.of(overGoal))), 0d);
     }
 
+    @Test
+    void buildsSequentialStepsFromRemainingObjectives() {
+        QuestAPI.Requirement first = requirement("Destroy Mordon", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 0, 1, false);
+        QuestAPI.Requirement second = requirement("Destroy Lordakium", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 0, 1, false);
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(
+                quest(11, true, false, List.of(first, second, dailyTimer())), "1");
+
+        assertEquals(2, plan.steps().stream()
+                .filter(step -> step.type() == DailyQuestConditionEngine.StepType.NPC_COMBAT)
+                .count());
+        assertTrue(plan.targetNpcDescription().contains("Mordon"));
+
+        QuestAPI.Requirement completedFirst = requirement("Destroy Mordon", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 1, 1, true);
+        DailyQuestConditionEngine.Plan nextPlan = DailyQuestConditionEngine.build(
+                quest(12, true, false, List.of(completedFirst, second, dailyTimer())), "1");
+        assertTrue(nextPlan.targetNpcDescription().contains("Lordakium"));
+    }
+
+    @Test
+    void classifiesPlayerCombatWithoutTreatingItAsNpcCombat() {
+        QuestAPI.Requirement pvp = requirement("Destroy enemy players", "KILL_PLAYERS",
+                QuestAPI.Requirement.RequirementType.KILL_PLAYERS, 0, 3, false);
+        QuestAPI.Quest quest = quest(13, true, false, List.of(pvp, dailyTimer()));
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(quest, "1");
+
+        assertTrue(DailyQuestConditionEngine.hasPlayerCombat(quest));
+        assertFalse(DailyQuestConditionEngine.supports(quest));
+        assertTrue(DailyQuestConditionEngine.supports(quest, true));
+        assertTrue(plan.targetPlayerDescription().contains("players"));
+        assertNull(plan.targetNpcDescription());
+    }
+
+    @Test
+    void policyRejectsRiskyOrUnsupportedOffersBeforeAcceptance() {
+        DailyTaskConfig config = new DailyTaskConfig();
+        QuestAPI.Requirement pvp = requirement("Destroy enemy players", "KILL_PLAYERS",
+                QuestAPI.Requirement.RequirementType.KILL_PLAYERS, 0, 3, false);
+        QuestAPI.Quest pvpOffer = quest(14, true, false, List.of(pvp, dailyTimer()),
+                List.of(reward("currency_uridium", 1500)));
+        assertEquals(DailyQuestPolicy.Decision.SKIP_PLAYER_COMBAT,
+                DailyQuestPolicy.evaluateOffer(pvpOffer, config));
+
+        config.acceptPlayerKillQuests = true;
+        assertEquals(DailyQuestPolicy.Decision.ACCEPT,
+                DailyQuestPolicy.evaluateOffer(pvpOffer, config));
+
+        QuestAPI.Requirement unsupported = requirement("Upgrade Skylab", "UPDATE_SKYLAB_TO_LEVEL",
+                QuestAPI.Requirement.RequirementType.UPDATE_SKYLAB_TO_LEVEL, 0, 1, false);
+        QuestAPI.Quest unsupportedOffer = quest(15, true, false, List.of(unsupported, dailyTimer()),
+                List.of(reward("currency_uridium", 1500)));
+        assertEquals(DailyQuestPolicy.Decision.SKIP_UNSUPPORTED,
+                DailyQuestPolicy.evaluateOffer(unsupportedOffer, config));
+    }
+
+    @Test
+    void policyHonorsRewardAndProtegitOptions() {
+        DailyTaskConfig config = new DailyTaskConfig();
+        QuestAPI.Requirement npc = requirement("Destroy Protegit", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 0, 3, false);
+        QuestAPI.Quest offer = quest(16, true, false, List.of(npc, dailyTimer()),
+                List.of(reward("currency_uridium", 1500)));
+        assertEquals(DailyQuestPolicy.Decision.SKIP_PROTEGIT,
+                DailyQuestPolicy.evaluateOffer(offer, config));
+
+        config.skipProtegitQuests = false;
+        assertEquals(DailyQuestPolicy.Decision.ACCEPT,
+                DailyQuestPolicy.evaluateOffer(offer, config));
+
+        QuestAPI.Quest noUri = quest(17, true, false, List.of(npc, dailyTimer()),
+                List.of(reward("resource_tetrathrin", 10)));
+        assertEquals(DailyQuestPolicy.Decision.SKIP_TETRATHRIN_ONLY,
+                DailyQuestPolicy.evaluateOffer(noUri, config));
+        config.skipTetrathrinOnly = false;
+        assertEquals(DailyQuestPolicy.Decision.SKIP_NO_URIDIUM,
+                DailyQuestPolicy.evaluateOffer(noUri, config));
+    }
+
+    @Test
+    void computesRemainingWorkForQuestPriority() {
+        QuestAPI.Requirement shortTask = requirement("Destroy Mordon", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 4, 5, false);
+        QuestAPI.Requirement longTask = requirement("Destroy Mordon", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 1, 20, false);
+        assertTrue(DailyTaskPlanner.remainingWork(
+                quest(18, true, false, List.of(shortTask, dailyTimer()))) <
+                DailyTaskPlanner.remainingWork(
+                        quest(19, true, false, List.of(longTask, dailyTimer()))));
+        assertEquals(590, new DailyTaskConfig().attackRadius);
+    }
+
     private static QuestAPI.Requirement dailyTimer() {
         return requirement("Complete within one day", "REAL_TIME_HASTE",
                 QuestAPI.Requirement.RequirementType.REAL_TIME_HASTE, 0, DAY_MS, false);
@@ -158,6 +252,12 @@ final class DailyTaskPlannerTest {
 
     private static QuestAPI.Quest quest(int id, boolean active, boolean completed,
                                         List<? extends QuestAPI.Requirement> requirements) {
+        return quest(id, active, completed, requirements, List.of());
+    }
+
+    private static QuestAPI.Quest quest(int id, boolean active, boolean completed,
+                                        List<? extends QuestAPI.Requirement> requirements,
+                                        List<? extends QuestAPI.Reward> rewards) {
         return new QuestAPI.Quest() {
             public int getId() { return id; }
             public boolean isActive() { return active; }
@@ -165,7 +265,7 @@ final class DailyTaskPlannerTest {
             public String getDescription() { return ""; }
             public boolean isCompleted() { return completed; }
             public List<? extends QuestAPI.Requirement> getRequirements() { return requirements; }
-            public List<? extends QuestAPI.Reward> getRewards() { return List.of(); }
+            public List<? extends QuestAPI.Reward> getRewards() { return rewards; }
         };
     }
 }

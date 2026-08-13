@@ -21,6 +21,7 @@ final class DailyNpcCombat extends LootModule {
     private final ConfigSetting<Boolean> petEnabledSetting;
     private final ConfigSetting<Boolean> keepRoamingPointSetting;
     private String targetDescription;
+    private int targetRadius = 590;
     private Boolean originalPetEnabledSetting;
     private Boolean originalKeepRoamingPointSetting;
     private Boolean originalPetRuntimeEnabled;
@@ -32,8 +33,9 @@ final class DailyNpcCombat extends LootModule {
         keepRoamingPointSetting = config.requireConfig("general.roaming.keep");
     }
 
-    void tick(String description) {
+    void tick(String description, int attackRadius) {
         targetDescription = description;
+        targetRadius = attackRadius;
         rememberUserSettings();
         if (!Boolean.TRUE.equals(petEnabledSetting.getValue())) petEnabledSetting.setValue(true);
         super.onTickModule();
@@ -112,7 +114,7 @@ final class DailyNpcCombat extends LootModule {
             return false;
         }
         String name = npc.getInfo() == null ? null : npc.getInfo().getName();
-        if (name == null || movement.getClosestDistance(npc) >= 590d) return false;
+        if (name == null || movement.getClosestDistance(npc) >= targetRadius) return false;
 
         String target = DailyTaskPlanner.normalizeNpcName(targetDescription);
         String candidate = DailyTaskPlanner.normalizeNpcName(name);
