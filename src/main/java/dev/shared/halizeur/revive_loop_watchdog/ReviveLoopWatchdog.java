@@ -15,17 +15,6 @@ import java.time.Duration;
 import java.time.format.DateTimeFormatter;
 import java.time.ZoneId;
 
-/**
- * Detects DarkBot's known "stuck on revive" refresh loop bug
- * (see: github.com/darkbot-reloaded/DarkBot issue #391 / #455).
- *
- * If the ship stays destroyed for far longer than a real revive should ever take,
- * this assumes the bot is stuck refreshing uselessly, pauses it (so it stops
- * burning hours doing nothing), and keeps watching in the background. Once the
- * game genuinely finishes loading again AND the ship is confirmed alive, it
- * resumes the bot automatically. Every state change is logged to the console/log
- * file so it's visible after the fact even if nobody was watching live.
- */
 @Feature(name = "Revive Loop Watchdog", description =
         "Detects the stuck-on-revive refresh loop bug, pauses the bot, and auto-resumes once it recovers.",
         enabledByDefault = true)
@@ -38,12 +27,9 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
     private final BotAPI bot;
     private final RepairAPI repair;
 
-    private Config config;
+    private Config config = new Config();
 
-    // When the ship was first observed destroyed in the current death, null if alive
     private Instant deadSince = null;
-
-    // True only if THIS plugin paused the bot (so we never touch a manual user pause)
     private boolean pausedByWatchdog = false;
 
     public ReviveLoopWatchdog(HeroAPI hero, BotAPI bot, RepairAPI repair) {
@@ -63,16 +49,11 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
         this.config = config.getValue();
     }
 
-    // Runs while the bot is actively working normally.
     @Override
     public void onTickBehavior() {
-        // Ship is alive & bot is ticking normally: nothing is wrong, clear any stale death timer.
         deadSince = null;
     }
 
-    // Runs whenever onTickBehavior wouldn't: bot stopped/paused, ship destroyed, refreshing, or still loading.
-    // This is the only place we can watch a stuck-revive situation, since the ship being
-    // "destroyed" is itself one of the conditions that routes ticks here instead of onTickBehavior.
     @Override
     public void onStoppedBehavior() {
         if (pausedByWatchdog) {
@@ -90,7 +71,6 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
                 pauseForStuckLoop(stuckMinutes);
             }
         } else {
-            // Not destroyed, and we didn't pause it - just a normal stop/refresh/loading moment.
             deadSince = null;
         }
     }
@@ -112,7 +92,6 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
             deadSince = null;
             bot.setRunning(true);
         }
-        // else: keep waiting, still stuck or still loading - checked again next tick.
     }
 
     private void log(String message) {
