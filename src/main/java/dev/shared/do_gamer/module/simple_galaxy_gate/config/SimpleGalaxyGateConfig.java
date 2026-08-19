@@ -673,6 +673,7 @@ public final class SimpleGalaxyGateConfig {
                                 "<b>Only when not available</b>: switch only when resources run out."),
                         buildList("Run config:",
                                 "Used at the <b>end of wave / gate</b> when there are no NPCs.",
+                                "May be used for <b>Veteran formation</b> to make more honor.",
                                 "NPC flag <b>Finish Off</b>: switches to <b>Run config</b> below 25% HP."),
                         buildList("Target switching:",
                                 "Stick to any target: don't switch away from any gate target.",
