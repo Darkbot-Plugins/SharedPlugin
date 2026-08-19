@@ -76,6 +76,12 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
     }
 
     private void pauseForStuckLoop(long stuckMinutes) {
+        if (!bot.isRunning()) {
+            // Bot is already stopped for some other reason (e.g. you paused it manually) -
+            // not our doing, so don't take ownership of it or auto-resume it later.
+            return;
+        }
+
         log("Ship has been destroyed for " + stuckMinutes + "+ minute(s) with no successful revive. " +
                 "Assuming the known DarkBot stuck-on-revive refresh loop bug. Pausing bot to stop wasted refreshing.");
         bot.setRunning(false);
