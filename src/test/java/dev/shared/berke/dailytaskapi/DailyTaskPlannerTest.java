@@ -1,10 +1,19 @@
 package dev.shared.berke.dailytaskapi;
 
+import eu.darkbot.api.config.ConfigSetting;
+import eu.darkbot.api.config.types.NpcInfo;
+import eu.darkbot.api.game.other.EntityInfo;
+import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.managers.OreAPI;
 import eu.darkbot.api.managers.QuestAPI;
+import eu.darkbot.api.managers.StarSystemAPI;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Proxy;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -221,6 +230,42 @@ final class DailyTaskPlannerTest {
                 DailyTaskPlanner.remainingWork(
                         quest(19, true, false, List.of(longTask, dailyTimer()))));
         assertEquals(590, new DailyTaskConfig().attackRadius);
+        assertEquals(4, new DailyTaskConfig().maxSelectionRetries);
+    }
+
+    @Test
+    void resolvesCompanyMapsFromFactionBeforeCurrentMap() {
+        assertEquals("1-8", DailyTaskCompanyMap.questBase(EntityInfo.Faction.MMO, "5-3"));
+        assertEquals("2-1", DailyTaskCompanyMap.homeBase(EntityInfo.Faction.EIC, "1-7"));
+        assertEquals("3", DailyTaskCompanyMap.prefix(EntityInfo.Faction.VRU, null));
+        assertEquals("2", DailyTaskCompanyMap.prefix(EntityInfo.Faction.NONE, "2-BL"));
+        assertNull(DailyTaskCompanyMap.questBase(EntityInfo.Faction.NONE, "4-4"));
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void resolvesNpcMapsFromDarkBotMetadataWithoutNpcLists() {
+        GameMap mmoMap = gameMap(101, "1-5");
+        GameMap eicMap = gameMap(202, "2-5");
+        NpcInfo npc = proxy(NpcInfo.class, (method, args) -> {
+            if (method.equals("getName")) return "-=[ Future NPC ]=-";
+            if (method.equals("getMapIds")) return Set.of(101, 202);
+            return null;
+        });
+        ConfigSetting<Map<String, NpcInfo>> setting = proxy(ConfigSetting.class,
+                (method, args) -> method.equals("getValue") ? Map.of("future", npc) : null);
+        StarSystemAPI maps = proxy(StarSystemAPI.class, (method, args) -> {
+            if (method.equals("getCurrentMap")) return gameMap(404, "4-4");
+            if (method.equals("isAccessible")) return true;
+            if (method.equals("findMap") && args[0] instanceof Integer) {
+                int id = (Integer) args[0];
+                return Optional.ofNullable(id == 101 ? mmoMap : id == 202 ? eicMap : null);
+            }
+            return null;
+        });
+
+        DailyNpcMapResolver resolver = new DailyNpcMapResolver(setting, maps);
+        assertEquals("2-5", resolver.resolve("Destroy Future NPC", "2").orElseThrow());
     }
 
     private static QuestAPI.Requirement dailyTimer() {
@@ -260,6 +305,26 @@ final class DailyTaskPlannerTest {
     private static QuestAPI.Quest quest(int id, boolean active, boolean completed,
                                         List<? extends QuestAPI.Requirement> requirements) {
         return quest(id, active, completed, requirements, List.of());
+    }
+
+    private static GameMap gameMap(int id, String name) {
+        return proxy(GameMap.class, (method, args) -> {
+            if (method.equals("getId")) return id;
+            if (method.equals("getName") || method.equals("getShortName")) return name;
+            if (method.equals("isGG") || method.equals("isPvp")) return false;
+            return null;
+        });
+    }
+
+    @SuppressWarnings("unchecked")
+    private static <T> T proxy(Class<T> type, ProxyCall call) {
+        return (T) Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type},
+                (instance, method, args) -> call.invoke(method.getName(), args));
+    }
+
+    @FunctionalInterface
+    private interface ProxyCall {
+        Object invoke(String method, Object[] args);
     }
 
     private static QuestAPI.Quest quest(int id, boolean active, boolean completed,

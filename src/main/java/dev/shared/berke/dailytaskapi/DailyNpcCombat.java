@@ -1,9 +1,7 @@
 package dev.shared.berke.dailytaskapi;
 
 import eu.darkbot.api.PluginAPI;
-import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.game.entities.Npc;
-import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.shared.modules.LootModule;
 
 import java.util.Comparator;
@@ -18,26 +16,16 @@ import java.util.Comparator;
  * owner of quest and map selection.</p>
  */
 final class DailyNpcCombat extends LootModule {
-    private final ConfigSetting<Boolean> petEnabledSetting;
-    private final ConfigSetting<Boolean> keepRoamingPointSetting;
     private String targetDescription;
     private int targetRadius = 590;
-    private Boolean originalPetEnabledSetting;
-    private Boolean originalKeepRoamingPointSetting;
-    private Boolean originalPetRuntimeEnabled;
 
     DailyNpcCombat(PluginAPI api) {
         super(api);
-        ConfigAPI config = api.requireAPI(ConfigAPI.class);
-        petEnabledSetting = config.requireConfig("pet.enabled");
-        keepRoamingPointSetting = config.requireConfig("general.roaming.keep");
     }
 
     void tick(String description, int attackRadius) {
         targetDescription = description;
         targetRadius = attackRadius;
-        rememberUserSettings();
-        if (!Boolean.TRUE.equals(petEnabledSetting.getValue())) petEnabledSetting.setValue(true);
         super.onTickModule();
     }
 
@@ -45,7 +33,6 @@ final class DailyNpcCombat extends LootModule {
         attack.stopAttack();
         attack.setTarget(null);
         targetDescription = null;
-        restoreUserSettings();
     }
 
     void shutdownPet() {
@@ -82,30 +69,9 @@ final class DailyNpcCombat extends LootModule {
         // MovementAPI.moveRandom follows the saved preferred-zone route for
         // this map and falls back to a random map point when no route exists.
         if (selected == null && !movement.isMoving()) {
-            rememberUserSettings();
-            if (Boolean.TRUE.equals(keepRoamingPointSetting.getValue())) {
-                keepRoamingPointSetting.setValue(false);
-            }
             movement.moveRandom();
         }
         return selected != null;
-    }
-
-    private void rememberUserSettings() {
-        if (originalPetEnabledSetting != null) return;
-        originalPetEnabledSetting = petEnabledSetting.getValue();
-        originalKeepRoamingPointSetting = keepRoamingPointSetting.getValue();
-        originalPetRuntimeEnabled = pet.isEnabled();
-    }
-
-    private void restoreUserSettings() {
-        if (originalPetEnabledSetting == null) return;
-        petEnabledSetting.setValue(originalPetEnabledSetting);
-        keepRoamingPointSetting.setValue(originalKeepRoamingPointSetting);
-        pet.setEnabled(Boolean.TRUE.equals(originalPetRuntimeEnabled));
-        originalPetEnabledSetting = null;
-        originalKeepRoamingPointSetting = null;
-        originalPetRuntimeEnabled = null;
     }
 
     private boolean isUsableTarget(Npc npc) {

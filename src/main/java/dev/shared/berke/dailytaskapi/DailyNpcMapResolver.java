@@ -5,8 +5,10 @@ import eu.darkbot.api.config.types.NpcInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.managers.StarSystemAPI;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -21,10 +23,17 @@ final class DailyNpcMapResolver {
     }
 
     Optional<String> resolve(String description, String companyPrefix) {
-        Map<String, NpcInfo> configured = npcInfos.getValue();
-        if (configured == null || configured.isEmpty()) return Optional.empty();
+        try {
+            Map<String, NpcInfo> configured = npcInfos.getValue();
+            if (configured == null || configured.isEmpty()) return Optional.empty();
+            return resolve(description, companyPrefix, new ArrayList<>(configured.values()));
+        } catch (RuntimeException ignored) {
+            return Optional.empty();
+        }
+    }
 
-        Optional<NpcInfo> target = configured.values().stream()
+    private Optional<String> resolve(String description, String companyPrefix, List<NpcInfo> configured) {
+        Optional<NpcInfo> target = configured.stream()
                 .filter(info -> info != null && DailyTaskPlanner.matchesNpcName(description, info.getName()))
                 .max(Comparator.comparingInt(info ->
                         DailyTaskPlanner.normalizeNpcName(info.getName()).length()));

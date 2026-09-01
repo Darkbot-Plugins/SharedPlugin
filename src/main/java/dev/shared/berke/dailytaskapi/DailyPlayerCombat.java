@@ -132,14 +132,14 @@ final class DailyPlayerCombat {
 
     private boolean isEligible(Player player, String objectiveDescription, DailyTaskConfig config) {
         if (player == null || !player.isValid() || !player.isSelectable() ||
-                player.isInvisible() || player.getId() == hero.getId()) {
+                player.isInvisible() || player.isBlacklisted() || player.getId() == hero.getId()) {
             return false;
         }
         EntityInfo info = player.getEntityInfo();
         if (info == null) return false;
         if (!matchesRequiredFaction(info, objectiveDescription)) return false;
         if (config.avoidAlliedAndGroupPlayers && isProtected(player, info)) return false;
-        return !config.enemyPlayersOnly || info.isEnemy() || player.isBlacklisted() ||
+        return !config.enemyPlayersOnly || info.isEnemy() ||
                 info.getClanDiplomacy() == EntityInfo.Diplomacy.WAR;
     }
 

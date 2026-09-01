@@ -12,6 +12,7 @@ import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Station;
 import eu.darkbot.api.game.enums.PetGear;
+import eu.darkbot.api.game.other.EntityInfo;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
 import eu.darkbot.api.game.other.Locatable;
@@ -52,10 +53,10 @@ import java.util.Set;
 @Feature(name = "DailyTaskAPI", description = "Completes only verified 24-hour daily quests")
 public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>,
         GearSelector, PetGearSupplier {
-    private static final String QUEST_BASE_MAP = "1-8";
     private static final String PARK_AFTER_DAILY = "__PARK_AFTER_DAILY__";
     private static final double QUEST_STATION_DISTANCE = 300d;
-    private static final Set<Integer> SPECIAL_DAILY_QUEST_IDS = Set.of(318001);
+    private static final int MAX_SOURCE_RECOVERY_ATTEMPTS = 3;
+    private static final int MAX_GIVER_OPEN_ATTEMPTS = 30;
 
     private enum State {
         STARTING, DISCOVERING, WAITING_FOR_DISCOVERY,
@@ -117,7 +118,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private DailyTaskConfig settings = new DailyTaskConfig();
     private State state = State.STARTING;
     private int selectionRetries;
-    private int menuScanPass;
+    private int sourceRecoveryAttempts;
     private int selectorIndex;
     private int questIdBeforeSelection = -1;
     private int currentQuestId = -1;
@@ -135,6 +136,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private double lastTrackedProgress = -1d;
     private long lastProgressAt;
     private final Set<Integer> completedQuestIds = new HashSet<>();
+    private final Set<Integer> skippedActiveQuestIds = new HashSet<>();
     private final Set<Integer> knownDailyQuestIds = new HashSet<>();
     private final Set<Integer> scannedQuestIds = new LinkedHashSet<>();
     private final Map<Integer, QuestChoice> dailyChoices = new LinkedHashMap<>();
@@ -142,7 +144,6 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private QuestChoice pendingChoice;
     private boolean offerScanNeeded = true;
     private int giverOpenAttempts;
-    private int dailyTabRetries;
     private int giverScrollPage;
     private boolean giverPageHadNewId;
     private int giverRowIndex = 1;
@@ -155,6 +156,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private final Set<Integer> acceptedOfferIds = new LinkedHashSet<>();
     private final Map<DailyQuestPolicy.Decision, Integer> skippedOfferCounts =
             new EnumMap<>(DailyQuestPolicy.Decision.class);
+    private boolean completionStopIssued;
 
     public DailyTaskAPI(PluginAPI api) {
         this.quests = api.requireAPI(QuestAPI.class);
@@ -197,18 +199,25 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private boolean handleCompletedState(long now) {
         if (state != State.DONE) return false;
+        if (completionStopIssued && bot.isRunning()) {
+            state = State.STARTING;
+            completionStopIssued = false;
+            return false;
+        }
         if (nextActionAt <= now) {
             state = State.STARTING;
             return false;
         }
         npcCombat.shutdownPet();
         if (npcCombat.isPetActive() || now < nextRoamAt) {
-            status = "ALL DAILY QUESTS COMPLETED | PET is shutting down";
+            status = completionSummary() + " | PET is shutting down";
             return true;
         }
-        status = "ALL DAILY QUESTS COMPLETED | Completed: " + completedQuestIds.size() +
-                " | PET off | Bot stopped";
-        if (bot.isRunning()) bot.setRunning(false);
+        status = completionSummary() + " | PET off | Bot stopped";
+        if (bot.isRunning()) {
+            completionStopIssued = true;
+            bot.setRunning(false);
+        }
         return true;
     }
 
@@ -301,20 +310,20 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private void resetSession() {
         selectionRetries = 0;
-        menuScanPass = 0;
+        sourceRecoveryAttempts = 0;
         selectorIndex = 0;
         questIdBeforeSelection = -1;
         currentQuestId = -1;
         currentQuestTitle = "";
         pendingChoice = null;
         completedQuestIds.clear();
+        skippedActiveQuestIds.clear();
         knownDailyQuestIds.clear();
         scannedQuestIds.clear();
         dailyChoices.clear();
         selectors = List.of();
         offerScanNeeded = true;
         giverOpenAttempts = 0;
-        dailyTabRetries = 0;
         giverScrollPage = 0;
         giverPageHadNewId = false;
         giverRowIndex = 1;
@@ -326,6 +335,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         seenGiverOfferIds.clear();
         acceptedOfferIds.clear();
         skippedOfferCounts.clear();
+        completionStopIssued = false;
         resetProgressTracking();
         clearPlan();
         status = "Scanning the native quest menu";
@@ -398,7 +408,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             retryMenuScan(questMenuSource.getLastError());
             return false;
         }
-        menuScanPass++;
+        sourceRecoveryAttempts = 0;
         selectorIndex = 0;
         selectionRetries = 0;
         scannedQuestIds.clear();
@@ -503,7 +513,6 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         // quests had been accepted forever, causing an active-menu scan loop.
         acceptedOfferIds.clear();
         giverOpenAttempts = 0;
-        dailyTabRetries = 0;
         giverScrollPage = 0;
         giverPageHadNewId = false;
         giverRowIndex = 1;
@@ -559,6 +568,10 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         findQuestStation().filter(station -> hero.distanceTo(station) <= QUEST_STATION_DISTANCE)
                 .ifPresent(station -> station.trySelect(false));
         giverOpenAttempts++;
+        if (giverOpenAttempts >= MAX_GIVER_OPEN_ATTEMPTS) {
+            pauseSafely("Quest giver did not open after " + giverOpenAttempts + " attempts");
+            return;
+        }
         state = State.WAITING_GIVER_OPEN;
         status = "Waiting for quest giver response (" + giverOpenAttempts + ")";
         nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
@@ -741,7 +754,6 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             selectedOfferTitle = "";
             giverRowIndex = 1;
             giverRowRetries = 0;
-            dailyTabRetries = 0;
             giverPageHadNewId = false;
             state = quests.isQuestGiverOpen() ? State.SELECTING_GIVER_ROW : State.OPENING_GIVER;
             nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
@@ -753,7 +765,11 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             nextActionAt = System.currentTimeMillis() + settings.questSwitchDelayMs;
             return;
         }
-        pauseSafely("Could not verify daily acceptance: " + selectedOfferTitle);
+        reviewedOfferIds.add(selectedOfferId);
+        status = "Could not verify daily acceptance; continuing safely: " + selectedOfferTitle;
+        selectedOfferId = -1;
+        selectedOfferTitle = "";
+        advanceGiverRow();
     }
 
     private Optional<QuestAPI.QuestListItem> findQuestItem(int id) {
@@ -840,14 +856,22 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     }
 
     private void retryMenuScan(String reason) {
-        status = reason + "; single scan completed";
+        sourceRecoveryAttempts++;
+        if (sourceRecoveryAttempts < MAX_SOURCE_RECOVERY_ATTEMPTS) {
+            selectors = List.of();
+            status = reason + "; retrying source discovery (" + sourceRecoveryAttempts + "/" +
+                    MAX_SOURCE_RECOVERY_ATTEMPTS + ")";
+            nextActionAt = System.currentTimeMillis() + Math.max(750L, settings.questSwitchDelayMs);
+            return;
+        }
+        status = reason + "; source discovery unavailable after safe retries";
         if (offerScanNeeded) beginQuestOfferScan();
         else finishAll();
     }
 
     private void prepareNewScan() {
         state = State.DISCOVERING;
-        menuScanPass = 0;
+        sourceRecoveryAttempts = 0;
         selectorIndex = 0;
         selectionRetries = 0;
         questIdBeforeSelection = -1;
@@ -855,6 +879,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         selectors = List.of();
         scannedQuestIds.clear();
         dailyChoices.clear();
+        skippedActiveQuestIds.clear();
     }
 
     private void refreshDailyCatalog() {
@@ -876,9 +901,14 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         if (!isVerifiedDaily(quest)) return;
         if (isFinished(quest)) {
             completedQuestIds.add(quest.getId());
+            skippedActiveQuestIds.remove(quest.getId());
             return;
         }
-        if (!DailyQuestPolicy.evaluateActive(quest, settings).accepted()) return;
+        if (!DailyQuestPolicy.evaluateActive(quest, settings).accepted()) {
+            skippedActiveQuestIds.add(quest.getId());
+            return;
+        }
+        skippedActiveQuestIds.remove(quest.getId());
         QuestChoice choice = new QuestChoice(quest.getId(), safeTitle(quest), selector,
                 DailyQuestPolicy.priority(quest, settings));
         QuestChoice existing = dailyChoices.get(quest.getId());
@@ -888,8 +918,8 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     }
 
     private boolean isVerifiedDaily(QuestAPI.Quest quest) {
-        return quest != null && (SPECIAL_DAILY_QUEST_IDS.contains(quest.getId()) ||
-                acceptedOfferIds.contains(quest.getId()) || knownDailyQuestIds.contains(quest.getId()) ||
+        return quest != null && (acceptedOfferIds.contains(quest.getId()) ||
+                knownDailyQuestIds.contains(quest.getId()) ||
                 DailyTaskPlanner.isDaily(quest));
     }
 
@@ -975,6 +1005,10 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         }
         if (!ores.canSellOres()) {
             String base = homeBaseMapName();
+            if (base == null) {
+                updateProgressStatus(quest, progress, "Waiting for company data before travelling to base");
+                return true;
+            }
             if (!isOnMap(base)) navigateTo(base);
             updateProgressStatus(quest, progress, "Travelling to base to sell ore");
             return true;
@@ -1051,10 +1085,16 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     }
 
     private boolean ensureQuestStation() {
-        if (!isOnMap(QUEST_BASE_MAP)) {
+        String questBaseMap = questBaseMapName();
+        if (questBaseMap == null) {
+            attack.stopAttack();
+            status = "Waiting for company data before locating the quest center";
+            return false;
+        }
+        if (!isOnMap(questBaseMap)) {
             if (!selectors.isEmpty() || state != State.DISCOVERING) prepareNewScan();
             if (questGui != null && questGui.isVisible()) questGui.setVisible(false);
-            navigateToQuestBase();
+            navigateToQuestBase(questBaseMap);
             return false;
         }
 
@@ -1062,7 +1102,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         if (station.isEmpty()) {
             attack.stopAttack();
             hero.setRoamMode();
-            status = QUEST_BASE_MAP + " ana istasyon verisi bekleniyor";
+            status = "Waiting for main-station data on " + questBaseMap;
             return false;
         }
 
@@ -1071,7 +1111,8 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             attack.stopAttack();
             hero.setRoamMode();
             movement.moveTo(station.get());
-            status = "Approaching main quest station on " + QUEST_BASE_MAP + ": " + (int) Math.round(distance);
+            status = "Approaching main quest station on " + questBaseMap + ": " +
+                    (int) Math.round(distance);
             return false;
         }
 
@@ -1097,11 +1138,11 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
                 .min(Comparator.comparingDouble(hero::distanceTo));
     }
 
-    private void navigateToQuestBase() {
-        Optional<GameMap> destination = starSystem.findMap(QUEST_BASE_MAP);
+    private void navigateToQuestBase(String questBaseMap) {
+        Optional<GameMap> destination = starSystem.findMap(questBaseMap);
         if (destination.isEmpty() || !starSystem.isAccessible(destination.get())) {
             attack.stopAttack();
-            status = "Waiting for quest-center map data: " + QUEST_BASE_MAP;
+            status = "Waiting for quest-center map data: " + questBaseMap;
             return;
         }
 
@@ -1111,7 +1152,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
             // normal loading state, so wait for the next tick instead of
             // entering a permanent safe pause.
             attack.stopAttack();
-            status = "Loading quest-center route: " + QUEST_BASE_MAP;
+            status = "Loading quest-center route: " + questBaseMap;
             return;
         }
 
@@ -1119,10 +1160,14 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         hero.setRoamMode();
         if (hero.distanceTo(portal) > 220d) movement.moveTo(portal);
         else movement.jumpPortal(portal);
-        status = "Travelling to " + QUEST_BASE_MAP + " for the quest center";
+        status = "Travelling to " + questBaseMap + " for the quest center";
     }
 
     private void navigateTo(String mapName) {
+        if (mapName == null || mapName.isBlank()) {
+            status = "Waiting for destination map data";
+            return;
+        }
         Optional<GameMap> destination = starSystem.findMap(mapName);
         if (destination.isEmpty() || !starSystem.isAccessible(destination.get())) {
             // Map/route data can be temporarily unavailable while a portal jump is
@@ -1176,20 +1221,30 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private boolean isOnMap(String mapName) {
         GameMap current = starSystem.getCurrentMap();
-        return current != null && current.getName().equalsIgnoreCase(mapName);
+        return current != null && current.getName() != null &&
+                current.getName().equalsIgnoreCase(mapName);
     }
 
     private String homeBaseMapName() {
-        GameMap current = starSystem.getCurrentMap();
-        String prefix = current == null ? "1" : current.getName().split("-")[0];
-        if (!prefix.matches("[1-3]")) prefix = "1";
-        return prefix + "-1";
+        return DailyTaskCompanyMap.homeBase(heroFaction(), currentMapName());
+    }
+
+    private String questBaseMapName() {
+        return DailyTaskCompanyMap.questBase(heroFaction(), currentMapName());
     }
 
     private String companyPrefix() {
+        return DailyTaskCompanyMap.prefix(heroFaction(), currentMapName());
+    }
+
+    private EntityInfo.Faction heroFaction() {
+        EntityInfo info = hero.getEntityInfo();
+        return info == null ? null : info.getFaction();
+    }
+
+    private String currentMapName() {
         GameMap current = starSystem.getCurrentMap();
-        String prefix = current == null ? "1" : current.getName().split("-")[0];
-        return prefix.matches("[1-3]") ? prefix : "1";
+        return current == null ? null : current.getName();
     }
 
     private boolean recoverStagnantPlan(QuestAPI.Quest quest, double progress, long now) {
@@ -1243,8 +1298,15 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         // Keep DarkBot ticking briefly so PetManager can send and observe the
         // actual PET deactivation before the bot's running flag is cleared.
         nextRoamAt = System.currentTimeMillis() + 5_000L;
-        status = "ALL DAILY QUESTS COMPLETED | Completed: " + completedQuestIds.size() +
-                " | PET is shutting down | Bot will stop afterwards";
+        status = completionSummary() + " | PET is shutting down | Bot will stop afterwards";
+    }
+
+    private String completionSummary() {
+        if (skippedActiveQuestIds.isEmpty()) {
+            return "ALL SUPPORTED DAILY QUESTS COMPLETED | Completed: " + completedQuestIds.size();
+        }
+        return "NO RUNNABLE DAILY QUESTS REMAIN | Completed: " + completedQuestIds.size() +
+                " | Skipped by settings or unsupported: " + skippedActiveQuestIds.size();
     }
 
     private void stopCurrentAction() {
@@ -1267,6 +1329,7 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     }
 
     private String getNpcLocatorTargetDescription() {
+        if (!bot.isRunning() || bot.getNonTemporalModule() != this) return null;
         if (state != State.RUNNING || targetNpcDescription == null) return null;
         if (targetMapName != null && !isOnMap(targetMapName)) return null;
         return targetNpcDescription;
