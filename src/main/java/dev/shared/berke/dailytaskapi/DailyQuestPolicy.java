@@ -53,7 +53,7 @@ final class DailyQuestPolicy {
     }
 
     static int priority(QuestAPI.Quest quest, DailyTaskConfig config) {
-        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(quest, "1");
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(quest);
         int score = plan.priorityScore();
         if (config.preferShorterQuests) {
             score += (int) Math.min(10_000d, Math.round(DailyTaskPlanner.remainingWork(quest)));

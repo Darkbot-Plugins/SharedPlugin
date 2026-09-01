@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -155,7 +156,11 @@ final class DailyQuestConditionEngine {
     private DailyQuestConditionEngine() {
     }
 
-    static Plan build(QuestAPI.Quest quest, String companyPrefix) {
+    static Plan build(QuestAPI.Quest quest) {
+        return build(quest, ignored -> Optional.empty());
+    }
+
+    static Plan build(QuestAPI.Quest quest, Function<String, Optional<String>> npcMapResolver) {
         List<QuestAPI.Requirement> requirements = DailyTaskPlanner.actionable(quest);
         List<Step> steps = buildSteps(requirements);
 
@@ -185,7 +190,7 @@ final class DailyQuestConditionEngine {
                 .findFirst()
                 .orElse(null);
         if (targetMap == null && targetNpc != null) {
-            targetMap = DailyTaskPlanner.preferredMapForNpc(targetNpc, companyPrefix).orElse(null);
+            targetMap = npcMapResolver.apply(targetNpc).orElse(null);
         }
 
         OreAPI.Ore ore = requirements.stream()
@@ -247,7 +252,7 @@ final class DailyQuestConditionEngine {
             if (isPlayerCondition(requirement) && !allowPlayerCombat) return false;
             if (!isExecutableCondition(requirement)) return false;
         }
-        return build(quest, "1").executable();
+        return build(quest).executable();
     }
 
     static boolean hasPlayerCombat(QuestAPI.Quest quest) {

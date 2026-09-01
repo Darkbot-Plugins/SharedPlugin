@@ -127,45 +127,6 @@ final class DailyTaskPlanner {
         return matcher.find() ? Optional.of(matcher.group(1).toUpperCase(Locale.ROOT)) : Optional.empty();
     }
 
-    static Optional<String> preferredMapForNpc(String description, String companyPrefix) {
-        if (description == null) return Optional.empty();
-        String prefix = companyPrefix != null && companyPrefix.matches("[1-3]") ? companyPrefix : "1";
-        String npc = normalizeNpcName(description);
-
-        if (npc.contains("uber")) return Optional.of("4-5");
-        if (description.contains("StreuneR")) return Optional.of(prefix + "-8");
-        String homeMap = homeMapForNpc(npc, prefix);
-        if (homeMap != null) return Optional.of(homeMap);
-        return pirateMapForNpc(npc);
-    }
-
-    private static String homeMapForNpc(String npc, String prefix) {
-        if (containsAny(npc, "protecgit", "protegit", "cubikon")) return prefix + "-6";
-        if (npc.contains("boss kristallon")) return prefix + "-7";
-        if (npc.contains("boss lordakium")) return prefix + "-5";
-        if (containsAny(npc, "kristallin", "kristallon", "lordakium")) return prefix + "-6";
-        if (npc.contains("sibelonit")) return prefix + "-5";
-        if (npc.contains("sibelon")) return prefix + "-4";
-        if (containsAny(npc, "saimon", "mordon", "devolarium")) return prefix + "-3";
-        if (containsAny(npc, "lordakia", "streuner")) return prefix + "-2";
-        return null;
-    }
-
-    private static Optional<String> pirateMapForNpc(String npc) {
-        if (npc.contains("battleray")) return Optional.of("5-3");
-        if (containsAny(npc, "interceptor", "barracuda", "saboteur", "annihilator")) {
-            return Optional.of("5-2");
-        }
-        return Optional.empty();
-    }
-
-    private static boolean containsAny(String value, String... candidates) {
-        for (String candidate : candidates) {
-            if (value.contains(candidate)) return true;
-        }
-        return false;
-    }
-
     static Optional<OreAPI.Ore> findOre(String description) {
         String text = normalize(description);
         if (text.contains("prometium")) return Optional.of(OreAPI.Ore.PROMETIUM);

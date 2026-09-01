@@ -20,9 +20,7 @@
 		"dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate",
 		"dev.shared.do_gamer.task.autobuy.Autobuy",
 		"dev.shared.halizeur.log_overlay.LogOverlay",
-		"dev.shared.berke.dailytaskapi.DailyTaskAPI",
-		"dev.shared.berke.petlocator.DailyNpcPetLocator",
-		"dev.shared.berke.ramcleaner.DailyRamCleaner"
+		"dev.shared.berke.dailytaskapi.DailyTaskAPI"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
 	"download": "https://github.com/Darkbot-Plugins/SharedPlugin/releases/latest/download/SharedPlugin.jar"

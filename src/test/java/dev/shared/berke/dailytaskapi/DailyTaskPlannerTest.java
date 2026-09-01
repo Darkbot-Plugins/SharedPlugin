@@ -39,7 +39,7 @@ final class DailyTaskPlannerTest {
         assertTrue(DailyTaskPlanner.actionable(daily).contains(npc));
         assertTrue(DailyTaskPlanner.actionable(daily).contains(map));
 
-        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(daily, "1");
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(daily);
         assertEquals("1-4", plan.targetMapName());
         assertTrue(plan.targetNpcDescription().contains("Mordon"));
     }
@@ -49,7 +49,7 @@ final class DailyTaskPlannerTest {
         QuestAPI.Requirement coordinates = requirement("X: 12400 Y: 7600", "COORDINATES",
                 QuestAPI.Requirement.RequirementType.COORDINATES, 0, 1, false);
         DailyQuestConditionEngine.Plan coordinatePlan = DailyQuestConditionEngine.build(
-                quest(5, true, false, List.of(coordinates, dailyTimer())), "1");
+                quest(5, true, false, List.of(coordinates, dailyTimer())));
         assertEquals(12400, coordinatePlan.targetCoordinates().x());
         assertEquals(7600, coordinatePlan.targetCoordinates().y());
         assertTrue(coordinatePlan.coordinatesOnly());
@@ -57,12 +57,12 @@ final class DailyTaskPlannerTest {
         QuestAPI.Requirement visit = requirement("Visit map 1-8", "VISIT_MAP",
                 QuestAPI.Requirement.RequirementType.VISIT_MAP, 0, 1, false);
         QuestAPI.Quest visitQuest = quest(6, true, false, List.of(visit, dailyTimer()));
-        assertEquals("1-8", DailyQuestConditionEngine.build(visitQuest, "1").targetMapName());
+        assertEquals("1-8", DailyQuestConditionEngine.build(visitQuest).targetMapName());
         assertTrue(DailyQuestConditionEngine.supports(visitQuest));
     }
 
     @Test
-    void matchesNpcVariantsAndPreferredMaps() {
+    void matchesNpcVariantsWithoutMaintainingNpcMapLists() {
         List<String> names = List.of("-=[ Lordakium ]=-", "..::{ Boss Lordakium }::..", "( UberLordakium )");
         assertEquals("-=[ Lordakium ]=-", DailyTaskPlanner.findNpc("Destroy Lordakium", names).orElseThrow());
         assertTrue(DailyTaskPlanner.findNpc("Destroy Boss Lordakium", names).orElseThrow()
@@ -70,12 +70,19 @@ final class DailyTaskPlannerTest {
         assertTrue(DailyTaskPlanner.findNpc("Destroy Boss Sibelonit", List.of("-=[ Sibelonit ]=-")).isEmpty());
         assertTrue(DailyTaskPlanner.findNpc("Destroy UberLordakium",
                 List.of("-=[ Lordakium ]=-", "..::{ Boss Lordakium }::..")).isEmpty());
-        assertEquals("1-3", DailyTaskPlanner.preferredMapForNpc("Destroy Saimon", "1").orElseThrow());
-        assertEquals("1-6", DailyTaskPlanner.preferredMapForNpc("Destroy Lordakium", "1").orElseThrow());
-        assertEquals("1-5", DailyTaskPlanner.preferredMapForNpc("Destroy Boss Lordakium", "1").orElseThrow());
-        assertEquals("4-5", DailyTaskPlanner.preferredMapForNpc("Destroy UberKristallin", "1").orElseThrow());
-        assertEquals("1-8", DailyTaskPlanner.preferredMapForNpc("Destroy StreuneR", "1").orElseThrow());
         assertEquals(OreAPI.Ore.PROMETIUM, DailyTaskPlanner.findOre("Sell Prometium").orElseThrow());
+    }
+
+    @Test
+    void resolvesNpcMapThroughRuntimeMetadataResolver() {
+        QuestAPI.Requirement npc = requirement("Destroy a newly added NPC", "KILL_NPC",
+                QuestAPI.Requirement.RequirementType.KILL_NPC, 0, 3, false);
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(
+                quest(20, true, false, List.of(npc, dailyTimer())),
+                ignored -> java.util.Optional.of("5-3"));
+
+        assertEquals("5-3", plan.targetMapName());
+        assertTrue(plan.targetNpcDescription().contains("newly added NPC"));
     }
 
     @Test
@@ -130,7 +137,7 @@ final class DailyTaskPlannerTest {
         QuestAPI.Requirement second = requirement("Destroy Lordakium", "KILL_NPC",
                 QuestAPI.Requirement.RequirementType.KILL_NPC, 0, 1, false);
         DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(
-                quest(11, true, false, List.of(first, second, dailyTimer())), "1");
+                quest(11, true, false, List.of(first, second, dailyTimer())));
 
         assertEquals(2, plan.steps().stream()
                 .filter(step -> step.type() == DailyQuestConditionEngine.StepType.NPC_COMBAT)
@@ -140,7 +147,7 @@ final class DailyTaskPlannerTest {
         QuestAPI.Requirement completedFirst = requirement("Destroy Mordon", "KILL_NPC",
                 QuestAPI.Requirement.RequirementType.KILL_NPC, 1, 1, true);
         DailyQuestConditionEngine.Plan nextPlan = DailyQuestConditionEngine.build(
-                quest(12, true, false, List.of(completedFirst, second, dailyTimer())), "1");
+                quest(12, true, false, List.of(completedFirst, second, dailyTimer())));
         assertTrue(nextPlan.targetNpcDescription().contains("Lordakium"));
     }
 
@@ -149,7 +156,7 @@ final class DailyTaskPlannerTest {
         QuestAPI.Requirement pvp = requirement("Destroy enemy players", "KILL_PLAYERS",
                 QuestAPI.Requirement.RequirementType.KILL_PLAYERS, 0, 3, false);
         QuestAPI.Quest quest = quest(13, true, false, List.of(pvp, dailyTimer()));
-        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(quest, "1");
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(quest);
 
         assertTrue(DailyQuestConditionEngine.hasPlayerCombat(quest));
         assertFalse(DailyQuestConditionEngine.supports(quest));

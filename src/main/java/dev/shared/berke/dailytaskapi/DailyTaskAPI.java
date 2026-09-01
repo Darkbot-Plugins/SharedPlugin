@@ -5,24 +5,31 @@ import eu.darkbot.api.config.ConfigSetting;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
 import eu.darkbot.api.extensions.Module;
+import eu.darkbot.api.extensions.selectors.GearSelector;
+import eu.darkbot.api.extensions.selectors.PetGearSupplier;
+import eu.darkbot.api.extensions.selectors.PrioritizedSupplier;
 import eu.darkbot.api.game.entities.Box;
 import eu.darkbot.api.game.entities.Portal;
 import eu.darkbot.api.game.entities.Station;
+import eu.darkbot.api.game.enums.PetGear;
 import eu.darkbot.api.game.other.GameMap;
 import eu.darkbot.api.game.other.Gui;
 import eu.darkbot.api.game.other.Locatable;
 import eu.darkbot.api.managers.AttackAPI;
 import eu.darkbot.api.managers.BotAPI;
+import eu.darkbot.api.managers.ConfigAPI;
 import eu.darkbot.api.managers.EntitiesAPI;
 import eu.darkbot.api.managers.GameScreenAPI;
 import eu.darkbot.api.managers.HeroAPI;
 import eu.darkbot.api.managers.MovementAPI;
 import eu.darkbot.api.managers.OreAPI;
+import eu.darkbot.api.managers.PetAPI;
 import eu.darkbot.api.managers.QuestAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.EnumMap;
 import java.util.HashSet;
@@ -43,7 +50,8 @@ import java.util.Set;
  * that module's saved settings untouched.</p>
  */
 @Feature(name = "DailyTaskAPI", description = "Completes only verified 24-hour daily quests")
-public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig> {
+public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>,
+        GearSelector, PetGearSupplier {
     private static final String QUEST_BASE_MAP = "1-8";
     private static final String PARK_AFTER_DAILY = "__PARK_AFTER_DAILY__";
     private static final double QUEST_STATION_DISTANCE = 300d;
@@ -98,10 +106,12 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
     private final MovementAPI movement;
     private final AttackAPI attack;
     private final HeroAPI hero;
+    private final PetAPI pet;
     private final Gui questGui;
     private final QuestMenuSource questMenuSource;
     private final QuestGiverSource questGiverSource;
     private final DailyNpcCombat npcCombat;
+    private final DailyNpcMapResolver npcMapResolver;
     private final DailyPlayerCombat playerCombat;
 
     private DailyTaskConfig settings = new DailyTaskConfig();
@@ -156,10 +166,14 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         this.movement = api.requireAPI(MovementAPI.class);
         this.attack = api.requireAPI(AttackAPI.class);
         this.hero = api.requireAPI(HeroAPI.class);
+        this.pet = api.requireAPI(PetAPI.class);
         this.questGui = gameScreen.getGui("quests");
         this.questMenuSource = new QuestMenuSource(questGui);
         this.questGiverSource = new QuestGiverSource(gameScreen);
         this.npcCombat = new DailyNpcCombat(api);
+        ConfigAPI config = api.requireAPI(ConfigAPI.class);
+        this.npcMapResolver = new DailyNpcMapResolver(
+                config.requireConfig("loot.npc_infos"), starSystem);
         this.playerCombat = new DailyPlayerCombat(api);
     }
 
@@ -889,7 +903,8 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
 
     private void buildPlanFromSource(QuestAPI.Quest quest) {
         clearPlan();
-        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(quest, companyPrefix());
+        DailyQuestConditionEngine.Plan plan = DailyQuestConditionEngine.build(
+                quest, description -> npcMapResolver.resolve(description, companyPrefix()));
         targetMapName = plan.targetMapName();
         targetNpcDescription = plan.targetNpcDescription();
         targetPlayerDescription = plan.targetPlayerDescription();
@@ -1257,13 +1272,51 @@ public final class DailyTaskAPI implements Module, Configurable<DailyTaskConfig>
         return targetNpcDescription;
     }
 
-    public boolean hasNpcLocatorTarget() {
-        return getNpcLocatorTargetDescription() != null;
+    @Override
+    public PetGearSupplier getGearSupplier() {
+        return this;
     }
 
-    public boolean matchesNpcLocatorTarget(String npcName) {
+    @Override
+    public PrioritizedSupplier.Priority getPriority() {
+        return getNpcLocatorTargetDescription() == null
+                ? PrioritizedSupplier.Priority.LOWEST
+                : PrioritizedSupplier.Priority.HIGHEST;
+    }
+
+    @Override
+    public PetGear get() {
+        if (getNpcLocatorTargetDescription() != null && pet.hasGear(PetGear.ENEMY_LOCATOR)) {
+            return PetGear.ENEMY_LOCATOR;
+        }
+        PetGear current = pet.getGear();
+        return current == null ? PetGear.PASSIVE : current;
+    }
+
+    @Override
+    public Boolean enablePet() {
+        return getNpcLocatorTargetDescription() == null ? null : Boolean.TRUE;
+    }
+
+    @Override
+    public PetAPI.LocatorPick getNpcLocatorPick(
+            Collection<? extends PetAPI.LocatorPick> available) {
         String description = getNpcLocatorTargetDescription();
-        return DailyTaskPlanner.matchesNpcName(description, npcName);
+        if (description == null) return PetGearSupplier.super.getNpcLocatorPick(available);
+        return available.stream()
+                .filter(pick -> pick != null &&
+                        DailyTaskPlanner.matchesNpcName(description, pick.getName()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    public Integer getNpcPickPriority(PetAPI.LocatorPick pick) {
+        String description = getNpcLocatorTargetDescription();
+        if (description == null) return PetGearSupplier.super.getNpcPickPriority(pick);
+        return pick != null && DailyTaskPlanner.matchesNpcName(description, pick.getName())
+                ? 0
+                : null;
     }
 
     private String safeTitle(QuestAPI.Quest quest) {
