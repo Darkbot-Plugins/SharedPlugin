@@ -70,6 +70,8 @@ Notes
 
 - Follow repository coding conventions and keep changes focused and small when possible.
 - If your PR requires special testing steps, include them in the PR description so reviewers can reproduce.
+- One feature per PR
+- Add a video demonstrating how the new features work (It isn’t necessary if the changes are to an existing one)
 
 ### Code guidelines
 
