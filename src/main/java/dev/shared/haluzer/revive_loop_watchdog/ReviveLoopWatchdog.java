@@ -12,16 +12,14 @@ import eu.darkbot.api.managers.RepairAPI;
 
 import java.time.Instant;
 import java.time.Duration;
-import java.time.format.DateTimeFormatter;
-import java.time.ZoneId;
+import java.util.logging.Logger;
 
 @Feature(name = "Revive Loop Watchdog", description =
         "Detects the stuck-on-revive refresh loop bug, pauses the bot, and auto-resumes once it recovers.",
         enabledByDefault = true)
 public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatchdog.Config> {
 
-    private static final DateTimeFormatter TIME_FORMAT =
-            DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss").withZone(ZoneId.systemDefault());
+    private static final Logger LOGGER = Logger.getLogger(ReviveLoopWatchdog.class.getName());
 
     private final HeroAPI hero;
     private final BotAPI bot;
@@ -41,7 +39,7 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
     @Configuration("revive_loop_watchdog.config")
     public static class Config {
         @Number(min = 1, max = 30, step = 1)
-        public int STUCK_THRESHOLD_MINUTES = 3;
+        public int stuckThresholdMinutes = 3;
     }
 
     @Override
@@ -67,7 +65,7 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
             }
 
             long stuckMinutes = Duration.between(deadSince, Instant.now()).toMinutes();
-            if (stuckMinutes >= config.STUCK_THRESHOLD_MINUTES) {
+            if (stuckMinutes >= config.stuckThresholdMinutes) {
                 pauseForStuckLoop(stuckMinutes);
             }
         } else {
@@ -80,8 +78,9 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
             return;
         }
 
-        log("Ship has been destroyed for " + stuckMinutes + "+ minute(s) with no successful revive. " +
-                "Assuming the known DarkBot stuck-on-revive refresh loop bug. Pausing bot to stop wasted refreshing.");
+        LOGGER.info("Revive Loop Watchdog: ship has been destroyed for " + stuckMinutes +
+                "+ minute(s) with no successful revive. Assuming the known DarkBot stuck-on-revive " +
+                "refresh loop bug. Pausing bot to stop wasted refreshing.");
         bot.setRunning(false);
         pausedByWatchdog = true;
     }
@@ -91,14 +90,11 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
         boolean alive = !repair.isDestroyed();
 
         if (loaded && alive) {
-            log("Game has finished loading and ship is confirmed alive again. Resuming bot automatically.");
+            LOGGER.info("Revive Loop Watchdog: game has finished loading and ship is confirmed alive again. " +
+                    "Resuming bot automatically.");
             pausedByWatchdog = false;
             deadSince = null;
             bot.setRunning(true);
         }
-    }
-
-    private void log(String message) {
-        System.out.println("[" + TIME_FORMAT.format(Instant.now()) + " | ReviveLoopWatchdog] " + message);
     }
 }
