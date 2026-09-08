@@ -19,7 +19,7 @@
 		"dev.shared.orbithelper.behaviours.fast_travel.FastTravel",
 		"dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate",
 		"dev.shared.do_gamer.task.autobuy.Autobuy",
-		"dev.shared.halizeur.log_overlay.LogOverlay",
+		"dev.shared.haluzer.log_overlay.LogOverlay",
 		"dev.shared.haluzer.revive_loop_watchdog.ReviveLoopWatchdog"
 	],
 	"update": "https://raw.githubusercontent.com/Darkbot-Plugins/SharedPlugin/main/src/main/resources/plugin.json",
