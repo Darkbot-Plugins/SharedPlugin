@@ -12,6 +12,7 @@ import eu.darkbot.api.managers.RepairAPI;
 
 import java.time.Instant;
 import java.time.Duration;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Feature(name = "Revive Loop Watchdog", description =
@@ -78,9 +79,9 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
             return;
         }
 
-        LOGGER.info("Revive Loop Watchdog: ship has been destroyed for " + stuckMinutes +
-                "+ minute(s) with no successful revive. Assuming the known DarkBot stuck-on-revive " +
-                "refresh loop bug. Pausing bot to stop wasted refreshing.");
+        LOGGER.log(Level.INFO, "Revive Loop Watchdog: ship has been destroyed for {0}+ minute(s) with no "
+                + "successful revive. Assuming the known DarkBot stuck-on-revive refresh loop bug. "
+                + "Pausing bot to stop wasted refreshing.", stuckMinutes);
         bot.setRunning(false);
         pausedByWatchdog = true;
     }
@@ -90,8 +91,8 @@ public class ReviveLoopWatchdog implements Behavior, Configurable<ReviveLoopWatc
         boolean alive = !repair.isDestroyed();
 
         if (loaded && alive) {
-            LOGGER.info("Revive Loop Watchdog: game has finished loading and ship is confirmed alive again. " +
-                    "Resuming bot automatically.");
+            LOGGER.info("Revive Loop Watchdog: game has finished loading and ship is confirmed alive again. "
+                    + "Resuming bot automatically.");
             pausedByWatchdog = false;
             deadSince = null;
             bot.setRunning(true);
