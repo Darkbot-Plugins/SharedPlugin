@@ -7,7 +7,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-import com.github.manolo8.darkbot.backpage.entities.ShipInfo;
+import com.github.manolo8.darkbot.backpage.hangar.Ret;
+import com.github.manolo8.darkbot.backpage.hangar.ShipInfo;
 import com.github.manolo8.darkbot.config.NpcExtraFlag;
 import com.github.manolo8.darkbot.core.itf.NpcExtraProvider;
 
@@ -282,22 +283,23 @@ public final class SimpleGalaxyGate implements Module, Task,
         }
 
         if (this.updateHangarData) {
-            this.backpageHelper.getLegacyHangarManager().updateHangarData(500);
+            this.backpageHelper.updateHangarData(500);
             this.setUpdateHangarData(false);
         }
 
         // Populate ship dropdown if empty
         Map<String, String> ships = SimpleGalaxyGateConfig.BuilderSettings.ShipDropdown.getShips();
         if (ships.isEmpty()) {
-            List<ShipInfo> shipInfos = this.backpageHelper.getLegacyHangarManager().getShipInfos();
-            if (shipInfos.isEmpty()) {
+            Ret hangar = this.backpageHelper.getCurrentHangarRet();
+            List<ShipInfo> shipInfos = hangar != null ? hangar.getShipInfos() : null;
+            if (shipInfos == null || shipInfos.isEmpty()) {
                 this.setUpdateHangarData(true);
                 return;
             }
             shipInfos.stream()
                     .filter(si -> si.getOwned() == 1)
-                    .sorted(Comparator.comparing(ShipInfo::getFav).reversed())
-                    .forEach(si -> ships.put(si.getHangarId(), si.getLootId()));
+                    .sorted(Comparator.comparingInt(ShipInfo::getFavourite).reversed())
+                    .forEach(si -> ships.put(String.valueOf(si.getHangarId()), si.getLootId()));
         }
     }
 

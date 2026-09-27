@@ -4,10 +4,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.function.Supplier;
 
-import com.github.manolo8.darkbot.backpage.entities.Item;
+import com.github.manolo8.darkbot.backpage.hangar.EquippableItem;
+import com.github.manolo8.darkbot.backpage.hangar.ItemInfo;
+import com.github.manolo8.darkbot.backpage.hangar.Ret;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
@@ -155,7 +158,7 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
             this.state = State.FETCH_LOG_FILE;
             return;
         }
-        this.backpageHelper.getLegacyHangarManager().updateHangarData(500);
+        this.backpageHelper.updateHangarData(500);
         this.state = State.FETCH_LOG_FILE;
     }
 
@@ -449,13 +452,23 @@ public final class Autobuy implements Task, Configurable<AutobuyConfig> {
      * Returns the quantity of the given item in the hangar, or 0 if not found.
      */
     private int getHangarQuantity(String itemId) {
-        int index = this.backpageHelper.getLegacyHangarManager().getLootIds().indexOf(itemId);
-        if (index == -1) {
+        Ret hangar = this.backpageHelper.getCurrentHangarRet();
+        if (hangar == null || hangar.getItemInfos() == null || hangar.getItems() == null) {
             return 0;
         }
-        return this.backpageHelper.getLegacyHangarManager().getItems().stream()
-                .filter(item -> item.getLoot() == index)
-                .mapToInt(Item::getQuantity)
+        int lootId = hangar.getItemInfos().stream()
+                .filter(info -> itemId.equals(info.getLocalizationId()))
+                .mapToInt(ItemInfo::getLootId)
+                .findFirst()
+                .orElse(-1);
+        if (lootId == -1) {
+            return 0;
+        }
+        return hangar.getItems().stream()
+                .filter(item -> item.getLootId() == lootId)
+                .map(EquippableItem::getQuantity)
+                .filter(Objects::nonNull)
+                .mapToInt(Integer::intValue)
                 .findFirst()
                 .orElse(0);
     }
