@@ -100,7 +100,7 @@ public final class BackpageHelper {
                     .setParam("params", params)
                     .consumeInputStream(in -> IOUtils.read(Base64.getDecoder().wrap(in)))
                     .contains("\"isError\":0");
-        } catch (IOException e) {
+        } catch (IOException | RuntimeException e) {
             System.out.println("BackpageHelper: Could not change hangar: " + e.getMessage());
             this.nextHangarChange = System.currentTimeMillis() + 5_000;
             return false;
