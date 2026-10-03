@@ -233,7 +233,12 @@ public final class GateBuilder {
             return false; // No ship available to switch, wait for next update
         }
 
-        String currentHangar = this.module.backpageHelper.getLegacyHangarManager().getActiveHangar();
+        int activeHangarId = this.module.backpageHelper.getActiveHangarId();
+        if (activeHangarId == 0) {
+            this.module.setUpdateHangarData(true);
+            return false; // Active hangar unknown, wait for hangar data
+        }
+        String currentHangar = String.valueOf(activeHangarId);
 
         if (hangarId.equals(currentHangar)) {
             if (this.isActiveShip(hangarId)) {
@@ -249,7 +254,7 @@ public final class GateBuilder {
         }
 
         this.switchingShip = true;
-        this.module.backpageHelper.getLegacyHangarManager().changeHangar(hangarId);
+        this.module.backpageHelper.changeHangar(Integer.parseInt(hangarId));
         return false;
     }
 
