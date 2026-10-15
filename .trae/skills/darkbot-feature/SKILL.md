@@ -5,7 +5,7 @@ description: "Scaffolds new DarkBot features for SharedPlugin (Module, Behavior,
 
 # DarkBot Feature (SharedPlugin)
 
-Scaffolds a new feature in `d:\Github\SharedPlugin`. Follow the existing code, do not invent new patterns.
+Follow the existing code, do not invent new patterns.
 
 ## 1. Layout (mandatory)
 
