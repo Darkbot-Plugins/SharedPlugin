@@ -1,4 +1,4 @@
-package dev.shared.halizeur.log_overlay;
+package dev.shared.haluzer.log_overlay;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
