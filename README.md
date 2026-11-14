@@ -23,6 +23,7 @@ We will seek to implement CI/CD in the repository so that developers have a good
 - Simple Galaxy Gate: Supports ABG, Delta, Epsilon, Zeta, Hades, Kuiper, LoW, Invasion, Mimesis, EBG, GoP, Treacherous, DSE, Fiesta, Trinity and Voyagers. By @do-gamer
 - Autobuy: Automatically buys boosters and special items from the shop at a configured interval. By @do-gamer
 - Log Overlay: Displays the latest in-game log messages on the canvas (top-center, auto-fade after 5s). Built-in keyword whitelist limits the displayed lines to gains and errors so the canvas does not get cluttered. By @Halizeur
+- Auto Dispatch: Collects finished retrievers and hires new ones into free dispatch slots, with a priority list and uridium/credit limits (never spends uridium by default). By @Alievs
 
 ## Contributing
 
