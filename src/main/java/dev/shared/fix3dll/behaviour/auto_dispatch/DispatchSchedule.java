@@ -18,7 +18,7 @@ import eu.darkbot.api.managers.DispatchAPI.Retriever;
  *
  * <p>The game does not count the remaining time of a retriever down in memory; the value is
  * only correct at the moment the in-progress list is drawn. The behaviour therefore hands the
- * list over once per cycle, while it is on screen (see {@link #record(List)}), and the remaining
+ * list over once per cycle, while it is on screen (see {@link #recordRunning(List)}), and the remaining
  * times are turned into absolute finishing times right then. Nothing is watched in between.
  *
  * <p>Shared as a singleton between the behaviour, which updates it on the bot's main tick, and
@@ -43,7 +43,7 @@ public final class DispatchSchedule implements API.Singleton {
     private static final long MAX_WAIT_MS = 24 * 60 * MINUTE_MS;
 
     private final BotAPI bot;
-    /** Retrievers in progress as of the last {@link #record(List)}; replaced as a whole. */
+    /** Retrievers in progress as of the last {@link #recordRunning(List)}; replaced as a whole. */
     private volatile List<Running> running = Collections.emptyList();
     /** Epoch milliseconds of the next scheduled check; read by the UI thread. */
     private volatile long nextCheckAt;
@@ -60,7 +60,7 @@ public final class DispatchSchedule implements API.Singleton {
      *
      * @param inProgress the game's list of retrievers in progress
      */
-    void record(final List<? extends Retriever> inProgress) {
+    void recordRunning(final List<? extends Retriever> inProgress) {
         long now = System.currentTimeMillis();
         List<Running> entries = new ArrayList<>(inProgress.size());
         for (Retriever retriever : inProgress) {
@@ -70,7 +70,7 @@ public final class DispatchSchedule implements API.Singleton {
     }
 
     /**
-     * @return number of retrievers in progress as of the last {@link #record(List)}; a caller
+     * @return number of retrievers in progress as of the last {@link #recordRunning(List)}; a caller
      *         seeing a different number of occupied slots knows the record is outdated
      */
     int recordedCount() {

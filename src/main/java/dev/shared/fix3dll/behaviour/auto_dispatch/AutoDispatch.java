@@ -119,7 +119,10 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
     private String lastSetup = "";
     private String lastBlocker;
     private int expectedCount;
+    /** Rows of the in-progress list before this index are left alone for the rest of the cycle. */
     private int skippedRows;
+    /** Row of the collect currently being tried. */
+    private int collectRow;
     /** Failed attempts at the collect currently being tried. */
     private int collectAttempts;
     /** Failed attempts at the hire currently being tried. */
@@ -178,6 +181,7 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
                 this.tickIdle();
             }
         } else if (this.isUnsafe()) {
+            this.leaveWindow();
             this.finish("hero invalid or captcha present");
         } else if (this.cycleTimeout.isInactive()) {
             this.leaveWindow();
@@ -329,7 +333,15 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
             return false;
         }
         this.setupCheck.activate(SETUP_CHECK_MS);
-        return this.dispatch.getTotalSlots() > 0 && !this.lastSetup.equals(this.setup());
+        if (this.dispatch.getTotalSlots() <= 0) {
+            return false;
+        }
+        if (this.lastSetup.isEmpty()) {
+            // Nothing to compare with yet; the first check is the timer's business.
+            this.lastSetup = this.setup();
+            return false;
+        }
+        return !this.lastSetup.equals(this.setup());
     }
 
     private void begin() {
@@ -350,6 +362,7 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
         this.cycleTimeout.activate(STALL_TIMEOUT_MS);
         this.log("cycle started - running " + this.dispatch.getInProgressRetrievers().size()
                 + ", free slots " + this.dispatch.getAvailableSlots() + "/" + this.dispatch.getTotalSlots());
+        this.guard.markBeneath();
         this.state = DispatchState.OPENING;
     }
 
@@ -392,7 +405,6 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
 
     private void handleOpening() {
         if (this.window.open()) {
-            this.guard.markOpened();
             this.state = DispatchState.SHOWING_RETRIEVERS;
         }
     }
@@ -421,12 +433,13 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
         List<? extends Retriever> inProgress = this.dispatch.getInProgressRetrievers();
         int row = this.config.collect ? this.nextFinishedRow(inProgress) : -1;
         if (row < 0) {
-            this.schedule.record(inProgress);
+            this.schedule.recordRunning(inProgress);
             this.log("nothing left to collect, " + this.dispatch.getAvailableSlots() + " free slots, wanted "
                     + this.config.targets());
             this.state = DispatchState.SELECTING;
         } else if (this.window.clickCollect(row)) {
             this.log("collecting " + inProgress.get(row).getName() + " in row " + (row + 1));
+            this.collectRow = row;
             this.expectedCount = inProgress.size();
             this.rewardPopupExpected = true;
             this.await(DispatchState.AWAIT_COLLECT);
@@ -582,12 +595,26 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
             this.retryHire("offer list changed");
         } else if (idOf(selected) != this.pendingId) {
             this.retryHire("game has " + describe(selected) + " selected instead of id " + this.pendingId);
+        } else if (!this.isStillPlanned()) {
+            this.log(this.pendingName + " is no longer the retriever to hire, choosing again");
+            this.state = DispatchState.SELECTING;
         } else if (this.window.clickHire()) {
             this.log(this.pendingName + " is selected, clicked hire");
             this.expectedCount = this.dispatch.getAvailableSlots();
             this.rewardPopupExpected = false;
             this.await(DispatchState.CONFIRMING);
         }
+    }
+
+    /**
+     * Works the plan out again right before spending anything. Between choosing a retriever
+     * and clicking hire a few seconds pass, in which the balance, the settings or the slots
+     * may have changed, for example when an earlier hire is only registered by the game now.
+     *
+     * @return {@code true} if the pending retriever is still the one to hire
+     */
+    private boolean isStillPlanned() {
+        return this.pickNext().map(next -> next.getId() == this.pendingId).orElse(false);
     }
 
     private static String describe(final Retriever retriever) {
@@ -652,7 +679,7 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
      * Records the finishing times again, now including the retrievers hired in this cycle.
      */
     private void handleReading() {
-        this.schedule.record(this.dispatch.getInProgressRetrievers());
+        this.schedule.recordRunning(this.dispatch.getInProgressRetrievers());
         this.state = DispatchState.CLOSING;
     }
 
@@ -674,7 +701,7 @@ public final class AutoDispatch implements Behavior, Configurable<AutoDispatchCo
             return;
         }
         this.collectAttempts = 0;
-        this.skippedRows++;
+        this.skippedRows = this.collectRow + 1;
         this.log("collect had no effect " + MAX_ATTEMPTS + " times, leaving that row for the next check");
     }
 

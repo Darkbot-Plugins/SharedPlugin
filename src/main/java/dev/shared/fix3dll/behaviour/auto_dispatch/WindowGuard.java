@@ -18,9 +18,9 @@ import eu.darkbot.api.managers.GameScreenAPI;
  * <ul>
  *   <li>{@link #isBusy()} before a cycle: windows that other features work in are open, so the
  *       cycle should not start yet.</li>
- *   <li>{@link #coveredBy()} during a cycle: a window appeared after the dispatch window was
- *       opened and overlaps it. The game puts newly opened windows on top, so such a window
- *       covers the dispatch window; windows that were already open stay beneath it.</li>
+ *   <li>{@link #coveredBy()} during a cycle: a window appeared after the cycle started and
+ *       overlaps the dispatch window. The game puts newly opened windows on top, so such a
+ *       window covers the dispatch window; windows that were already open stay beneath it.</li>
  * </ul>
  *
  * <p>Only windows known to the bot can be seen here; a window the bot does not track is not
@@ -58,10 +58,12 @@ final class WindowGuard {
     }
 
     /**
-     * Remembers which windows are visible right now. To be called once the dispatch window has
-     * been opened: those windows are beneath it and are ignored by {@link #coveredBy()}.
+     * Remembers which windows are visible right now. To be called right before the dispatch
+     * window is opened: those windows end up beneath it and are ignored by
+     * {@link #coveredBy()}, while anything that appears from then on, including while the
+     * dispatch window is still opening, counts as covering it.
      */
-    void markOpened() {
+    void markBeneath() {
         this.beneath.clear();
         for (Gui gui : this.screen.getGuis()) {
             if (gui.isVisible()) {
@@ -71,7 +73,7 @@ final class WindowGuard {
     }
 
     /**
-     * Looks for a window that appeared after {@link #markOpened()} and overlaps the dispatch
+     * Looks for a window that appeared after {@link #markBeneath()} and overlaps the dispatch
      * window.
      *
      * @return a description of the covering window (its position and size, as windows carry
