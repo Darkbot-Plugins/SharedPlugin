@@ -209,6 +209,13 @@ def file_at_commit(root: Path, commit: str, path: str) -> str:
     return out or ""
 
 
+def source_text(root: Path, commit: str | None, path: str) -> str:
+    """Read a file as it exists at `commit`, or from the working tree when no commit applies."""
+    if commit:
+        return file_at_commit(root, commit, path)
+    return read_text(root, path)
+
+
 def added_lines_with_numbers(
     root: Path, range_spec: str, path: str
 ) -> list[tuple[int, str]]:
@@ -235,24 +242,21 @@ def added_lines_with_numbers(
     return result
 
 
-def load_json(path: Path) -> dict:
+def parse_json(text: str) -> dict:
     try:
-        return json.loads(path.read_text(encoding="utf-8", errors="replace"))
-    except (OSError, json.JSONDecodeError):
+        return json.loads(text)
+    except json.JSONDecodeError:
         return {}
 
 
-def property_keys(path: Path) -> set[str]:
+def property_keys_in(text: str) -> set[str]:
     keys: set[str] = set()
-    try:
-        for raw in path.read_text(encoding="utf-8", errors="replace").splitlines():
-            line = raw.strip()
-            if not line or line.startswith("#") or line.startswith("!"):
-                continue
-            if "=" in line:
-                keys.add(line.split("=", 1)[0].strip())
-    except OSError:
-        pass
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or line.startswith("!"):
+            continue
+        if "=" in line:
+            keys.add(line.split("=", 1)[0].strip())
     return keys
 
 
@@ -377,9 +381,12 @@ def build_context(args: argparse.Namespace) -> dict:
     if base_ref:
         base_commit = resolve_commit(root, base_ref)
 
-    plugin = load_json(root / PLUGIN_JSON)
+    # In pr/base modes the review target is the fetched commit, not the working tree.
+    source_commit = head_commit if mode in ("pr", "base") else None
+
+    plugin = parse_json(source_text(root, source_commit, PLUGIN_JSON))
     registered = set(plugin.get("features") or [])
-    strings = property_keys(root / STRINGS_EN)
+    strings = property_keys_in(source_text(root, source_commit, STRINGS_EN))
 
     files = []
     signals = []
@@ -412,7 +419,7 @@ def build_context(args: argparse.Namespace) -> dict:
             content = read_text(root, path)
             added = [(i + 1, line) for i, line in enumerate(content.splitlines())]
         else:
-            content = read_text(root, path)
+            content = source_text(root, source_commit, path)
             added = added_lines_with_numbers(root, diff_range, path)
 
         meta = analyse_java(root, path, content)
