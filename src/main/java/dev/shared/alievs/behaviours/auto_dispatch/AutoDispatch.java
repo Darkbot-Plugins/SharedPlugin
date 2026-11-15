@@ -38,7 +38,10 @@ public class AutoDispatch implements Behavior, Configurable<AutoDispatchConfig> 
     private static final int MAX_ACTIONS_PER_CYCLE = 20;
     private static final int HIRE_VERIFY_RETRIES = 2;
     // Hire button position measured in a 785x424 dispatch window; scaled to the window's actual size.
-    private static final double HIRE_REF_W = 785, HIRE_REF_H = 424, HIRE_BTN_X = 700, HIRE_BTN_Y = 375;
+    private static final double HIRE_REF_W = 785;
+    private static final double HIRE_REF_H = 424;
+    private static final double HIRE_BTN_X = 700;
+    private static final double HIRE_BTN_Y = 375;
 
     private enum State { IDLE, OPENING, COLLECT, AFTER_COLLECT, HIRE_TAB, HIRE_SELECT, HIRE_CLICK, AFTER_HIRE, CLOSING }
 
@@ -251,7 +254,8 @@ public class AutoDispatch implements Behavior, Configurable<AutoDispatchConfig> 
 
     /** Clicks the Hire button, scaling its reference position to the dispatch window's current size. */
     private void clickHireButton(DispatchManager dm) {
-        int w = dm.width, h = dm.height;
+        int w = dm.width;
+        int h = dm.height;
         if (w <= 0 || h <= 0) {
             dm.clickHire(); // window size unknown: fall back to DarkBot's fixed position
             return;
