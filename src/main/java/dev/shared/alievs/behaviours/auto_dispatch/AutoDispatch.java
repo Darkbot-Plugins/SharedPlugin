@@ -1,14 +1,13 @@
-package dev.shared.alievs.tasks.auto_dispatch;
+package dev.shared.alievs.behaviours.auto_dispatch;
 
 import com.github.manolo8.darkbot.core.manager.DispatchManager;
 import com.github.manolo8.darkbot.core.objects.gui.DispatchPopupRewardGui;
 import eu.darkbot.api.PluginAPI;
 import eu.darkbot.api.config.ConfigSetting;
+import eu.darkbot.api.extensions.Behavior;
 import eu.darkbot.api.extensions.Configurable;
 import eu.darkbot.api.extensions.Feature;
-import eu.darkbot.api.extensions.Task;
 import eu.darkbot.api.game.other.GameMap;
-import eu.darkbot.api.managers.BotAPI;
 import eu.darkbot.api.managers.DispatchAPI;
 import eu.darkbot.api.managers.StarSystemAPI;
 import eu.darkbot.api.managers.StatsAPI;
@@ -23,10 +22,13 @@ import java.util.Optional;
  * <p>
  * DispatchAPI only exposes read access, so the clicks go through DarkBot's own {@link DispatchManager}
  * (openAvailableTab, clickHire, clickCollect, ...). Each step waits for the game UI to react.
+ * <p>
+ * Implemented as a {@link Behavior} so it runs on the main game loop alongside the active module and gets a
+ * clean stop hook ({@link #onStoppedBehavior()}) to close the window when the bot stops.
  */
 @Feature(name = "Auto Dispatch", description = "Collects finished retrievers and hires new ones automatically",
         enabledByDefault = false)
-public class AutoDispatch implements Task, Configurable<AutoDispatchConfig> {
+public class AutoDispatch implements Behavior, Configurable<AutoDispatchConfig> {
 
     private static final long STEP_DELAY_MS = 1_200;
     private static final long SELECT_DELAY_MS = 500;
@@ -40,7 +42,6 @@ public class AutoDispatch implements Task, Configurable<AutoDispatchConfig> {
 
     private enum State { IDLE, OPENING, COLLECT, AFTER_COLLECT, HIRE_TAB, HIRE_SELECT, HIRE_CLICK, AFTER_HIRE, CLOSING }
 
-    private final BotAPI bot;
     private final StarSystemAPI starSystem;
     private final Optional<DispatchManager> dispatch;
     private final DispatchPopupRewardGui rewardsGui;
@@ -58,8 +59,7 @@ public class AutoDispatch implements Task, Configurable<AutoDispatchConfig> {
     private boolean acceptClicked;
     private int hireChecks;
 
-    public AutoDispatch(PluginAPI api, BotAPI bot, StatsAPI stats) {
-        this.bot = bot;
+    public AutoDispatch(PluginAPI api, StatsAPI stats) {
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.selector = new RetrieverSelector(stats);
         this.rewardsGui = api.requireInstance(DispatchPopupRewardGui.class);
@@ -77,16 +77,17 @@ public class AutoDispatch implements Task, Configurable<AutoDispatchConfig> {
     }
 
     @Override
-    public void onTickTask() {
+    public void onTickBehavior() {
         if (config == null || !dispatch.isPresent()) return;
-
-        if (!bot.isRunning()) {
-            if (state != State.IDLE) abort(dispatch.get());
-            return;
-        }
         if (System.currentTimeMillis() < waitUntil) return;
-
         tick(dispatch.get());
+    }
+
+    @Override
+    public void onStoppedBehavior() {
+        // Bot stopped mid-cycle: close the window and popups so they don't sit over the game UI, then go idle.
+        if (config == null || !dispatch.isPresent()) return;
+        if (state != State.IDLE) abort(dispatch.get());
     }
 
     private void tick(DispatchManager dm) {

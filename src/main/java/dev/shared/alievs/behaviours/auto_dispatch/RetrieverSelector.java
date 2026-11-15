@@ -1,10 +1,9 @@
-package dev.shared.alievs.tasks.auto_dispatch;
+package dev.shared.alievs.behaviours.auto_dispatch;
 
 import eu.darkbot.api.managers.DispatchAPI;
 import eu.darkbot.api.managers.StatsAPI;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -16,7 +15,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * Chooses which retriever to hire: honours the priority list, the cost limits,
+ * Chooses which retriever to hire: honours the preferred retriever, the default retriever, the cost limits,
  * the account balance and a cooldown for retrievers whose hire failed.
  */
 public class RetrieverSelector {
@@ -42,39 +41,38 @@ public class RetrieverSelector {
         }
         if (candidates.isEmpty()) return Optional.empty();
 
-        List<String> priority = parsePriority(config.priority);
-        for (String name : priority) {
-            for (DispatchAPI.Retriever retriever : candidates) {
-                if (normalize(retriever.getName()).equals(name)) return Optional.of(retriever);
-            }
+        // Preferred retriever first; if it isn't affordable, fall back to the configured default retriever.
+        String priority = normalize(config.priority);
+        if (!priority.isEmpty()) {
+            Optional<DispatchAPI.Retriever> match = findByName(candidates, priority);
+            if (match.isPresent()) return match;
+            warnUnhireablePriority(priority, available);
         }
-        warnUnhireablePriority(priority, available, candidates);
-        // No priority retriever is affordable (e.g. out of uridium/permits): use the configured default retriever
-        // so a free slot is still filled with a cheap fallback instead of being left empty.
-        String fallback = normalize(config.fallback);
-        if (!fallback.isEmpty()) {
-            for (DispatchAPI.Retriever retriever : candidates) {
-                if (normalize(retriever.getName()).equals(fallback)) return Optional.of(retriever);
-            }
+        String defaultName = normalize(config.defaultRetriever);
+        if (!defaultName.isEmpty()) {
+            return findByName(candidates, defaultName);
         }
         return Optional.empty();
     }
 
-    /** Logs once why a priority retriever could not be hired (over the limit/balance or on cooldown). */
+    private static Optional<DispatchAPI.Retriever> findByName(Collection<DispatchAPI.Retriever> candidates,
+                                                              String normalizedName) {
+        for (DispatchAPI.Retriever retriever : candidates) {
+            if (normalize(retriever.getName()).equals(normalizedName)) return Optional.of(retriever);
+        }
+        return Optional.empty();
+    }
+
+    /** Logs once why the preferred retriever could not be hired (over the limit/balance or on cooldown). */
     @SuppressWarnings("java:S106")
-    private void warnUnhireablePriority(List<String> priority, Collection<? extends DispatchAPI.Retriever> available,
-                                        Collection<DispatchAPI.Retriever> candidates) {
-        Set<String> hireable = new HashSet<>();
-        for (DispatchAPI.Retriever retriever : candidates) hireable.add(normalize(retriever.getName()));
-        for (String name : priority) {
-            if (hireable.contains(name) || !warnedPriority.add(name)) continue;
-            for (DispatchAPI.Retriever retriever : available) {
-                if (normalize(retriever.getName()).equals(name)) {
-                    System.out.println("[AutoDispatch] Priority " + retriever.getName() + " not hired: cost "
-                            + describeCost(retriever) + " is over the limit/balance or on cooldown"
-                            + " (raise Max uridium/credits to allow it)");
-                    break;
-                }
+    private void warnUnhireablePriority(String normalizedName, Collection<? extends DispatchAPI.Retriever> available) {
+        if (!warnedPriority.add(normalizedName)) return;
+        for (DispatchAPI.Retriever retriever : available) {
+            if (normalize(retriever.getName()).equals(normalizedName)) {
+                System.out.println("[AutoDispatch] Priority " + retriever.getName() + " not hired: cost "
+                        + describeCost(retriever) + " is over the limit/balance or on cooldown"
+                        + " (raise Max uridium/credits to allow it)");
+                break;
             }
         }
     }
@@ -125,13 +123,6 @@ public class RetrieverSelector {
             System.out.println("[AutoDispatch] Found retriever " + retriever.getName()
                     + " tier " + retriever.getTier() + ", cost: " + describeCost(retriever));
         }
-    }
-
-    private static List<String> parsePriority(String priority) {
-        return Arrays.stream(Optional.ofNullable(priority).orElse("").split(","))
-                .map(RetrieverSelector::normalize)
-                .filter(name -> !name.isEmpty())
-                .collect(Collectors.toList());
     }
 
     private static String normalize(String name) {
