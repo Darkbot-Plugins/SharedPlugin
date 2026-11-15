@@ -91,8 +91,7 @@ As I use graddle you can run the task 'copyFile' and it will generate a jar call
 
 ### How to test the changes
 
-When a pull request is made, I will build a version with the changes so that they can be tested.
-Each time a merge is performed, a new version will be deployed and the .jar file will be added.
+To test it, we recommend running the bot from an IDE with signature verification disabled so you can test the plugin.
 
 ### Rules
 
