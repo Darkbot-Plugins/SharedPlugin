@@ -229,6 +229,8 @@ public final class GateBuilder {
     /**
      * Switches to the specified ship if enabled and ship is different.
      */
+    // Console logging matches the rest of the module (see AGENTS.md); silence Sonar's logger rule (java:S106).
+    @SuppressWarnings("java:S106")
     private boolean switchToShip(String hangarId) {
         if (!this.module.getConfig().builder.switchShip.enabled) {
             return true; // No switching needed
