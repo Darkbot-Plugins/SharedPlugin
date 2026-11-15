@@ -1,6 +1,7 @@
 package dev.shared.do_gamer.module.simple_galaxy_gate.utils;
 
 import java.util.List;
+import java.util.Map;
 
 import dev.shared.do_gamer.module.simple_galaxy_gate.SimpleGalaxyGate;
 import dev.shared.do_gamer.module.simple_galaxy_gate.config.Maps;
@@ -33,6 +34,8 @@ public final class GateBuilder {
     private int shipSwitchAttempts = 0;
     private boolean switchingShip = false;
     private boolean shipOffsetPositive = true;
+    private boolean warnedShipNotSelected = false;
+    private boolean warnedShipNotFound = false;
     private BuildState state = BuildState.NONE;
 
     public GateBuilder(SimpleGalaxyGate module, PluginAPI api) {
@@ -53,6 +56,8 @@ public final class GateBuilder {
         this.switchingShip = false;
         this.shipSwitchAttempts = 0;
         this.galaxyInfoFailCount = 0;
+        this.warnedShipNotSelected = false;
+        this.warnedShipNotFound = false;
         this.spinTimer.disarm();
         this.placeTimer.disarm();
         this.moveShipTimer.disarm();
@@ -135,7 +140,7 @@ public final class GateBuilder {
     private void performGateSpinCycle(GalaxyInfo info, GalaxyGate targetGate) {
         double progress = this.getProgress(info, targetGate);
         SpinOption spinOption = this.getSpinOption(progress);
-        long waitTime = (spinOption.waitMs * this.module.getConfig().builder.speed.multiplier);
+        long waitTime = spinOption.waitMs;
         int currentMulti = info.getGateInfo(targetGate).getMultiplier();
         if (currentMulti >= 1 && currentMulti <= 5) {
             // Adjust known buggy values from the upstream API:
@@ -229,8 +234,24 @@ public final class GateBuilder {
             return true; // No switching needed
         }
 
-        if (SimpleGalaxyGateConfig.BuilderSettings.ShipDropdown.getShips().isEmpty() || hangarId == null) {
-            return false; // No ship available to switch, wait for next update
+        if (hangarId == null) {
+            if (!this.warnedShipNotSelected) {
+                System.out.println("[GateBuilder] Ship Switching is enabled but a ship is not selected."
+                        + " Pick both ships (Ship for Gate and Ship for Build) or turn Ship Switching off.");
+                this.warnedShipNotSelected = true;
+            }
+            return false; // Nothing to switch to until a ship is selected
+        }
+
+        Map<String, String> ships = SimpleGalaxyGateConfig.BuilderSettings.ShipDropdown.getShips();
+        if (ships.isEmpty()) {
+            this.module.setUpdateHangarData(true);
+            return false; // Ship list not loaded yet: request hangar data and wait
+        }
+        if (!ships.containsKey(hangarId) && !this.warnedShipNotFound) {
+            System.out.println("[GateBuilder] Selected ship (hangar " + hangarId
+                    + ") was not found among owned ships; check the Ship Switching selection.");
+            this.warnedShipNotFound = true;
         }
 
         int activeHangarId = this.module.backpageHelper.getActiveHangarId();
@@ -411,18 +432,16 @@ public final class GateBuilder {
      */
     private SpinOption getSpinOption(double progress) {
         // Define spin options in descending order of threshold
+        SimpleGalaxyGateConfig.BuilderSettings builder = this.module.getConfig().builder;
         List<SpinOption> options = List.of(
-                new SpinOption(this.module.getConfig().builder.spins100, 100,
-                        SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_100),
-                new SpinOption(this.module.getConfig().builder.spins10, 10,
-                        SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_10),
-                new SpinOption(this.module.getConfig().builder.spins5, 5,
-                        SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_5));
+                new SpinOption(builder.spins100, 100, builder.waitSpin100),
+                new SpinOption(builder.spins10, 10, builder.waitSpin10),
+                new SpinOption(builder.spins5, 5, builder.waitSpin5));
 
         return options.stream()
                 .filter(option -> option.threshold > progress)
                 .findFirst()
-                .orElse(new SpinOption(0.0, 1, SimpleGalaxyGateConfig.BuilderSettings.WAIT_TIME_SPIN_1));
+                .orElse(new SpinOption(0.0, 1, builder.waitSpin1));
     }
 
     /**

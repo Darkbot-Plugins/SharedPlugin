@@ -494,11 +494,6 @@ public final class SimpleGalaxyGateConfig {
      * Settings for the Galaxy Gate Builder
      */
     public static class BuilderSettings {
-        public static final int WAIT_TIME_SPIN_1 = 100;
-        public static final int WAIT_TIME_SPIN_5 = 200;
-        public static final int WAIT_TIME_SPIN_10 = 250;
-        public static final int WAIT_TIME_SPIN_100 = 500;
-
         @Option("general.enabled")
         public boolean enabled = false;
 
@@ -532,9 +527,21 @@ public final class SimpleGalaxyGateConfig {
         @Percentage
         public double spins100 = 0.0;
 
-        @Option("do_gamer.simple_galaxy_gate.builder.speed")
-        @Dropdown(options = BuilderSpeedDropdown.class)
-        public BuilderSpeed speed = BuilderSpeed.NORMAL;
+        @Option("do_gamer.simple_galaxy_gate.builder.wait_spin_1")
+        @Number(min = 50, max = 15_000, step = 50)
+        public int waitSpin1 = 300;
+
+        @Option("do_gamer.simple_galaxy_gate.builder.wait_spin_5")
+        @Number(min = 50, max = 15_000, step = 50)
+        public int waitSpin5 = 300;
+
+        @Option("do_gamer.simple_galaxy_gate.builder.wait_spin_10")
+        @Number(min = 50, max = 15_000, step = 50)
+        public int waitSpin10 = 300;
+
+        @Option("do_gamer.simple_galaxy_gate.builder.wait_spin_100")
+        @Number(min = 50, max = 15_000, step = 50)
+        public int waitSpin100 = 300;
 
         @Option("do_gamer.simple_galaxy_gate.builder.build_until")
         @Dropdown(options = BuildUntilDropdown.class)
@@ -581,37 +588,6 @@ public final class SimpleGalaxyGateConfig {
 
             @Override
             public String getText(BuildUntil option) {
-                return option.label;
-            }
-        }
-
-        /**
-         * Speed options for the builder
-         */
-        public enum BuilderSpeed {
-            VERY_FAST(1, "Very Fast"),
-            FAST(2, "Fast"),
-            NORMAL(3, "Normal"),
-            SLOW(4, "Slow"),
-            VERY_SLOW(5, "Very Slow");
-
-            public final int multiplier;
-            public final String label;
-
-            BuilderSpeed(int multiplier, String label) {
-                this.multiplier = multiplier;
-                this.label = label;
-            }
-        }
-
-        public static class BuilderSpeedDropdown implements Dropdown.Options<BuilderSpeed> {
-            @Override
-            public List<BuilderSpeed> options() {
-                return List.of(BuilderSpeed.values());
-            }
-
-            @Override
-            public String getText(BuilderSpeed option) {
                 return option.label;
             }
         }
