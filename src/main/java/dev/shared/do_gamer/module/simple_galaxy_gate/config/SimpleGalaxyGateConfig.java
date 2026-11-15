@@ -533,15 +533,15 @@ public final class SimpleGalaxyGateConfig {
 
         @Option("do_gamer.simple_galaxy_gate.builder.wait_spin_5")
         @Number(min = 50, max = 15_000, step = 50)
-        public int waitSpin5 = 300;
+        public int waitSpin5 = 600;
 
         @Option("do_gamer.simple_galaxy_gate.builder.wait_spin_10")
         @Number(min = 50, max = 15_000, step = 50)
-        public int waitSpin10 = 300;
+        public int waitSpin10 = 750;
 
         @Option("do_gamer.simple_galaxy_gate.builder.wait_spin_100")
         @Number(min = 50, max = 15_000, step = 50)
-        public int waitSpin100 = 300;
+        public int waitSpin100 = 1_500;
 
         @Option("do_gamer.simple_galaxy_gate.builder.build_until")
         @Dropdown(options = BuildUntilDropdown.class)
