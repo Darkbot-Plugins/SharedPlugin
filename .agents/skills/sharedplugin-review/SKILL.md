@@ -21,20 +21,20 @@ Follow the steps in order. Each one exists to prevent a specific failure mode.
 
 ### 1. Fix the scope
 
-Use the collector first. It is read-only, needs no `gh`, and produces the diff, the changed-file map, registration status, i18n coverage and regex signals in one pass.
+Establish the diff and the changed-file set directly with git. The reviewer runs the commands; nothing here is automated, and no external script is needed.
 
-| Situation | Command |
+| Situation | Commands |
 | --- | --- |
-| Uncommitted work | `python .agents/skills/sharedplugin-review/scripts/collect_review_context.py --working` |
-| Branch vs main | `python .agents/skills/sharedplugin-review/scripts/collect_review_context.py --base origin/main` |
-| GitHub PR number | `python .agents/skills/sharedplugin-review/scripts/collect_review_context.py --pr 209` |
-| Single commit | `python .agents/skills/sharedplugin-review/scripts/collect_review_context.py --base <sha>^ --head <sha>` |
-| Whole feature or files | `python .agents/skills/sharedplugin-review/scripts/collect_review_context.py --files <paths>` |
+| Uncommitted work | `git diff --name-status -M HEAD` plus `git ls-files --others --exclude-standard` |
+| Branch vs main | `git diff --name-status -M origin/main...HEAD` |
+| GitHub PR number | `git fetch origin refs/pull/<n>/head` then `git diff --name-status -M origin/main...FETCH_HEAD` |
+| Single commit | `git diff --name-status -M <sha>^..<sha>` |
+| Whole feature or files | review the named files in full |
 
-- If the user pastes a PR URL, extract the number. If they name a branch or commit, use `--base`.
-- When the diff is very large, run with `--no-diff` first, then read the files that matter. `--json` is useful for filtering.
+- If the user pastes a PR URL, extract the number. If they name a branch or commit, use `--base`-style ranges (`<base>...<head>`).
+- When the diff is very large, get the file list first (`git diff --name-only`), then read only the files that matter.
 - Read the PR title and description (`git log -1 --format=%B`, or ask the user). Intent decides whether an odd-looking change is a bug or a deliberate workaround.
-- Note who owns the touched packages. A change spanning two `dev.shared.<dev>` packages needs both developers' agreement; the collector reports it.
+- Note who owns the touched packages. A change spanning two `dev.shared.<dev>` packages needs both developers' agreement; the owner is the segment after `dev/shared/` in the path.
 
 ### 2. Build a mental model before judging
 
@@ -62,7 +62,7 @@ Severity follows blast radius. A per-tick `Thread.sleep` outranks a missing `fin
 
 - **Compile** with `.\gradlew.bat compileJava` (or `build`). Only claim a compile failure you reproduced; if you did not run it, say so in the report.
 - **API**: confirm the method exists in `eu.darkbot.api` before calling it misuse. Check an existing call site or the dependency jar. Never invent a signature.
-- **Registration and i18n**: re-check with the collector or a quick grep. The collector validates `@Feature` classes against `plugin.json` and `@Option` keys against `strings_en.properties`.
+- **Registration and i18n**: re-check with a quick grep. Confirm every `@Feature` class appears in `plugin.json` and every `@Option` key exists in `strings_en.properties`.
 - **Thread**: identify the caller. A method only blocks the game thread if a tick actually calls it.
 - **Behavior you cannot run**: phrase it as a question with the scenario. A confident wrong claim costs more than an honest question.
 

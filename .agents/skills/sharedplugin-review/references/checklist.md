@@ -102,7 +102,7 @@ Rules are grouped by review pass. Each row says what to flag and the default sev
 | Package matches the folder | MAJOR | `package dev.shared.a.b` in a folder that is not `dev/shared/a/b`. |
 | Feature name and description are user-facing | NIT | The description is empty, says "test", or does not explain what the feature does. |
 
-See `references/registration-and-i18n.md` for the exact key format and the collector output.
+See `references/registration-and-i18n.md` for the exact key format and the manual checks.
 
 ## 9. Naming and structure
 

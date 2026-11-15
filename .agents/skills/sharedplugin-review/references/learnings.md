@@ -94,7 +94,7 @@ These were checked against the code, not assumed. They exist so the skill does n
 ### 2026-11-15 — Registration and i18n are currently complete
 - **Context:** 14 `@Feature` classes and 14 `plugin.json` entries match exactly. 157 distinct `@Option` keys all exist in `strings_en.properties`.
 - **Observation:** a missing entry is therefore a real defect introduced by the change, not pre-existing debt.
-- **Decision:** keep both checks strict; report `[MISSING]` and `[MISSING STRING]` from the collector as MAJOR/BLOCKER as the checklist says.
+- **Decision:** keep both checks strict; report `[MISSING]` and `[MISSING STRING]` findings as MAJOR/BLOCKER as the checklist says.
 - **Applies to:** registration pass.
 
 ### 2026-11-15 — `getStoppedStatus()` may return null
@@ -123,7 +123,7 @@ These were checked against the code, not assumed. They exist so the skill does n
 
 ### 2026-11-15 — No `gh` CLI in this environment
 - **Context:** `gh --version` fails; the remote is GitHub over SSH.
-- **Observation:** the collector fetches `refs/pull/<n>/head` with plain `git`, so PR review works without `gh`.
+- **Observation:** PR review works without `gh`: fetch `refs/pull/<n>/head` with plain `git`.
 - **Decision:** use `--pr N` (or `--base <ref>` for an already-fetched branch). Do not depend on `gh` commands in instructions.
 - **Applies to:** scope step.
 

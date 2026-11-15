@@ -74,7 +74,7 @@ orbithelper.fast_travel.max_jump_attempt_time
 
 Located at `src/main/resources/dev/shared/lang/strings_en.properties`. Format is `key=value`, with `#` comments.
 
-- Every `@Option` key needs an entry. Missing keys show up raw in the UI. The collector reports them.
+- Every `@Option` key needs an entry. Missing keys show up raw in the UI. Check with a quick grep.
 - Only edit the English file. `crowdin.yml` maps `strings_en.properties` to `strings_<locale>.properties`; Crowdin owns the other 16 languages. A manual edit to another language is a MAJOR.
 - Values are user-facing: sentence case, no trailing period on labels, clear wording. A label like `Enable` is better than `enable flag`.
 - Keep the key stable when editing the value. Changing wording is safe; changing the key is not.
@@ -91,11 +91,11 @@ Located at `src/main/resources/dev/shared/lang/strings_en.properties`. Format is
 ## Fast checks
 
 ```powershell
-# Registration: every @Feature FQCN is listed
-python .agents/skills/sharedplugin-review/scripts/collect_review_context.py --files <changed-java-files>
+# Registration: every @Feature FQCN is listed in plugin.json
+Select-String -Path src\main\resources\plugin.json -Pattern 'dev\.shared\..*\.MyFeature'
 
 # i18n: every @Option key exists in English
 Select-String -Path src\main\resources\dev\shared\lang\strings_en.properties -Pattern '^do_gamer\.my_feature\.'
 ```
 
-The collector does both automatically and prints `[MISSING]`, `[STALE]` and `[MISSING STRING]` lines.
+Run these greps manually; there is no automated collector. Report `[MISSING]`, `[STALE]` and `[MISSING STRING]` findings by hand.
