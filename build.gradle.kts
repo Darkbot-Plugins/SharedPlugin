@@ -28,8 +28,8 @@ version = "0.0.0"
 description = "SharedPlugin"
 
 dependencies {
-    api("eu.darkbot.DarkBotAPI", "darkbot-impl", "0.9.11")
-    api("eu.darkbot", "DarkBot", "e787b48c23")
+    api("eu.darkbot.DarkBotAPI", "darkbot-impl", "0.9.12")
+    api("eu.darkbot", "DarkBot", "66ae03e7ca")
 }
 
 
