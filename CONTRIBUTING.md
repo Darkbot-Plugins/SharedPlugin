@@ -70,6 +70,8 @@ Notes
 
 - Follow repository coding conventions and keep changes focused and small when possible.
 - If your PR requires special testing steps, include them in the PR description so reviewers can reproduce.
+- One feature per PR
+- Add a video demonstrating how the new features work (It isn’t necessary if the changes are to an existing one)
 
 ### Code guidelines
 
@@ -89,8 +91,7 @@ As I use graddle you can run the task 'copyFile' and it will generate a jar call
 
 ### How to test the changes
 
-When a pull request is made, I will build a version with the changes so that they can be tested.
-Each time a merge is performed, a new version will be deployed and the .jar file will be added.
+To test it, we recommend running the bot from an IDE with signature verification disabled so you can test the plugin.
 
 ### Rules
 

@@ -1,14 +1,19 @@
 package dev.shared.do_gamer.utils;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 import com.github.manolo8.darkbot.backpage.BackpageManager;
-import com.github.manolo8.darkbot.backpage.LegacyHangarManager;
+import com.github.manolo8.darkbot.backpage.HangarManager;
+import com.github.manolo8.darkbot.backpage.hangar.HangarResponse;
+import com.github.manolo8.darkbot.backpage.hangar.Ret;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
 import eu.darkbot.api.PluginAPI;
+import eu.darkbot.util.IOUtils;
 import eu.darkbot.util.http.Http;
 
 public final class BackpageHelper {
@@ -17,6 +22,10 @@ public final class BackpageHelper {
     private static final String INTERNAL_START = "internalStart";
     private static final String INDEX_INTERNAL_ES = "indexInternal.es";
     private static final String SHOP_PATH = "ajax/shop.php";
+    private static final String INVENTORY_PATH = "flashAPI/inventory.php";
+    private static final String ACTION = "action";
+    private long lastHangarDataUpdate = 0;
+    private long nextHangarChange = 0;
 
     public BackpageHelper(PluginAPI api) {
         this.instance = api.requireInstance(BackpageManager.class);
@@ -26,9 +35,76 @@ public final class BackpageHelper {
         return this.instance;
     }
 
-    @SuppressWarnings("deprecation")
-    public LegacyHangarManager getLegacyHangarManager() {
-        return this.getInstance().legacyHangarManager;
+    public HangarManager getHangarManager() {
+        return this.getInstance().hangarManager;
+    }
+
+    /**
+     * Refreshes the hangar list and the active hangar data if older than the
+     * given expiry time.
+     */
+    public void updateHangarData(long expiryTime) {
+        if (System.currentTimeMillis() <= this.lastHangarDataUpdate + expiryTime) {
+            return;
+        }
+        try {
+            // updateCurrentHangar only fetches the hangar list when it is null
+            this.getHangarManager().updateHangarList();
+            this.getHangarManager().updateCurrentHangar();
+            this.lastHangarDataUpdate = System.currentTimeMillis();
+        } catch (Exception e) {
+            System.out.println("BackpageHelper: Could not update hangar data: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Returns the "ret" payload of the active hangar, or null if not loaded yet.
+     */
+    public Ret getCurrentHangarRet() {
+        HangarResponse hangar = this.getHangarManager().getCurrentHangar();
+        if (hangar == null || hangar.getData() == null) {
+            return null;
+        }
+        return hangar.getData().getRet();
+    }
+
+    /**
+     * Returns the ID of the active hangar, or 0 if the hangar list is not loaded.
+     */
+    public int getActiveHangarId() {
+        return this.getHangarManager().getCurrentHangarId();
+    }
+
+    /**
+     * Requests to activate the given hangar. The ship must be in a base or
+     * disconnected.
+     */
+    public boolean changeHangar(int hangarId) {
+        int activeHangarId = this.getActiveHangarId();
+        if (this.nextHangarChange > System.currentTimeMillis() || activeHangarId == 0 || !this.isValid()) {
+            return false;
+        }
+
+        JsonObject hangarObj = new JsonObject();
+        hangarObj.addProperty("hi", activeHangarId);
+        hangarObj.addProperty("hangarId", hangarId);
+        JsonObject paramObj = new JsonObject();
+        paramObj.add("params", hangarObj);
+
+        String params = Base64.getEncoder()
+                .encodeToString(paramObj.toString().getBytes(StandardCharsets.UTF_8));
+        try {
+            return this.postHttp(INVENTORY_PATH)
+                    .addSupplier(() -> this.nextHangarChange = System.currentTimeMillis() + 12_000)
+                    .setRawParam(ACTION, "activateShip")
+                    .setParam("params", params)
+                    .consumeInputStream(in -> IOUtils.read(Base64.getDecoder().wrap(in)))
+                    .contains("\"isError\":0");
+        } catch (IOException | RuntimeException e) {
+            System.out.println("BackpageHelper: Could not change hangar: " + e.getMessage());
+            this.nextHangarChange = System.currentTimeMillis() + 5_000;
+            return false;
+        }
     }
 
     /**
@@ -120,7 +196,7 @@ public final class BackpageHelper {
      */
     public String fetchShopPage(String page) throws IOException {
         return this.getHttp(INDEX_INTERNAL_ES)
-                .setRawParam("action", INTERNAL_DOCK)
+                .setRawParam(ACTION, INTERNAL_DOCK)
                 .setRawParam("tpl", INTERNAL_DOCK + page)
                 .setHeader("Referer", this.referer(INTERNAL_START))
                 .getContent();
@@ -131,7 +207,7 @@ public final class BackpageHelper {
      */
     public void purchaseShopItem(String page, String category, String itemId, int amount) throws IOException {
         this.postHttp(SHOP_PATH)
-                .setRawParam("action", "purchase")
+                .setRawParam(ACTION, "purchase")
                 .setRawParam("category", category)
                 .setRawParam("itemId", itemId)
                 .setRawParam("amount", amount)
