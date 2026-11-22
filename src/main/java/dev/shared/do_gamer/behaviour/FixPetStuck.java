@@ -260,9 +260,16 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
 
     private boolean shouldSkipReload() {
         FixPetStuckConfig.ForceReloadConfig force = this.config.forceReload;
-        return (!force.inGG && this.isGGMap() && this.hasActiveNpc())
+        return this.isReloadBlockedInGG(force.gg)
                 || (!force.whileAttacking && this.isInCombat())
                 || (!force.underAttack && this.isUnderAttack());
+    }
+
+    private boolean isReloadBlockedInGG(FixPetStuckConfig.GGMode mode) {
+        if (!this.isGGMap() || mode == FixPetStuckConfig.GGMode.ALWAYS) {
+            return false;
+        }
+        return mode != FixPetStuckConfig.GGMode.NO_NPC || this.hasActiveNpc();
     }
 
     private boolean isGGMap() {
