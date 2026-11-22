@@ -266,10 +266,16 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
     }
 
     private boolean isReloadBlockedInGG(FixPetStuckConfig.GGMode mode) {
-        if (!this.isGGMap() || mode == FixPetStuckConfig.GGMode.ALWAYS) {
-            return false;
+        if (!this.isGGMap()) {
+            return false; // GG mode applies only in GG maps
         }
-        return mode != FixPetStuckConfig.GGMode.NO_NPC || this.hasActiveNpc();
+        if (mode == FixPetStuckConfig.GGMode.ALWAYS) {
+            return false; // Reload even with NPCs
+        }
+        if (mode == FixPetStuckConfig.GGMode.NO_NPC) {
+            return this.hasActiveNpc(); // Reload only when no NPCs left
+        }
+        return true; // NEVER: never reload in GG
     }
 
     private boolean isGGMap() {
