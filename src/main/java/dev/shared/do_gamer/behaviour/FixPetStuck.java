@@ -168,26 +168,41 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
      * Closes the PET window, as reloading with it open loads it empty again.
      */
     private void tickClosingWindow() {
+        if (this.shouldSkipReload()) {
+            this.restorePet(); // Reload is blocked again, give the PET back while waiting
+            this.setState(State.WAITING);
+            return;
+        }
+
         this.petGearHelper.setEnabled(false); // Modules enable the PET again on every tick
         if (this.petGearHelper.isActive()) {
             this.cancel(); // PET recovered on its own
             return;
         }
 
-        boolean ready;
+        if (this.isWindowReadyForReload()) {
+            this.triggerReload();
+        }
+    }
+
+    /**
+     * Checks if the PET window has stayed closed long enough to reload.
+     * Reloads anyway if it could not be closed in time, so the PET is not left disabled.
+     */
+    private boolean isWindowReadyForReload() {
         if (this.closePetWindow()) {
             if (this.windowClosedAt < 0) {
                 this.windowClosedAt = System.currentTimeMillis();
             }
-            ready = this.elapsed(this.windowClosedAt) >= WINDOW_CLOSED_DELAY_MS;
-        } else {
-            this.windowClosedAt = -1L;
-            ready = this.elapsed(this.stateSince) >= WINDOW_CLOSE_TIMEOUT_MS;
+            return this.elapsed(this.windowClosedAt) >= WINDOW_CLOSED_DELAY_MS;
         }
 
-        if (ready && !this.shouldSkipReload()) {
-            this.triggerReload();
+        this.windowClosedAt = -1L;
+        if (this.elapsed(this.stateSince) < WINDOW_CLOSE_TIMEOUT_MS) {
+            return false;
         }
+        System.out.println("PET window did not close, reloading anyway.");
+        return true;
     }
 
     /**
@@ -197,14 +212,17 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
         this.petGearHelper.setEnabled(false); // Modules enable the PET again on every tick
         this.closePetWindow();
 
-        if ((resumed || this.reloadSeen) && this.reloadedAt < 0) {
+        if (resumed || this.reloadSeen) {
+            // (Re)start the settle time after every load, a stall before the reload must not count
             this.reloadedAt = System.currentTimeMillis();
+            this.reloadSeen = false;
         }
 
         boolean settled = this.reloadedAt > 0 && this.elapsed(this.reloadedAt) >= RELOAD_SETTLE_MS;
         boolean timedOut = this.reloadedAt < 0 && this.elapsed(this.stateSince) >= RELOAD_TIMEOUT_MS;
         if (settled || timedOut) {
             this.cancel();
+            this.graceSince = System.currentTimeMillis(); // Give the PET time to activate after the reload
         }
     }
 
@@ -234,15 +252,20 @@ public class FixPetStuck implements Behavior, Configurable<FixPetStuckConfig> {
      * Stops the fix and enables the PET again if it was disabled by this feature.
      */
     private void cancel() {
-        if (this.state == State.MONITORING && !this.petDisabled) {
-            return;
+        this.restorePet();
+        if (this.state != State.MONITORING) {
+            this.reset();
         }
+    }
+
+    /**
+     * Enables the PET again if it was disabled by this feature.
+     */
+    private void restorePet() {
         if (this.petDisabled) {
             this.petGearHelper.setEnabled(true);
             this.petDisabled = false;
-            this.graceSince = System.currentTimeMillis();
         }
-        this.reset();
     }
 
     private void reset() {
