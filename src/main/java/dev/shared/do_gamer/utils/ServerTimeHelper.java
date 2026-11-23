@@ -13,8 +13,8 @@ import eu.darkbot.api.managers.BackpageAPI;
 
 public final class ServerTimeHelper {
 
-    private static long serverOffsetMinutes = -1; // Offset in minutes between local time and server time
-    private static long lastOffsetCheckTime = 0; // Timestamp for the last offset check
+    private static volatile long serverOffsetMinutes = -1; // Offset in minutes between local time and server time
+    private static volatile long lastOffsetCheckTime = 0; // Timestamp for the last offset check
     private static final long OFFSET_CHECK_INTERVAL_MS = 5 * 60_000L; // 5 minutes
 
     private ServerTimeHelper() {
@@ -23,7 +23,7 @@ public final class ServerTimeHelper {
 
     // Check if the server offset has been updated
     public static boolean offsetUpdated() {
-        return (serverOffsetMinutes != -1);
+        return serverOffsetMinutes != -1;
     }
 
     /**
@@ -31,48 +31,37 @@ public final class ServerTimeHelper {
      *
      * @param backpageAPI the BackpageAPI instance used to retrieve server data
      */
-    public static void fetchServerOffset(BackpageAPI backpageAPI) {
+    public static synchronized void fetchServerOffset(BackpageAPI backpageAPI) {
         if (offsetUpdated()) {
             return; // Already updated
         }
 
         long currentTime = System.currentTimeMillis();
-        // Check server time offset if not updated
-        if ((currentTime - lastOffsetCheckTime) >= OFFSET_CHECK_INTERVAL_MS) {
-            lastOffsetCheckTime = currentTime;
+        if ((currentTime - lastOffsetCheckTime) < OFFSET_CHECK_INTERVAL_MS) {
+            return;
+        }
+        lastOffsetCheckTime = currentTime;
 
-            try {
-                String response = backpageAPI.getHttp("indexInternal.es?action=internalStart").getContent();
+        try {
+            String response = backpageAPI.getHttp("indexInternal.es?action=internalStart").getContent();
+            String serverDate = extractServerDate(response);
+            String serverTime = extractServerTime(response);
 
-                // Extract server date and time
-                String serverDate = extractServerDate(response);
-                String serverTime = extractServerTime(response);
-
-                if (!serverDate.isEmpty() && !serverTime.isEmpty()) {
-                    serverOffsetMinutes = calcOffsetMinutes(serverDate, serverTime);
-                    System.out.printf("Server date: '%s', time: '%s'%n", serverDate, serverTime);
-                }
-            } catch (Exception e) {
-                serverOffsetMinutes = -1;
-                System.out.printf("Error retrieving server time: %s%n", e.getMessage());
+            if (!serverDate.isEmpty() && !serverTime.isEmpty()) {
+                serverOffsetMinutes = calcOffsetMinutes(serverDate, serverTime);
+                System.out.printf("Server date: '%s', time: '%s'%n", serverDate, serverTime);
             }
+        } catch (Exception e) {
+            serverOffsetMinutes = -1;
+            System.out.printf("Error retrieving server time: %s%n", e.getMessage());
         }
     }
 
-    // Get the current server-adjusted LocalDateTime
+    // Get the current server-adjusted LocalDateTime; use local time if no offset is available.
     public static LocalDateTime currentDateTime() {
         LocalDateTime currentTime = LocalDateTime.now();
-
-        if (serverOffsetMinutes == 0 || serverOffsetMinutes == -1) {
-            return currentTime; // No offset or invalid offset
-        } else {
-            // Adjust local time with server offset
-            if (serverOffsetMinutes > 0) {
-                return currentTime.plusMinutes(serverOffsetMinutes);
-            } else {
-                return currentTime.minusMinutes(Math.abs(serverOffsetMinutes));
-            }
-        }
+        long offsetMinutes = serverOffsetMinutes;
+        return offsetMinutes == -1 ? currentTime : currentTime.plusMinutes(offsetMinutes);
     }
 
     // Calculate the offset in minutes between local time and server time
@@ -85,9 +74,7 @@ public final class ServerTimeHelper {
         LocalDateTime serverDateTime = LocalDateTime.of(date, time);
         LocalDateTime localDateTime = LocalDateTime.now();
 
-        // Compute the offset in minutes between local and server time
         long offset = Duration.between(localDateTime, serverDateTime).toMinutes();
-
         return roundToNearest(offset);
     }
 
@@ -95,27 +82,15 @@ public final class ServerTimeHelper {
     private static long roundToNearest(long offset) {
         long c60 = Math.round((double) offset / 60) * 60;
         long c30 = Math.round((double) offset / 30) * 30;
-
         long d60 = Math.abs(offset - c60);
         long d30 = Math.abs(offset - c30);
-
-        if (d60 <= d30) {
-            return c60; // prefer 60 if tie
-        }
-        return c30;
+        return d60 <= d30 ? c60 : c30;
     }
 
     // Parse server time string to LocalTime
     private static LocalTime parseServerTime(String serverTime) {
         String timeStr = serverTime.toUpperCase(Locale.ENGLISH);
-
-        String pattern;
-        if (timeStr.endsWith("AM") || timeStr.endsWith("PM")) {
-            pattern = "hh:mm a"; // 12-hour with AM/PM
-        } else {
-            pattern = "HH:mm"; // 24-hour
-        }
-
+        String pattern = timeStr.endsWith("AM") || timeStr.endsWith("PM") ? "hh:mm a" : "HH:mm";
         DateTimeFormatter parser = DateTimeFormatter.ofPattern(pattern, Locale.ENGLISH);
         return LocalTime.parse(timeStr, parser);
     }
@@ -125,7 +100,6 @@ public final class ServerTimeHelper {
         if (!response.isEmpty()) {
             Pattern pattern = Pattern.compile("var " + key + " = '([^']+)';", Pattern.CASE_INSENSITIVE);
             Matcher matcher = pattern.matcher(response);
-
             if (matcher.find()) {
                 return matcher.group(1).trim();
             }
@@ -155,7 +129,7 @@ public final class ServerTimeHelper {
     /**
      * Calculates the duration in seconds until the next occurrence
      * of the specified hour and minute.
-     * 
+     *
      * @param hour   the target hour (0-23)
      * @param minute the target minute (0-59)
      * @return the duration in seconds
@@ -163,7 +137,6 @@ public final class ServerTimeHelper {
     public static long durationUntilTime(int hour, int minute) {
         LocalDateTime now = currentDateTime();
         LocalDateTime target = now.withHour(hour).withMinute(minute).withSecond(0).withNano(0);
-        // If the target time has already passed today, move it to the next day
         if (target.isBefore(now)) {
             target = target.plusDays(1);
         }
@@ -173,7 +146,7 @@ public final class ServerTimeHelper {
     /**
      * Formats a duration in seconds to a human-readable string format
      * (e.g., "1h 30m 45s").
-     * 
+     *
      * @param seconds the duration in seconds to format
      * @return the formatted duration string
      */
@@ -190,7 +163,6 @@ public final class ServerTimeHelper {
             sb.append(String.format("%dm ", min));
         }
         sb.append(String.format("%ds", sec));
-
         return sb.toString();
     }
 }
