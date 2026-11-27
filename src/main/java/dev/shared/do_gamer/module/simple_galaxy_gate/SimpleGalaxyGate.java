@@ -19,6 +19,7 @@ import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateBuilder;
 import dev.shared.do_gamer.module.simple_galaxy_gate.utils.GateHandler;
 import dev.shared.do_gamer.module.simple_galaxy_gate.utils.StateStore;
 import dev.shared.do_gamer.utils.BackpageHelper;
+import dev.shared.do_gamer.utils.MapTravelHelper;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
@@ -620,10 +621,7 @@ public final class SimpleGalaxyGate implements Module, Task,
      */
     private void travelToGalaxyGate(GameMap target) {
         if (target != null && !this.entities.getPortals().isEmpty()) {
-            this.traveler.setTarget(target);
-            if (!this.traveler.isDone()) {
-                this.traveler.tick();
-            }
+            MapTravelHelper.travel(this.traveler, this.starSystem, target);
         }
     }
 

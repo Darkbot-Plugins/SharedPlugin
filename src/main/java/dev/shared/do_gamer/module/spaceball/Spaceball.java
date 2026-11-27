@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 
 import dev.shared.do_gamer.config.SpaceballConfig;
+import dev.shared.do_gamer.utils.MapTravelHelper;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
@@ -630,10 +631,7 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
         // Moving to exit map
         this.hero.setRoamMode();
         this.petGearHelper.setEnabled(false);
-        if (!this.traveler.isDone()) {
-            this.traveler.setTarget(this.starSystem.getOrCreateMap(this.getExitMap()));
-            this.traveler.tick();
-        }
+        MapTravelHelper.travel(this.traveler, this.starSystem, this.starSystem.getOrCreateMap(this.getExitMap()));
     }
 
     private void stopBot() {

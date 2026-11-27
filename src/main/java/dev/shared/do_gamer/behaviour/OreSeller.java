@@ -9,6 +9,7 @@ import java.util.Locale;
 import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
+import dev.shared.do_gamer.utils.MapTravelHelper;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.utils.CaptchaBoxDetector;
 import dev.shared.utils.CustomSafetyFinder;
@@ -517,7 +518,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (this.desiredBaseMap == null) {
             return;
         }
-        this.traveler.setTarget(this.desiredBaseMap);
 
         if (this.isOnBaseMap()) {
             if (this.wait(this.timer(TimerSlot.LOAD), TRAVEL_LOAD_DELAY_MS)) {
@@ -529,7 +529,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         this.timer(TimerSlot.LOAD).disarm();
 
-        this.traveler.tick();
+        MapTravelHelper.travel(this.traveler, this.starSystem, this.desiredBaseMap);
     }
 
     /**
