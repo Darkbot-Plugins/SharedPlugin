@@ -52,7 +52,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final AttackAPI attacker;
     private final CustomSafetyFinder safetyFinder;
     private final PetGearHelper petGearHelper;
-    private final MapTraveler traveler;
+    private final MapTravelHelper travelHelper;
 
     private OreSellerConfig config;
     private ActiveMode activeMode = ActiveMode.NONE;
@@ -117,7 +117,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.stats = api.requireAPI(StatsAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
-        this.traveler = api.requireInstance(MapTraveler.class);
+        this.travelHelper = new MapTravelHelper(api.requireInstance(MapTraveler.class), this.starSystem);
 
         this.safetyFinder = CustomSafetyFinder.create(api);
         this.petGearHelper = new PetGearHelper(api);
@@ -529,7 +529,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         this.timer(TimerSlot.LOAD).disarm();
 
-        MapTravelHelper.travel(this.traveler, this.starSystem, this.desiredBaseMap);
+        this.travelHelper.travel(this.desiredBaseMap);
     }
 
     /**

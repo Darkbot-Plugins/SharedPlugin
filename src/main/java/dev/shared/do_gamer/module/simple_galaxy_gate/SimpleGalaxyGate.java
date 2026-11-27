@@ -57,6 +57,7 @@ public final class SimpleGalaxyGate implements Module, Task,
     public final CustomCollectorModule collectorModule;
     public final StarSystemAPI starSystem;
     public final MapTraveler traveler;
+    private final MapTravelHelper travelHelper;
     public final PortalJumper jumper;
     public final BotAPI bot;
     public final BackpageHelper backpageHelper;
@@ -99,6 +100,7 @@ public final class SimpleGalaxyGate implements Module, Task,
         this.collectorModule = new CustomCollectorModule(api);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.traveler = api.requireInstance(MapTraveler.class);
+        this.travelHelper = new MapTravelHelper(this.traveler, this.starSystem);
         this.jumper = api.requireInstance(PortalJumper.class);
         this.bot = api.requireAPI(BotAPI.class);
         this.backpageHelper = new BackpageHelper(api);
@@ -621,7 +623,7 @@ public final class SimpleGalaxyGate implements Module, Task,
      */
     private void travelToGalaxyGate(GameMap target) {
         if (target != null && !this.entities.getPortals().isEmpty()) {
-            MapTravelHelper.travel(this.traveler, this.starSystem, target);
+            this.travelHelper.travel(target);
         }
     }
 
