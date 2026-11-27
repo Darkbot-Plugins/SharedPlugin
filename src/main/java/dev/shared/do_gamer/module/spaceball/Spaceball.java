@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 
 import dev.shared.do_gamer.config.SpaceballConfig;
+import dev.shared.do_gamer.utils.MapTravelHelper;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.do_gamer.utils.ServerTimeHelper;
 import eu.darkbot.api.PluginAPI;
@@ -40,7 +41,7 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
     private final MovementAPI movement;
     private final StarSystemAPI starSystem;
     private final BackpageAPI backpage;
-    private final MapTraveler traveler;
+    private final MapTravelHelper travelHelper;
     private final PetGearHelper petGearHelper;
     private boolean isSpaceball;
     private long lastTargetLostTime;
@@ -76,7 +77,7 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
         this.movement = api.requireAPI(MovementAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.backpage = api.requireAPI(BackpageAPI.class);
-        this.traveler = traveler;
+        this.travelHelper = new MapTravelHelper(traveler, this.starSystem);
         this.petGearHelper = new PetGearHelper(api);
         this.isSpaceball = false;
         this.lastTargetLostTime = 0;
@@ -630,10 +631,7 @@ public class Spaceball implements Module, Task, Configurable<SpaceballConfig>, I
         // Moving to exit map
         this.hero.setRoamMode();
         this.petGearHelper.setEnabled(false);
-        if (!this.traveler.isDone()) {
-            this.traveler.setTarget(this.starSystem.getOrCreateMap(this.getExitMap()));
-            this.traveler.tick();
-        }
+        this.travelHelper.travel(this.starSystem.getOrCreateMap(this.getExitMap()));
     }
 
     private void stopBot() {

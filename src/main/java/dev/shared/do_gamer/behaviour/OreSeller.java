@@ -9,6 +9,7 @@ import java.util.Locale;
 import dev.shared.do_gamer.config.OreSellerConfig;
 import dev.shared.do_gamer.config.OreSellerConfig.SellModeOptions;
 import dev.shared.do_gamer.config.OreSellerConfig.TradeMapOptions;
+import dev.shared.do_gamer.utils.MapTravelHelper;
 import dev.shared.do_gamer.utils.PetGearHelper;
 import dev.shared.utils.CaptchaBoxDetector;
 import dev.shared.utils.CustomSafetyFinder;
@@ -51,7 +52,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
     private final AttackAPI attacker;
     private final CustomSafetyFinder safetyFinder;
     private final PetGearHelper petGearHelper;
-    private final MapTraveler traveler;
+    private final MapTravelHelper travelHelper;
 
     private OreSellerConfig config;
     private ActiveMode activeMode = ActiveMode.NONE;
@@ -116,7 +117,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         this.stats = api.requireAPI(StatsAPI.class);
         this.starSystem = api.requireAPI(StarSystemAPI.class);
         this.items = api.requireAPI(HeroItemsAPI.class);
-        this.traveler = api.requireInstance(MapTraveler.class);
+        this.travelHelper = new MapTravelHelper(api.requireInstance(MapTraveler.class), this.starSystem);
 
         this.safetyFinder = CustomSafetyFinder.create(api);
         this.petGearHelper = new PetGearHelper(api);
@@ -517,7 +518,6 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
         if (this.desiredBaseMap == null) {
             return;
         }
-        this.traveler.setTarget(this.desiredBaseMap);
 
         if (this.isOnBaseMap()) {
             if (this.wait(this.timer(TimerSlot.LOAD), TRAVEL_LOAD_DELAY_MS)) {
@@ -529,7 +529,7 @@ public class OreSeller extends TemporalModule implements Behavior, Configurable<
 
         this.timer(TimerSlot.LOAD).disarm();
 
-        this.traveler.tick();
+        this.travelHelper.travel(this.desiredBaseMap);
     }
 
     /**
